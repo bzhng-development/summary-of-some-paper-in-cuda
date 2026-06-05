@@ -1,0 +1,429 @@
+Mike Stonebraker is a Turing Award winner famous for his contributions to fundamental database technologies. We discussed the story behind building Postgres, where he disagrees with Google/Amazon on databases, and what he’s working on now.
+
+Check out the episode wherever you get your podcasts: YouTube, Spotify, Apple Podcasts.
+
+
+## Timestamps
+
+
+1:03 - How he got into databases
+
+6:43 - Competing with Oracle
+
+9:07 - What made Postgres special
+
+15:55 - One size fits none
+
+21:37 - Why he disagreed with Google
+
+29:14 - Why he chose academia over big tech
+
+30:58 - Replacing state in an OS with a DB
+
+42:02 - Future problems in databases
+
+51:36 - Technical book recommendations to learn databases
+
+52:20 - Advice for younger self
+
+
+## Transcript
+
+
+
+## 1:03 — How he got into databases
+
+
+Mike:
+
+[1:03] When I graduated I had the good fortune of being hired at Berkeley and I, it was clear I had to, you know, continuing what I did for my PhD was not going to go anywhere then as well as today. You’re way ahead if you get adopted by a mentor who knows the ropes. So Gene Wong, who, who is still alive and still, still kicking, took me under his wing and said well, let’s do something together. And this was 1971, which was the year after Ted Cod wrote his pioneering paper in CACM.
+
+[1:50] Gene Wong said well let’s, let’s take a look at database stuff. And at the time the competitors were a thing called the codicil proposal which you’re probably too young to have ever heard of. And so it was a low level spaghetti network proposal where you executed queries by following pointers. And then the, the alternative was the IBM proposal which was a higher, a thing called ims, which is still available.
+
+[2:25] And it’s hierarchical data, it’s a tree. You organized your data as trees. And even at the time IBM realized that trees were not general enough to, to solve many people’s problems. So they hacked on a, a way to make it a limited network structure. So it was clear that was a horrible hack. The codicil proposal had all kinds of bad properties besides being low level and, and really hard to debug. It also had the property that if anything changed in your, what’s now called your schema, you basically had to throw away everything and do it all again because it was absolutely rooted at the physical level, whereas Ted Cod stuff made perfect sense.
+
+[3:22] And so Gene said well let’s build one of these puppies, that’s clearly the next thing to try. So we started building ingress in 1972 while I was an assistant professor at Berkeley. As you know, if you’re an assistant professor, you have to, you have about. You get five years to prove that you’re a big shit, and they fire you or they give you tenure. So Ingress was my ticket to getting tenure, which happened in 1976.
+
+[3:55] That was where it started. And then again, you know, happenstance at the time. You know, a lot of people would build prototypes which were sort of studenty, like code, which means you could get it to run, but if you gave it to anybody else, they couldn’t. So we put in the first 90% to get something we could run. And then for whatever reason, we put in the next 90% to get it to where it really worked.
+
+[4:29] So the University of California version of Ingress was really worked. And so over the next couple years, about 100 universities started running it because UNIX became the big thing. And so this was a database, a free database system that ran on Unix. And so it was quite popular in the academic world. And so we got started getting, you know, lots of visitors at Berkeley who would say, gee, this is really nifty looking stuff.
+
+[5:06] What’s the biggest app, biggest anchor application you have? And we’d be forced to say, not very big. And so this was brought home in spades when Arizona State University considered running Ingress on their student records data, all 40,000 students worth. And they could get over that. They had to get an unsupported operating system from Bell Labs. They could also get over. They had to run an unsupported, unsupported database system from these guys at Berkeley.
+
+[5:49] But the project went down in flames when they realized there was no COBOL available for Unix. And they were a COBOL shop. So, unsupported operating system, unsupported database system. No, COBOL doomed us to, you know, irrelevance. And it was clear the only way out of that was to start a company. And so in 1980, we got Venture capital as it existed then and started Ingres Corporation to move ingres to dex VMs, you know, a real operating system.
+
+[6:36] And we had a real company that would support Ingress. And that was the start of the commercial journey.
+
+
+## 6:43 — Competing with Oracle
+
+
+Ryan:
+
+[6:43] I saw that Ingres was competing with Larry Ellison’s offering at Oracle. Yes, I saw that Ingress was, was certainly better than what they were offering, but they were still competing somehow. How? How did they compete?
+
+Mike:
+
+[7:02] Larry Ellison is a fabulous salesman and he, at the time he, he was, he made present tense and future tense indistinguishable. And so he basically lied to customers. He would ship stuff that didn’t work and have his initial customers help him debug it. So I think he, he engaged in what I consider very shady business practices. But lying to customers, I think is, is, you know, unconscionable. So for instance, there was a thing called referential integrity, which is if you, if you fire an employee and he’s the last person in a given department, do you want to delete the department or do you want to have it be a department, a ghost department?
+
+[8:01] It’s, it’s all that kind of stuff. And so Ingres Corporation implemented referential integrity. Oracle Corporation wrote two manual pages that said, here’s the definition of referential integrity, which everybody agreed to. And then, then down at the bottom it said not yet implemented.
+
+Ryan:
+
+[8:25] Interesting. Yeah. I had interviewed someone who worked at Sun Microsystems and they had a similar opinion that they, Larry Ellison was a little bit shady. So it seems to be a commonality. I also saw somewhere else in something that you had said was that when Oracle acquired MySQL that everyone kind of got afraid of that and moved to Postgres.
+
+Mike:
+
+[8:55] That was the genesis of Postgres replacing MySQL as the preferred open source relational database system.
+
+
+## 9:07 — What made Postgres special
+
+
+Ryan:
+
+[9:07] So you created Ingress, and there was a lot of technical innovations in it so that it was better than the incumbents. But ultimately it went away and you developed postgres. What was the thing that Ingress didn’t do that Postgres would do?
+
+Mike:
+
+[9:24] The big thing that guided us at the very beginning was the original reasoning for the academic version of Ingress was we were going to support a geographic information system that the neighboring professor Praveen Varia wanted. And so to support a GIS system you need points, lines, polygons, line groups, that sort of stuff. And it was clear that Ingress couldn’t do it because the data types we put into Ingress were the standard ones, integers, floats, text, strings, and you couldn’t support, you couldn’t efficiently support GIS types on top of that.
+
+[10:20] So as a gis, the academic version of Ingress was a complete failure. And that was in the back of, of our mind. The other thing that happened, this is a little out of chronic chronological sequence, but it helps make the point is that the commercial version of Ingress, I think around 1985, you know, there was an, just proposed a date and time standard for relational databases. And so commercial Ingress implemented date and time, you know, using the standard Gregorian calendar.
+
+[11:05] And so I was associated with the commercial version of Ingress as well, as I was still at the University of California as a professor. So I got a call from, from an Ingres customer who said, you know, you implemented date and time wrong. And I said, huh? We implemented the Gregorian calendar and you can subtract and, you know, if it has, you know, days have 30 or 31 months, except for February, except for leap years.
+
+[11:40] So subtraction on dates works exactly the way you would expect it to. But he said, that’s not what I want in his particular world. He said he was dealing with bond financial instruments and for some reason, I mean, you got the same amount of interest on his financial bonds during each month, no matter how long the month was. So he had the date you bought the bond, the date you sold the bond. He wanted to do a subtraction, multiply it by the coupon rate and say, that’s what, that’s the interest we paid you.
+
+[12:26] But of course, his version of subtraction was March 15th minus February 15th is 30 days, because that’s the definition of his calendar. And so he had to retrieve two dates out to user code, do the subtraction and user code, put the answer back, and it cost him a factor of two or three in efficiency. And he said, why can’t I just overload your definition of subtraction with what I want? And of course, with Ingress, it was hard coded.
+
+[13:02] And the problem was this is a case where you wanted bond time just like you wanted points, lines and polygons. And so Postgres was engineered to have an extendable type system so you could have whatever data types you wanted. And they were very efficient. And that was the main gist of Postgres was that it had that flexibility. And as you know, in business data processing a lot most people were happy with the standard data types.
+
+[13:41] But relational databases started to spread to all kinds of other places. What are called abstract data types or stored procedures, bunch of names they’re called, you know, had, had great applicability. And so Postgres, that was, that was the big thing in Postgres. We also, Postgres also supported what the AI guys at the time wanted in the way of inheritance. We also supported time travel, but the implementation absolutely sucked and it got taken out after a while.
+
+[14:28] So there were a huge number of really nifty things in Postgres.
+
+Ryan:
+
+[14:32] You mentioned you want to hire extraordinary software engineers, and I think you’ve said before that, you have no trouble finding those people. How do you identify those people in your hiring? That they’re the extraordinary ones?
+
+Mike:
+
+[14:49] It’s usually pretty obvious. I mean, I have a good feel for how difficult stuff is. If they get 3x the, the amount done, you know, in school that I think is reasonable, then, then they’re incredible.
+
+Ryan:
+
+[15:05] On the flip side, you had this interesting quote I wrote, I wrote it down. He said, I can’t stand people who are, who aren’t really smart. It’s challenging to talk to them. How do you identify the people who aren’t smart?
+
+Mike:
+
+[15:20] Well, I mean it’s, it’s very easy. You talk to them and, and it, it rapidly, you can rapidly surface whether they’re smart or not. You know, what was your master’s thesis? What did you do? Well, how did it, how did it exactly work? Well, how did you deal with error conditions? How many processes did you have? Why didn’t you use threads? You asked them deep technical questions, you gave a talk.
+
+
+## 15:55 — One size fits none
+
+
+Ryan:
+
+[15:55] And I think there’s also a paper behind it of this idea that one size fits all database systems not optimal, one size actually fits none. And that what you really want is database solutions that target specific needs. What database offerings you see today that are one size fits all.
+
+Mike:
+
+[16:16] In 2004 when I wrote the paper, we had an academic project which was building what became streambase. And so a stream processing engine looks nothing like a relational database. And we had the gist of an idea for column stores for data warehouses, which was popularized by Vertica, looks nothing like a roast or. So here were three wildly different implementations that had no resemblance to each other.
+
+[16:49] And in each case they were an order of magnitude faster than the other guys. So it’s pretty clear that one side, you know that with those three instances you give up an order of magnitude when you’re running a database system that isn’t, that isn’t architected for your kind of stuff. I think that’s still true. I mean, I think Clickhouse is a column store. Pinecone is faster than user defined types on text based vector processing.
+
+[17:31] And so I think it’s still very much the case. And I think there’s no difficulty putting a common parser on top of multiple implementations. Postgres has so far chosen not to do that. They don’t implement a column store. And so I think they are not, they are not competitive, you know, on sizable data warehouses. They also don’t have multi node support. Again, for people with big data warehouses. That’s table stakes.
+
+[18:11] So I Think it’s just as true today as it ever was. I think that what is true is that if you want to get going, you have a database problem. You know, the answer is choose postgres. And there’s a huge programming community, all kinds of, all kinds of, you know, data type implementations. It’s free and you can find postgres talent easily and get going. And so I think it’s, it’s, it’s a great choice for lowest common denominator.
+
+[18:51] And until you’re trying to do a million transactions a second, it works just fine. Until you’re trying to support a petabyte data warehouse, I say at the low end it’s absolutely the right one, size fits all. At the low end, it’s postgres. At the high end, that’s just not true.
+
+Ryan:
+
+[19:12] GPUs, do they make available some new opportunities to optimize databases?
+
+Mike:
+
+[19:19] Probably, but I think the big challenge is that GPUs are SIMD, single instruction multi data. And that’s the anathema of indexing. And so whenever indexing is the right answer, they’re probably not a good idea. I think also you’ve got to architect them so that the, so that the bandwidth, so that the bandwidth from storage is, is not, not the bottleneck. And so if they’re an add on to the CPU as often as not, the bus connecting it to the GPU to the CPU is a bottleneck.
+
+Ryan:
+
+[20:10] Can you explain why indexing would be not as effective when there’s simd?
+
+Mike:
+
+[20:17] So let’s, let’s say I’m, I’m looking for Ryan’s, I’m looking for Ryan’s salary and I have a B tree. So you go to the root of the B tree, you find, you find the divider that has both sides of Ryan. You follow the pointer, that’s a memory access for sure. Then you do it all again and you do this like three or four times. So that doesn’t parallelize. Well, so the answer is indexing doesn’t parallelize.
+
+Ryan:
+
+[20:54] Well, you mentioned B trees when you first implemented that first version of Ingress. Did you write all of that by hand? Because I imagine there’s probably not some existing B tree library or something.
+
+Mike:
+
+[21:07] Yeah, we wrote the original version of Ingress was all written from scratch.
+
+Ryan:
+
+[21:12] What was the hardest part of that implementation?
+
+Mike:
+
+[21:16] Query optimizer.
+
+Ryan:
+
+[21:18] And why is that hard?
+
+Mike:
+
+[21:20] It’s tough. It’s just algorithmically difficult. It’s still, if you ask most any senior database programmer, what’s the hardest, hardest part, they’ll still say the optimizer MapReduce
+
+
+## 21:37 — Why he disagreed with Google
+
+
+Ryan:
+
+[21:37] came out at some point in the early 2000s and it kind of took the data world by storm. People were really impressed by it. They thought Google really knows what they’re doing. This is the best thing since sliced bread. But it seems like when I look at the literature and what you thought at the time, you kind of disagreed heavily. Why did you disagree so much with MapReduce?
+
+Mike:
+
+[22:02] Well, I think there were a lot of not very enlightened people who said, Google, Google is really smart, they must know what they’re doing. And so we’ll do whatever they say. And so they would, they would, they would engage in Hadoop or engage with Hadoop, but Hadoop is ridiculously inefficient. And so at the time, you know, others, you know, Dave DeWitt and others who were involved in our 2011 paper, we understood distributed databases and understood that you could beat the heck out of Hadoop with a distributed database system, which is basically what that 2011 paper says.
+
+[22:54] And of course it was, it’s true. And, but that wasn’t the only, that wasn’t the only thing Google was stupid about. So Google also had the opinion that eventual consistency was the right way to do concurrency control. And so that was postulated from on high by Google all during that same period of time. And it wasn’t. And all the database people said, you know, you’re out of your friggin mind. Because it doesn’t, it solves one particular kind of problem, but only.
+
+[23:39] And that very rarely occurs in practice.
+
+Ryan:
+
+[23:42] Why did they pursue eventual consistency?
+
+Mike:
+
+[23:45] Okay, well the idea is that have an east coast database and a West coast database and they’re replicas, so you want them to be the same. If you say I’m going to do a transaction, I’m going to decrement by one the number of widgets in the west coast warehouse, then I’m going to, before I commit that transaction, I’m going to update the east coast warehouse, pay a message over and back to update it.
+
+[24:14] And then to make sure everything goes well, it takes, it takes another round trip of message to make sure that both of them actually do the commit correctly. So it’s expensive to do a distributed commit. It still is. And so the idea was, well, you do the, do the west coast update, you decrease the widgets by one, you just send a message asynchronously and not in a transaction so that eventually the east coast warehouse gets decremented by one.
+
+[24:51] So meanwhile, if you’re on the East coast you, you decrement, you know, foodstuffs by one, you send an asynchronous message, eventually the west coast gets it and eventually everything settles out. So if you’re allowed to, to go below zero, then what will happen is if the east coast guy and the west coast guy simultaneously sell the last widget, then, then eventually the state of the warehouse will be minus one and somebody won’t get their widget, their widget.
+
+[25:36] And so if you’re allowed, like Amazon to say, usually ships in 24 hours, then maybe you’re allowed to oversell. But most enterprises can’t do that. And so eventual consistency just doesn’t work. So we talked a million hours ago about referential integrity. So referential integrity in a sales system is integrity constraint is stock is greater than minus one. And that fails with eventual consistency.
+
+[26:16] And so Jeff Dean final of Google finally figured that out and when they did Spanner, Spanner had a conventional transactional system. And so Google completely abandoned eventual consistency and completely abandoned MapReduce.
+
+Ryan:
+
+[26:37] So the trade offs basically correctness for performance.
+
+Mike:
+
+[26:42] So it’s performance versus data integrity. And if you don’t care about your data then you’re willing to deal with, with bad things happening.
+
+Ryan:
+
+[26:54] So did you ever talk to the Google team while they were doing those things that you thought was so wrong?
+
+Mike:
+
+[27:00] We talked to them before the 2011 paper and said why don’t we, why don’t we partner up and do some stuff? And they weren’t, they weren’t interested. So they declined.
+
+Ryan:
+
+[27:19] Have you seen other examples in other big tech companies where their databases are database solutions where you actively disagree with them, like maybe Amazon or Facebook?
+
+Mike:
+
+[27:31] Well, I gave a talk at Amazon maybe three years ago and I told them all the things I thought they were doing wrong. And I think Amazon’s problem is that they are supporting, you know, 15 different database systems and that’s about 12 too many. So, so I think they have their own culture. And I told, I, I said you’re supporting too many database systems. And at this point they haven’t chosen to retire any of them.
+
+Ryan:
+
+[28:09] Why do you say that the 15 should be 3?
+
+Mike:
+
+[28:12] Well, they’re supporting a graph based database system and it’s well understood that a graph based database system is almost never the performant option. And so if you want a graph, if you want, if you like the idea of having a user interface that deals with nodes and edges, that’s fine. Put, put a layer on top of a relational database system that gives you that user model. And so most of their database Systems, there’s some other of their database systems that better at what it does than, than it is.
+
+[28:58] And so, so the answer is you should retire. You should retire any database system that isn’t performant in, in a big enough market to justify the maintenance.
+
+
+## 29:14 — Why he chose academia over big tech
+
+
+Ryan:
+
+[29:14] You’ve influenced industry significantly from academia and my one thought that I had is what, why not work directly in industry? Or why, why do you prefer the position of being in academia and having influence in the way that you have versus just taking a job at AWS or something like that, being a very distinguished engineer there
+
+Mike:
+
+[29:43] because that gives you a boss and that gives you company rules. Limits your ability to publish, limits your ability to go talk at conferences, limits your, your ability to go, go poke at what, what various competitors are doing that they won’t tell their competitors. But mostly I really like being in startups and I, and I after the commercial version of Postgres got acquired by Informix, you know, I was working part time for Informix which was a 2000 person company and I didn’t feel like I could make a difference because it was bureaucratic and, and whatever the president wanted he got.
+
+[30:38] So I think I’m just not cut out for, I’m not cut out for politicking. I don’t do that very well and I have a hard time interacting with people I think are dumb and that again. So I guess I have some problems with big companies.
+
+
+## 30:58 — Replacing state in an OS with a DB
+
+
+Ryan:
+
+[30:58] I wanted to talk a little bit about dboss. I just thought it was a really interesting technical model. Can you explain what DBOSS is?
+
+Mike:
+
+[31:08] We started the academic project in 2019, 2020, something like that. And the gist of it was at that point Mate Zaharia, who is on the faculty at Stanford, was also one of the founders of Databricks, was the original creator of Spark. And so he said at the time Databricks basically was running people’s Spark jobs on the cloud. He said at any given time we might be orchestrating a million Spark jobs.
+
+[31:54] We have to write a scheduler that’s going to decide who to run next at scale a million. And he said there was no, we tried all the, all the schedulers written by the OS folks and they didn’t scale. So we put all the scheduling data in a postgres database and basically a postgres application was doing scheduling and then it sort of clicked that. By and large most everything you do in an operating system is managing data at scale and you should do that using database technology.
+
+[32:38] So why don’t we just replace at least the upper half of Linux with a database system. So that was the gist of the academic project and we worked on it at Berkeley and Stanford in the early, early twenties and it was, it was very successful. It clearly, it clearly worked. And in the process the Stanford folks wrote an extension to JavaScript so that you could program, you need some programming world that can, can talk to your implementation.
+
+[33:23] So if you’re doing what amounts to a programming language and you’re running on top of what amounts to an operating system, that is a database, then the obvious thing to do is put all your state in the database. And that’s exactly what they did. And so we had an innovative programming language model, an innovative operating system model. And of course then the idea was, well, can we start a company?
+
+[33:56] And so we Talked to the VCs, who to a person said, you’re dreaming if you think you’re going to displace Linux. However, this programming language stuff is really nifty. We had what amounted to extensions to JavaScript that would allow any, any program to have all of the nice features of a database system. You know, stuff was durable, you could have transactions, if it failed, you’d fail over, you know, it’s all that nifty stuff.
+
+[34:37] So we got funded to start a company in 2023 and that was DBOSS Incorporated. And we decided that that was the name of the project, since it always been the name of the project, but we were, we were basically in the programming language business. And so at the current time, DBOSS has a version of TypeScript, a version of Java, a version of Joe Go and a version of Python, which, which are basically seamless.
+
+[35:16] It runs what looks like vanilla programs in the world of the cloud. There’s every incentive for you to structure your, your, your application as a workflow. And so we decided that we would support a workflow system, period. And so the workflow that DBOSS supports in those four languages is the steps in a workflow. The individual micro ops, whatever you want to call them, are transactional workflows, are durable so that once you do a step, it’s not forgotten.
+
+[36:05] And it’s clear that we can make workflows atomic if there was a market for it, which means the whole workflow would either finish or look like it never happened. So it has very, very nice properties and is a great deal faster and a great deal easier to use than the competition. So the company is selling and innovating in this area. And so, so the idea is that you want to make state of your application persistent when you put it in the database and then it, and then you figure out how to do it fast.
+
+[36:53] And I think their business model as we were talking earlier, is very much get leaf level programmers interested. So it’s been very much tell us leaf level program or tell us what you need that we don’t have. Get it quickly and convince people to try it. And we’ve been very, very successful with others, with other startups who want to choose the best thing and we’re starting to be, to be successful with the big boys.
+
+[37:36] So it’s an interesting market and I think the key thing so far is probably 2/3 of the customers are doing agentic AI, which means that they have a large language model surrounded by a bunch of stuff that adds more signal. And so far most of agentic AI is read only, meaning you want to produce a prediction for whether Ryan is going to be a good customer or not. And so that just runs some stuff and then produces a new thing that’s given to somebody.
+
+[38:27] So basically read only, which means that you’re not actually updating Ryan’s credit rating or. And so I think fairly quickly this, the whole world is going to move to using, you know, agents to do read write applications and that’s going to make, that’s going to make them very, very databasey. And dboss does that stuff really, really well. And so you know, for instance, if you want to write an agent or two agents that move a hundred dollars from my account to your account and so you debit my account, you increment your account and these two agents have to agree to commit or you have to back everything out.
+
+[39:29] Which is to say the workflow needs to be what I called atomic, which is it all happens or it looks like it never happened. And so I think the, the demands on, in this market will escalate with, with things with people wanting stuff to be read. Right. And so I think that that will bode well for the market and bode well for DWAs.
+
+Ryan:
+
+[39:57] And this, this what’s being offered in the market today to application developers differs from the original research project where that was actually swapping out the guts of an operating system with the database. I see that. I mean that’s really cool. I never imagined replacing all the state of a, of an operating system with a database. What’s the there, there’s gotta be some trade off there.
+
+Mike:
+
+[40:22] Well, a file system written on top of a DBMS is faster than the Linux file system. The scheduling engine is competitive with other scheduling engines. You can make everything fail over so you get high availability without having to do anything else. The answer is there’s really no downside.
+
+Ryan:
+
+[40:49] Then why wouldn’t Linux incorporate that and upgrade itself with this?
+
+Mike:
+
+[40:55] You hope they would. In other words, you should keep all the device driver junk down at the bottom because there’s a lot of it and no one wants to do that and replace everything else with the database implementation.
+
+Ryan:
+
+[41:12] Is that something that you’ve mentioned to Linux people and what’s their typical reaction?
+
+Mike:
+
+[41:17] Back in the academic project when I’d mentioned that to Operating system folks, they would get very, very threatened, which is this is the database guys trying to take over their turf and I think the programming language guys ditto. Which is the way to implement the runtime for a programming environment is with the database.
+
+Ryan:
+
+[41:46] That’s, that’s interesting. I mean if it’s objectively true, then maybe it will take over.
+
+Mike:
+
+[41:52] Well, I mean it took Java 10 years to become widely accepted. I just think the time constant is substantial.
+
+
+## 42:02 — Future problems in databases
+
+
+Ryan:
+
+[42:02] I think we talked a lot about the past of databases and I’m curious your thoughts on unsolved problems in databases and what you think the future might look like.
+
+Mike:
+
+[42:13] Okay, so I think two different things that I’d like to talk about. The first one is like everyone else, three years ago we started to look at what were large language models good for. So we’ve been trying to get what’s now called text to SQL to. We’ve been, we’ve been trying to make it work on real world databases, especially real world data warehouses. So we’ve been trying the technology on four different production databases, warehouses where we’ve gotten the workload, the actual workload that’s run and you know, from the actual users using the system.
+
+[43:11] And we’ve gotten them to reverse engineer the text that corresponds to that SQL. So we have text and SQL for. We have four benchmarks.
+
+Ryan:
+
+[43:26] When you say text to SQL, you mean like a human prompting model or something? Like I would just in English that text would be, you know, everyone over
+
+Mike:
+
+[43:36] four years old tell me all the professors at MIT who won the Turing Award. And so an LLM is supposedly good at that. And so the text, the SQL benchmarks, there’s one called Spider, another one called Bird, and the, the best LLM systems are pretty good at those benchmarks, you know, like 80% accuracy or better.
+
+Ryan:
+
+[44:04] So not superhuman?
+
+Mike:
+
+[44:06] Not superhuman, but they’re pretty good. Like you would consider using them and you know like current, current leaderboard is something like 85% accuracy, which, I mean it’s getting there. You say maybe it’s not quite ready for prime time, but it’s simply, it’s certainly looks looks pretty good. Well, on our benchmarks, large language models get 0% and if you enhance them with rag and all the tricks goes to 10%.
+
+[44:41] And if you give as a prompt the from clause, in other words, all the actual tables that need to be accessed and all the actual join clauses that need to be joined, then accuracy goes to about 35%. So the definition of this stuff is not ready for prime time and not going to be for a while, if ever. So what’s the difference? Number one, data warehouse LLMs are trained on the pile. Data warehouse data is not in the pile.
+
+[45:23] And there’s an adage that if you haven’t seen the data a couple times before, you have no chance of regurgitating it. That’s number one. Number two, query complexity on Spider and Bird is maybe 10 to 20 lines of SQL real world data warehouses, it’s 100 lines of SQL complexity is bigger. Number three, the schema in Spider and Bird is clean. The table names are mnemonic, the column names are mnemonic and there’s no duplication in data warehouses.
+
+[46:08] People have materialized views all the time. It means there’s redundancy and column names are often underscore Z, upper score blah. And so they’re not mnemonic. That makes it a lot harder. And then they also have idiosyncratic data. So J term is popular thing at mit. It’s a one month term in January. Not unique to mit, but not very popular. So not in the pile. Idiosyncratic data, simple queries, schema.
+
+[46:53] Schema is a mess, make it not work. And those are true of every data warehouse I know of. And so I think the technology simply doesn’t work and isn’t going to work anytime soon. So we’ve been. So what do you do? Well, first of all, we published our benchmark, it’s a thing called Beaver, which is an anonymized and abstracted version of these four data warehouses. And so if you think you’re really good at doing text to SQL, try a real benchmark, not a fake one.
+
+[47:36] So number two, borrowing from what I just said, if you don’t have all the join terms and you don’t have the from clause, you’re toast. What’s more, if you don’t break down the query into simpler pieces, you’re toast. So that says to me that you want to give your retrieval system simpler pieces which include the from clause include join terms. That’s number one. Number two, the minute you want to talk to two different structured databases like your data warehouse and your CRM system, then it’s pretty clear to me that doing a structured data join using an LLM is a bad idea.
+
+[48:37] It’s just you’re much better off leaving them as tables and doing a join in SQL. So our point of view is we are trying out turning everything into tables. You know, we’re, we’re working with the Department of Transportation in the city of Munich, Germany and they have six people full time who are answering citizens complaints queries which are of the form how come I, I don’t have enough time to cross this intersection next to my house before the light turns?
+
+[49:18] All kinds of stuff. How come the trolley doesn’t stop for enough time for me to get on the trolley? You know, it’s how come the trolley doesn’t come more than once an hour? I mean it’s all this stuff. Their database is the trolley schedule, that’s SQL. The light sequencing, that’s SQL. The intersections, that’s cad. The federal, you know, country of Germany regulations of this stuff, that’s text.
+
+[49:56] City of Munich regulations for this stuff, which is text. So you got to join SQL, SQL, cad, text and text. So our point of view is turn it all into SQL, all into tables and do a join with what amounts to a query optimizer. So that’s what we’re working on. I think other people will have other ideas, but I think it’s extremely fertile area because people really want to do it. So that’s number one. Number two, we talked earlier about agentic AI.
+
+[50:33] The minute this becomes read write, it’s a distributed database problem and you want atomicity, consistency, all that stuff. I think a very interesting area.
+
+Ryan:
+
+[50:53] zero percent right now. What percent is human? If you took someone who really knows SQL and what would they score like the average human?
+
+Mike:
+
+[51:03] So once you disambiguate the text, a knowledgeable SQL user programmer with the schema will do, will get very high accuracy.
+
+Ryan:
+
+[51:15] Okay, like 90% or something at least. Okay, okay. Wow. I’m surprised that the LLM scores so lowly on this kind of benchmark. Maybe when this goes out, someone who works at Anthropic will reach out to you or something and say let’s.
+
+Mike:
+
+[51:31] I’d love to, I’d love to find out because I mean it’s a terrific
+
+
+## 51:36 — Technical book recommendations to learn databases
+
+
+Ryan:
+
+[51:36] success story for people who want to deeply understand databases. And they’re looking for some material to study. Is there a book that you recommend that’s a top technical book to learn?
+
+Mike:
+
+[51:49] Databases, papers in the literature. I think Joey Hellerstein and I published a red book, what’s called the red book, which is called Readings and Database Systems. It’s now eight years old. I mean, I think that that would be a great set of readings for eight years ago. And beyond that, papers, popular papers from the literature.
+
+
+## 52:20 — Advice for younger self
+
+
+Ryan:
+
+[52:20] If you could go back to yourself when you just graduated, give yourself some advice, knowing what you know today, what would you say?
+
+Mike:
+
+[52:27] Back when I first took the job at Berkeley, without thinking about it much, we said, let’s write a database system. And we, we knew nothing about databases, nothing about implementations. We were not skilled programmers like Bill Joy. So starting off doing something that was that crazy was really pretty crazy. And you effort and you make stuff work and you learn along the way. And so I think the answer is think outside the box, think crazy thoughts and try and do them.
+
+[53:11] And I think to me it’s not at all obvious. The better question is if you were starting out today, what would you major in? Because I think computer science may well not be a growth industry going forward. And I’m not sure I would recommend 18 year olds to major in computer science. I think healthcare and the building trades are, are safe bets and everything else looks much riskier. If, if you’re about to get your PhD and are trying to decide what to do, then I think life is pretty easy.
+
+[53:55] You know, take, take the most prestigious job you can get and find a mentor who’s willing to help you and then pick some area that isn’t, you know, like our, our stuff, you know, which is called Rubicon, is definitely not going with the flow. So choose something that’s not, that isn’t going with the flow and try and make it work. Both my wife and I said, follow your passion, somehow the money will work out.
+
+[54:31] And I don’t believe that for a minute. But, but I think that’s what you have to tell your kids and your grandkids.
+
+Ryan:
+
+[54:38] If you don’t believe that, then why do you have to tell them that?
+
+Mike:
+
+[54:42] My wife is a good example. So she has a master’s degree in computer science, undergraduate degree in computer science, and she wanted to be a teacher, K12 teacher. And her parents said, you can’t do that, it doesn’t pay enough money. And so I think, I don’t think she, ever since that time has regretted that decision. She wasn’t passionate about doing computer science. It was simply a trade. And so I think find something you’re passionate about and and you will.
+
+[55:22] You know, either you won’t starve, you may not make a lot of money, but I think chances are you’ll be happier than if you do something you’re not passionate about. Because I think a lot of people I know view their job as simply a job and life is what happens between 5pm and 8am I don’t feel that way at all. I really like what I do. Wouldn’t matter whether I made a lot of money or didn’t.

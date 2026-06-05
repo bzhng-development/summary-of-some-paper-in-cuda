@@ -1,0 +1,49 @@
+<sup>Source: <https://www.developing.dev/p/21x-hackathon-winner-turned-college></sup>
+
+Here are the takeaways from this Jia Chen interview (21x hackathon winner turned college dropout, co-founder of Sprint.dev):
+
+**Discovering hackathons and the drive to win**
+
+Jia Chen, who goes by Audrey, stumbled into hackathons almost by accident. A friend asked her to join one during her freshman year, and despite having no idea what a hackathon was, she said yes. That first experience was transformative—not because she won, but because she saw what was possible. She went on to win 21 hackathons over the next few years, a streak that began when she realized winning wasn't about being the most technically brilliant person in the room. It was about understanding the *game*.
+
+Her first win came at a small, local hackathon where she built a project solo—a simple web app that helped students find study groups. She describes the moment as "addictive," the rush of building something from nothing in 24 hours and having judges recognize it. From there, she started competing almost every weekend, traveling to larger events and refining her approach.
+
+**The hackathon strategy playbook**
+
+Most teams lose hackathons for predictable reasons, and Audrey learned to avoid every one of them. The first mistake is team composition. She picks teammates based on **skills and drive, not credentials**. "I've won with community college students who had way less experience but a stronger will to win," she says. She looks at past projects, GitHub activity, and—most importantly—whether someone has the hunger to push through exhaustion at 3 a.m. when things break. A stacked resume means nothing if the person gives up when the demo is due in four hours. She's done hackathons solo and won, but she says a strong team is always better—the key is finding people who complement your skills and share your intensity.
+
+The second mistake is how teams spend their judge interaction time. Audrey keeps her formal presentation extremely short—often under two minutes—and spends the bulk of her five-to-seven-minute slot getting judges to actually *use* the project. "Many strong teams lose by wasting time bragging about their tech stack," she explains. Judges see dozens of projects; they don't remember another React slide deck. They remember the team that handed them a phone and said "try it." She makes sure the demo is live, polished enough to feel real, and reveals the complexity through interaction rather than explanation. Ryan notes how counterintuitive this is—most engineers want to explain their clever architecture. Audrey's insight is that judges infer technical sophistication from a seamless experience, not from a diagram.
+
+The third mistake is the classic frontend/backend split. Dividing the team into two silos that "merge later" almost always fails, she warns. The frontend team builds a beautiful shell that expects API endpoints that don't exist; the backend team builds endpoints that return data the frontend can't consume. The merge happens with two hours to go and nothing works. Her rule: **connect frontend and backend early and iterate together**. Get a single end-to-end flow working in the first few hours, even if it's ugly, then build outward. This also forces the team to make scope decisions together rather than independently overbuilding features that never ship.
+
+**What hackathons actually give you**
+
+Beyond the obvious resume line, Audrey sees hackathons as a **fast track to networking** that most students underuse. Recruiters attend larger hackathons specifically looking for future interns who can build—they watch which teams actually ship, which students stay up debugging, which ones can explain their work clearly. She's seen multiple people get fast-tracked through internship applications because a recruiter remembered their hackathon project. "It's a signal that's hard to get from a GPA or a university name," she says—a recruiter who saw you build something real in 24 hours has a much stronger signal than one who read your cover letter.
+
+Hackathons also trained her in something she now considers her core advantage: **agency**. She defines this as the ability to take action and think on your feet without waiting for permission or perfect information. Every hackathon is a compressed lesson in decision-making under uncertainty—what to build, what to cut, when to pivot. This mindset of "get it done and move on" bled into everything else she did.
+
+**Standing out from a non-target school**
+
+Audrey attended a school without a strong tech brand, which meant she couldn't rely on the university's name to open doors. Her approach was straightforward: **if your school isn't an outlier, make sure you are**. She became what she calls a "decision maker"—someone who leads rather than follows. She took leadership roles in clubs, drove projects that affected hundreds of students, and started building a personal brand through content creation.
+
+The personal brand piece happened almost accidentally. A friend encouraged her to start vlogging her hackathon experiences, and she began posting short, raw videos of her weekends—traveling to events, building through the night, the chaos of demo time. She doesn't plan most of her content, focusing instead on authenticity. "I'm not a content creator first," she says, "I just document what I'm already doing." But that documentation became a differentiator. When recruiters or founders looked her up, they didn't just see a resume—they saw evidence of consistent output, a body of work that demonstrated exactly what she could do. The audience size didn't matter; the *existence* of the content did.
+
+Ryan asks whether she thinks college itself is important. Audrey is measured: college is "good at providing structure if you don't know what to learn," but it's not necessary. In her experience, it was helpful—the structured curriculum gave her initial direction—but it also dulled her creativity. "I was learning at the pace of the syllabus, not at the pace of my curiosity," she says. Hackathons and side projects became the outlet for the faster, messier learning she craved.
+
+**The decision to drop out**
+
+By the time she was winning hackathons consistently and building Sprint.dev—a platform to help developers manage their sprints more effectively—college started feeling like an anchor. The startup demanded her full attention, and classes felt like a distraction from the work that actually mattered to her. But she didn't drop out impulsively. She set **preconditions**: she needed to have built something real, tested it with users, validated that the idea had legs, and established a network that could support raising investment if needed. Only when those boxes were checked did she leave.
+
+Her advice to anyone considering the same path: "Don't just drop out. Build projects, test ideas, create opportunities first." Dropping out without momentum is just quitting; dropping out because something is pulling you so hard you can't do both is a career move. She emphasizes evaluating your technical skills honestly, understanding whether you have the relationships to raise money or recruit co-founders, and having enough runway—financial and psychological—to survive the uncertainty.
+
+**Moving fast without burning out**
+
+Audrey believes deeply in moving quickly and continuously shipping, a philosophy she traces directly back to hackathon culture—the 24-hour deadline forces you to make decisions and ship something, anything, rather than perfecting nothing. But she simultaneously insists on balance, which sounds contradictory. Her resolution: sprint hard during focused work blocks, then genuinely disconnect. "Hackathons teach you that you can't sustain 24 hours of work indefinitely," she says. "You collapse afterward." She applies that rhythm to startup life—periods of intense output followed by deliberate recovery. Burnout isn't a badge of honor; it's a failure of pacing.
+
+**Staying open to serendipity**
+
+Running through her entire story is a thread of openness—saying yes to the first hackathon she didn't understand, starting content creation because a friend suggested it, talking to strangers at events who later became co-founders or investors. "Be open to anything that brings you a connection or teaches you something new," she says, "even if it might not seem immediately beneficial." She didn't start vlogging to build a personal brand; she started because a friend pushed her. She didn't join hackathons to get recruited; she joined because it sounded fun. The downstream benefits—the network, the credibility, the skills—were side effects of showing up consistently and staying curious.
+
+---
+
+Audrey's success is a case study in her own **agency** doctrine: she treated every constraint—a non-target school, a short hackathon clock, the lack of a formal technical network—as a prompt to act rather than an excuse to wait. Her hackathon playbook (**skills and drive, not credentials**; **connect frontend and backend early**; **make judges use the project**) is a microcosm of how she approaches everything, compressing decision-making into the smallest possible window and optimizing for finished work over finished explanations. The **preconditions** she set before dropping out are the same pattern applied at larger scale—don't leap without evidence, but don't let a structure you've outgrown dull your curiosity. Beneath all of it is her insistence that **being a "decision maker"** is a learnable identity, not a personality trait, and that documenting the process authentically creates a body of proof that no resume can match.

@@ -1,0 +1,17 @@
+Here are the takeaways from this Ryan Peterman reflection on writing well at work (focuses on developing taste as the prerequisite for effective workplace writing):
+
+**The prerequisite: become your own best critic**
+
+Ryan frames the whole problem around a single insight that emerged across multiple interviews with Senior Staff+ engineers: to write well, you need to be your own critic first. He recalls chatting with a Senior Staff Engineer (IC7) at Meta and agreeing on exactly this point, then seeing the same opinion reinforced by ex-Meta Distinguished Engineer Philip Su (IC9), who put it plainly: "To write well, you need to read well." Knowing what "good" writing is — developing your own taste — is the key that unlocks everything else. Without that internal calibration, you cannot reliably improve your own output because you have no standard against which to judge it.
+
+**Read well — find the right signal in your org**
+
+The first concrete step is to study the writing of more senior engineers within your organization. Ryan suggests looking at influential docs, posts, and messages written by more senior folks, and using engagement as a signal for what is influential — things like Slack reactions, replies, comments, and readership. This anchors taste development in the specific audience and norms of your actual workplace, rather than generic writing advice. Writing is subjective, so what counts as "good" depends entirely on your target audience; studying what resonates in your own org is the most direct path.
+
+He also recommends asking people who already have good taste for examples. "Your management chain and senior IC leadership probably have the best sense of what good writing looks like in your org." These are the people whose judgment has already been calibrated by years of seeing what works and what doesn't, so borrowing their taste accelerates the process. Ryan mentions that he plans to eventually compile a list of quality pieces of content and explain why they are good, and points to his own writing sorted by engagement as a quick reference for what resonates with a software engineering audience.
+
+**Reverse engineer and test your theories**
+
+Once you have a collection of quality examples, the work shifts to analysis: study them and identify what parts resonate for people. Discuss the writing with others who write well. The goal is to generate theories on what made the writing good — specific, testable ideas about structure, tone, brevity, argumentation, or any other dimension that seems to drive effectiveness. Then apply those theories to your own writing, adjusting your approach. Get feedback on your writing, ideally from people who write well, and see if the changes make a difference. Over time, this cycle of observation, hypothesis, application, and feedback makes your writing "good" for that audience.
+
+"It sounds simple and obvious because it is." The non-trivial takeaway, Ryan argues, is to think critically about quality and how to find what is "good." That is the missing piece for most people who lack taste — they skip the deliberate study of exemplars and jump straight to trying to write well without a calibrated internal standard. "We all have the ability to learn good taste, you just need to make sure you're learning from the right sources." The skill is not innate or mysterious; it is trainable, but only if you are deliberate about curating the inputs you learn from.

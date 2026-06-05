@@ -1,0 +1,461 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/3-important-software-eng-skills-nobody",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 138121532,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-10-20T13:01:20.462Z",
+  "updated_at": "2024-01-08T06:31:34.880Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "3-important-software-eng-skills-nobody",
+  "social_title": null,
+  "subtitle": "",
+  "teaser_post_eligible": true,
+  "title": "Top 3 SWE Skills I Picked Up On The Job",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 9,
+  "reactions": {
+    "❤": 126
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "how-some-engineers-always-lead",
+  "next_post_slug": "6-software-engineering-templates",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/3545093a-9e84-4307-9cb7-4e3da43ccd29_449x201.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "When I look back on my career, I realize I’ve learned most of what I’ve needed on the job. Most of this learning came through observation. I worked closely with stronger engineers, saw what they did, and picked up on what worked well.",
+  "body_html": "<p>👋<em> Hi, this is&nbsp;<a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a>&nbsp;with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 25,000 readers this week </em>🙏<em> </em>🎉</p><p><em>This week I wrote the post I wish I had read at the start of my career. If you find it helpful, please share it with your friends and coworkers. Enjoy!</em></p><div><hr></div><p>When I look back on my career, I realize I’ve learned most of what I needed on the job. Most of this learning came through observation. I worked closely with stronger engineers, saw what they did, and picked up on what worked well.</p><p>However, learning this way is much slower than it should be. Rather than having someone walk you through it, you learn behaviors by seeing a ton of examples. Once you’ve seen enough, you start to reverse engineer their decision-making to develop the skills inside their “black box”.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!RRCO!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fee7989ae-0317-407e-8671-3b1cddf1674a_449x201.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!RRCO!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fee7989ae-0317-407e-8671-3b1cddf1674a_449x201.png 424w, https://substackcdn.com/image/fetch/$s_!RRCO!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fee7989ae-0317-407e-8671-3b1cddf1674a_449x201.png 848w, https://substackcdn.com/image/fetch/$s_!RRCO!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fee7989ae-0317-407e-8671-3b1cddf1674a_449x201.png 1272w, https://substackcdn.com/image/fetch/$s_!RRCO!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fee7989ae-0317-407e-8671-3b1cddf1674a_449x201.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!RRCO!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fee7989ae-0317-407e-8671-3b1cddf1674a_449x201.png\" width=\"449\" height=\"201\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/ee7989ae-0317-407e-8671-3b1cddf1674a_449x201.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:201,&quot;width&quot;:449,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:63499,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!RRCO!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fee7989ae-0317-407e-8671-3b1cddf1674a_449x201.png 424w, https://substackcdn.com/image/fetch/$s_!RRCO!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fee7989ae-0317-407e-8671-3b1cddf1674a_449x201.png 848w, https://substackcdn.com/image/fetch/$s_!RRCO!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fee7989ae-0317-407e-8671-3b1cddf1674a_449x201.png 1272w, https://substackcdn.com/image/fetch/$s_!RRCO!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fee7989ae-0317-407e-8671-3b1cddf1674a_449x201.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div></div></div></a><figcaption class=\"image-caption\">Trying to reverse engineer the skill in the black box is slow</figcaption></figure></div><p>My goal with this article is to explain what is in the “black box” for three important skills software engineers need and give you some tactics on how you can improve faster. </p><h3>1) Code Review</h3><p>I didn’t review any code when I first started working. I thought I didn’t know enough to add anything helpful. I was later told that I was expected to review code so I started approving code changes I knew nothing about. I let some bugs into production and even had someone ask me why I approved their code.</p><p>For the basics of how to review code, <a href=\"https://google.github.io/eng-practices/review/reviewer/\">this resource from Google</a> explains it better than I can. If you’re strapped for time, I’d recommend you focus on just these two bits:</p><ol><li><p><a href=\"https://google.github.io/eng-practices/review/reviewer/looking-for.html\">What to look for in a code review</a> - Great list that covers the types of feedback to give and why.</p></li><li><p><a href=\"https://google.github.io/eng-practices/review/reviewer/navigate.html\">Navigating a change</a> - A strategy for reviewing code changes.</p></li></ol><p>Starting to review code can be intimidating if you’re new to the codebase. <strong>To get started, you can do “dry-run” reviews where you review the code and ask questions, but don’t approve it unless you’re certain.</strong> This lets you learn and provide valuable feedback without any risk.</p><p>When I first started reviewing code, I realized I didn’t have much feedback to give. After I finished the <a href=\"https://www.developing.dev/p/speedrunning-guide-l3-l4\">pipeline rewrite that got me promoted to Mid-level (L4)</a> it became much easier to contribute to code reviews. If at first you don’t have much to add, don’t worry since that will change after you build a few features.</p><h3>2) Influence: How To Sell Your Projects</h3><p>I’ve never had someone sit me down and teach me how to influence. I figured it out by watching others and reading resources on my own time. The gist of how to do this can be summarized in this quote:</p><blockquote><p><em>“The only way on earth to influence other people is to talk about what they want and show them how to get it” - Dale Carnegie</em></p></blockquote><p>To learn this skill fast, think critically about what it is that people and teams want. This is often captured by the team’s goals and strategy. With this understanding, tailor your communication around their goals. <strong>Explain the benefit of your projects in terms of how they move the team’s goal metrics.</strong></p><p>For example, in <a href=\"https://www.developing.dev/p/speedrunning-guide-mid-level-l4-senior\">my promotion to Senior (L5)</a>, I had to get an ads team to prioritize video performance wins. At first, I got them to invest a little by explaining the impact in terms of creation reliability. This interested them since their team was suffering from operational burdens from low reliability. </p><p>After we <a href=\"https://about.instagram.com/blog/engineering/making-instagram-video-ads-performant\">landed our initial wins</a>, we saw unexpectedly large wins in their team’s topline goaling metric. From that point forward, I talked mostly about that and ways to improve it even more. This significantly increased their level of investment which led to a collaboration for several halves.</p><p>If you want to learn more, you can read <a href=\"https://www.amazon.com/How-Win-Friends-Influence-People/dp/0671027034\">“How To Win Friends And Influence People”</a>. It covers the essentials of how to influence:</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!-bvw!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!-bvw!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic 424w, https://substackcdn.com/image/fetch/$s_!-bvw!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic 848w, https://substackcdn.com/image/fetch/$s_!-bvw!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic 1272w, https://substackcdn.com/image/fetch/$s_!-bvw!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!-bvw!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic\" width=\"249\" height=\"331.9429945054945\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:1941,&quot;width&quot;:1456,&quot;resizeWidth&quot;:249,&quot;bytes&quot;:null,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!-bvw!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic 424w, https://substackcdn.com/image/fetch/$s_!-bvw!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic 848w, https://substackcdn.com/image/fetch/$s_!-bvw!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic 1272w, https://substackcdn.com/image/fetch/$s_!-bvw!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">My worn copy my Dad gave me.</figcaption></figure></div><h3>3) Work Communication</h3><p>The key to good communication is to <strong>know your audience</strong>. Your message needs to be useful and meaningful for your audience to be effective. Imagine you are giving project updates to three different audiences, here’s how your message might differ:</p><ol><li><p><strong>To your engineering collaborators</strong> - In communication with engineers working directly on your project it’s useful to be detailed and speak about the specifics of the code.</p></li><li><p><strong>To a general engineering audience</strong> - If you’re speaking about your project in your team’s all-hands, you might talk more about the high-level engineering plan and next steps rather than diving into the details of the code.</p></li><li><p><strong>To your cross-functional partners</strong> - Your updates won’t be effective if you dive deep into the technical details if you’re speaking to your PM for instance. Tailor your message around how high-level updates affect the user experience.</p></li></ol><p>Knowing your audience is common advice though. At work, one difference is that <strong>effective communication gets the point across in as few words as possible</strong>. Here are a few tactics that have helped me hone my message:</p><ol><li><p>If you can remove a word and preserve your message, remove it.</p></li><li><p>If you have a longer message, give your audience the main details in 1-2 lines at the beginning before diving in.</p></li><li><p>Use short, punchy sentences and don’t hesitate to structure your thoughts with bullets (as an example, see the <a href=\"https://www.developing.dev/p/faang-career-ladder-mid-level-l4\">“Team-level influence” section here</a>)</p></li></ol><p>If you want to learn this skill faster, <strong>communicate a lot and get feedback from others who are good at communication</strong>. For further learning, here are some resources I’ve used:</p><ol><li><p>Read <a href=\"https://www.amazon.com/Writing-Well-Classic-Guide-Nonfiction/dp/0060891548\">“On Writing Well”</a> - the first part on “Principles” is full of great advice.</p></li><li><p>Attend your local <a href=\"https://www.toastmasters.org/\">Toastmasters</a> - It’s a public speaking club that provides a supportive environment to practice in.</p></li></ol><div><hr></div><p>These skills are critical for growth to senior levels (<a href=\"https://www.developing.dev/p/faang-career-ladder-mid-level-l4\">see FAANG Senior expectations here</a>):</p><ol><li><p>Code review - Helps you grow others and influence your team’s code quality.</p></li><li><p>Influence &amp; Communication - mandatory skills to have team-level impact.</p></li></ol><p>If you found this useful, <strong>please share it with a friend and consider subscribing if you haven’t already</strong>. Also, if you have feedback about how I can make the content better, <a href=\"https://forms.gle/TDAiBbh8UAxgXgjS6\">please share it here</a> 🙏</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 25000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 25,000 readers this week 🙏 🎉",
+  "wordcount": 1059,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "5a4683e9-1121-4159-b2d7-6ca77779173f",
+      "publication_id": 1340878,
+      "name": "Career",
+      "slug": "career",
+      "hidden": false
+    },
+    {
+      "id": "7944911a-7d9b-49e5-a951-df44d652b086",
+      "publication_id": 1340878,
+      "name": "Soft Skills",
+      "slug": "soft-skills",
+      "hidden": false
+    },
+    {
+      "id": "874981f8-464b-461c-9d3e-1d42147927a0",
+      "publication_id": 1340878,
+      "name": "Communication",
+      "slug": "communication",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        127.5,
+        127.5,
+        127.5
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        66.3,
+        66.3,
+        66.3
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        188.7,
+        188.7,
+        188.7
+      ],
+      "population": 0
+    },
+    "Muted": {
+      "rgb": [
+        131,
+        131,
+        131
+      ],
+      "population": 166
+    },
+    "DarkMuted": {
+      "rgb": [
+        55,
+        55,
+        55
+      ],
+      "population": 301
+    },
+    "LightMuted": {
+      "rgb": [
+        188,
+        188,
+        188
+      ],
+      "population": 511
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 126,
+  "comment_count": 11,
+  "child_comment_count": 6,
+  "audio_items": [
+    {
+      "post_id": 138121532,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/138121532/tts/f070c306-55ca-46e5-8e63-9e1bf65f4de4/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 42188893,
+      "body": "Number 3 is too relatable. In my experience its the one that the majority of software engineers 1-4 years into their career can see the most growth (and fruits) of improving. Definitely was the case for me, and still is to some extent. I have to pull back my tendencies",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Number 3 is too relatable. In my experience its the one that the majority of software engineers 1-4 years into their career can see the most growth (and fruits) of improving. Definitely was the case for me, and still is to some extent. I have to pull back my tendencies"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 138121532,
+      "user_id": 58854493,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-10-20T13:23:30.562Z",
+      "edited_at": "2023-10-20T13:23:47.624Z",
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Jordan Cutler",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/670bb162-5a63-4fd2-8253-f98c28d446a7_1168x1168.jpeg",
+      "handle": "jordancutler",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 3
+      },
+      "reaction_count": 3,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "jordancutler",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "High Growth Engineer",
+          "id": 1504485,
+          "base_url": "https://read.highgrowthengineer.com"
+        }
+      },
+      "user_bestseller_tier": 100,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": 100,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "bestseller",
+          "tier": 100
+        },
+        "subscriber": null
+      },
+      "score": 8,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    },
+    {
+      "id": 42642383,
+      "body": "Code reviews are difficult.\n\nI did a course by Curtis Einsmann, that one taught me so much.\n\nIt's scary how there are so little resources out there for how to do code reviews.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Code reviews are difficult."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I did a course by Curtis Einsmann, that one taught me so much."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "It's scary how there are so little resources out there for how to do code reviews."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 138121532,
+      "user_id": 70741339,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-10-28T10:08:27.306Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Tiger Abrodi",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/a6147c0a-6f1f-45e8-bf11-a22e4d0591a5_2389x2523.jpeg",
+      "handle": "tigerabrodi",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "tigerabrodi",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Saiyan Growth Letter",
+          "id": 1755946,
+          "base_url": "https://www.saiyangrowthletter.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

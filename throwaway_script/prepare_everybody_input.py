@@ -62,12 +62,18 @@ def fetch(arxiv_id: str, url: str | None) -> tuple[str, str | None, str | None]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--output", type=Path, default=Path("local_data/regen_input_everybody.jsonl"))
-    ap.add_argument("--cached", type=Path, nargs="*",
-                    default=[Path("local_data/regen_input_FULL.jsonl"),
-                             Path("local_data/regen_input_interested_v3.jsonl"),
-                             Path("local_data/regen_input_interested.jsonl"),
-                             Path("local_data/regen_input_interested_v2.jsonl"),
-                             Path("local_data/regen_input_company.jsonl")])
+    ap.add_argument(
+        "--cached",
+        type=Path,
+        nargs="*",
+        default=[
+            Path("local_data/regen_input_FULL.jsonl"),
+            Path("local_data/regen_input_interested_v3.jsonl"),
+            Path("local_data/regen_input_interested.jsonl"),
+            Path("local_data/regen_input_interested_v2.jsonl"),
+            Path("local_data/regen_input_company.jsonl"),
+        ],
+    )
     ap.add_argument("--workers", type=int, default=24)
     ap.add_argument("--limit", type=int, default=0)
     args = ap.parse_args()
@@ -111,7 +117,7 @@ def main() -> int:
                 continue
             try:
                 done.add(json.loads(line)["arxiv_id"])
-            except (json.JSONDecodeError, KeyError):
+            except json.JSONDecodeError, KeyError:
                 continue
         logger.info("resume: {} already in output", len(done))
 
@@ -157,12 +163,18 @@ def main() -> int:
                 if i % 50 == 0 or i == len(to_fetch):
                     rate = i / max(time.perf_counter() - t0, 1e-3)
                     eta = (len(to_fetch) - i) / max(rate, 1e-3) / 60
-                    logger.info("progress: {}/{}  ok={}  fail={}  rate={:.1f}/s  eta={:.1f}min",
-                                i, len(to_fetch), n_ok, n_fail, rate, eta)
+                    logger.info(
+                        "progress: {}/{}  ok={}  fail={}  rate={:.1f}/s  eta={:.1f}min",
+                        i,
+                        len(to_fetch),
+                        n_ok,
+                        n_fail,
+                        rate,
+                        eta,
+                    )
 
     logger.info("done. output: {}", args.output)
-    logger.info("final tally: cached={}, fetched_ok={}, fetch_failures={}",
-                n_cached_written, n_ok, n_fail)
+    logger.info("final tally: cached={}, fetched_ok={}, fetch_failures={}", n_cached_written, n_ok, n_fail)
     return 0
 
 

@@ -36,7 +36,6 @@ import asyncio
 import json
 import re
 import sys
-import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -59,7 +58,7 @@ def _valid_arxiv_id(aid: str) -> bool:
     try:
         yy = int(aid[:2])
         mm = int(aid[2:4])
-    except (ValueError, IndexError):
+    except ValueError, IndexError:
         return False
     if not (1 <= mm <= 12):
         return False
@@ -168,9 +167,7 @@ ORGS: tuple[OrgPub, ...] = (
         primary_url="https://www.microsoft.com/en-us/research/publications/",
         hf_orgs=("microsoft",),
         mode="sitemap",
-        sitemap_urls=(
-            "https://www.microsoft.com/en-us/research/msr-research-item-sitemap.xml",
-        ),
+        sitemap_urls=("https://www.microsoft.com/en-us/research/msr-research-item-sitemap.xml",),
         paper_link_must_contain="/research/publication/",
         max_paper_links=300,  # cap; sitemap has 1000+ which would be too slow
     ),
@@ -440,8 +437,9 @@ ORGS: tuple[OrgPub, ...] = (
 # ------------------------------------------------------------- scroll utilities
 
 
-async def autoscroll(page: Page, max_scrolls: int = 60, dwell_ms: int = 800,
-                     load_more_selectors: tuple[str, ...] = ()) -> int:
+async def autoscroll(
+    page: Page, max_scrolls: int = 60, dwell_ms: int = 800, load_more_selectors: tuple[str, ...] = ()
+) -> int:
     """Scroll-to-exhaustion. Returns # iterations executed.
 
     Guard: if a click navigates the page to a different URL, navigate
@@ -610,8 +608,9 @@ async def dismiss_cookies(page: Page) -> None:
 # ------------------------------------------------------- per-paper hop helpers
 
 
-async def collect_paper_links(page: Page, selector: str, must_contain: Optional[str],
-                              must_not_contain: tuple[str, ...] = ()) -> list[str]:
+async def collect_paper_links(
+    page: Page, selector: str, must_contain: Optional[str], must_not_contain: tuple[str, ...] = ()
+) -> list[str]:
     try:
         hrefs = await page.eval_on_selector_all(selector, "nodes => nodes.map(n => n.href)")
     except Exception:
@@ -658,8 +657,7 @@ async def harvest_per_paper_loop(page: Page, hrefs: list[str]) -> dict[str, str]
             else:
                 all_ids.update(ids)
         if (i + 1) % 25 == 0:
-            logger.info("    per-paper progress: {}/{} ({} total ids)",
-                        i + 1, len(hrefs), len(all_ids))
+            logger.info("    per-paper progress: {}/{} ({} total ids)", i + 1, len(hrefs), len(all_ids))
     return all_ids
 
 
@@ -677,7 +675,8 @@ async def scrape_simple(page: Page, org: OrgPub) -> dict[str, str]:
             pass
     await dismiss_cookies(page)
     iters = await autoscroll(
-        page, max_scrolls=org.max_scrolls,
+        page,
+        max_scrolls=org.max_scrolls,
         dwell_ms=org.scroll_dwell_ms,
         load_more_selectors=org.load_more_selectors,
     )
@@ -687,8 +686,10 @@ async def scrape_simple(page: Page, org: OrgPub) -> dict[str, str]:
     # If configured, follow per-paper links and union.
     if org.follow_paper_links and org.paper_link_selector:
         hrefs = await collect_paper_links(
-            page, org.paper_link_selector,
-            org.paper_link_must_contain, org.paper_link_must_not_contain,
+            page,
+            org.paper_link_selector,
+            org.paper_link_must_contain,
+            org.paper_link_must_not_contain,
         )
         hrefs = hrefs[: org.max_paper_links]
         logger.info("  following {} per-paper links", len(hrefs))
@@ -715,18 +716,18 @@ async def scrape_paginated(page: Page, org: OrgPub) -> dict[str, str]:
             except PWTimeoutError:
                 pass
         await page.wait_for_timeout(1000)
-        await autoscroll(page, max_scrolls=20, dwell_ms=600,
-                         load_more_selectors=org.load_more_selectors)
+        await autoscroll(page, max_scrolls=20, dwell_ms=600, load_more_selectors=org.load_more_selectors)
         ids = await harvest_arxiv_from_page(page)
         all_ids.update(ids)
         if org.follow_paper_links and org.paper_link_selector:
             hrefs = await collect_paper_links(
-                page, org.paper_link_selector,
-                org.paper_link_must_contain, org.paper_link_must_not_contain,
+                page,
+                org.paper_link_selector,
+                org.paper_link_must_contain,
+                org.paper_link_must_not_contain,
             )
             paper_hrefs.extend(hrefs)
-        logger.info("  page {}: +{} ids, total {} ids / {} hrefs",
-                    p, len(ids), len(all_ids), len(paper_hrefs))
+        logger.info("  page {}: +{} ids, total {} ids / {} hrefs", p, len(ids), len(all_ids), len(paper_hrefs))
 
     if org.follow_paper_links and paper_hrefs:
         paper_hrefs = list(dict.fromkeys(paper_hrefs))[: org.max_paper_links]
@@ -736,8 +737,9 @@ async def scrape_paginated(page: Page, org: OrgPub) -> dict[str, str]:
     return all_ids
 
 
-async def fetch_sitemap_urls(client: httpx.AsyncClient, sitemap_urls: list[str],
-                              must_contain: Optional[str]) -> list[str]:
+async def fetch_sitemap_urls(
+    client: httpx.AsyncClient, sitemap_urls: list[str], must_contain: Optional[str]
+) -> list[str]:
     """Fetch each sitemap.xml via httpx and extract <loc>...</loc> URLs.
 
     Playwright's page.content() returns empty for some XML responses
@@ -809,8 +811,9 @@ async def scrape_primary(page: Page, org: OrgPub, http_client: httpx.AsyncClient
 # ----------------------------------------- HF model-card scraper (the real one)
 
 
-async def hf_list_models(client: httpx.AsyncClient, author: str, limit: int = 500,
-                          max_429_retries: int = 4) -> list[str]:
+async def hf_list_models(
+    client: httpx.AsyncClient, author: str, limit: int = 500, max_429_retries: int = 4
+) -> list[str]:
     """Return model IDs for an HF org via the public /api/models endpoint."""
     out: list[str] = []
     params = {"author": author, "limit": limit, "full": "false"}
@@ -822,8 +825,13 @@ async def hf_list_models(client: httpx.AsyncClient, author: str, limit: int = 50
             return out
         if r.status_code == 429:
             wait_s = 8 + attempt * 8
-            logger.warning("  hf models api 429 for {}, backing off {}s (attempt {}/{})",
-                           author, wait_s, attempt + 1, max_429_retries + 1)
+            logger.warning(
+                "  hf models api 429 for {}, backing off {}s (attempt {}/{})",
+                author,
+                wait_s,
+                attempt + 1,
+                max_429_retries + 1,
+            )
             await asyncio.sleep(wait_s)
             continue
         if r.status_code >= 400:
@@ -909,8 +917,9 @@ async def hf_fetch_model_card_metadata(client: httpx.AsyncClient, model_id: str)
     return ids
 
 
-async def scrape_hf_org(client: httpx.AsyncClient, slug: str, max_models: int = 200,
-                        concurrency: int = 8) -> dict[str, str]:
+async def scrape_hf_org(
+    client: httpx.AsyncClient, slug: str, max_models: int = 200, concurrency: int = 8
+) -> dict[str, str]:
     """Enumerate HF org's models + datasets and harvest arxiv from each."""
     out: dict[str, str] = {}
     model_ids = await hf_list_models(client, slug, limit=max_models)
@@ -1015,14 +1024,14 @@ async def run(args: argparse.Namespace) -> int:
                     await route.continue_()
             except Exception:
                 pass
+
         await context.route("**/*", block_route)
         page = await context.new_page()
         page.set_default_timeout(30_000)
 
         try:
             for org in selected:
-                logger.info("=== {} (mode={}, primary={}) ===",
-                            org.label, org.mode, org.primary_url or "—")
+                logger.info("=== {} (mode={}, primary={}) ===", org.label, org.mode, org.primary_url or "—")
                 primary_ids: dict[str, str] = {}
                 hf_ids_per_slug: dict[str, dict[str, str]] = {}
                 err_notes: list[str] = []
@@ -1036,9 +1045,9 @@ async def run(args: argparse.Namespace) -> int:
                 if not org.skip_hf_models:
                     for slug in org.hf_orgs:
                         try:
-                            ids = await scrape_hf_org(http_client, slug,
-                                                       max_models=org.hf_max_models,
-                                                       concurrency=org.hf_concurrency)
+                            ids = await scrape_hf_org(
+                                http_client, slug, max_models=org.hf_max_models, concurrency=org.hf_concurrency
+                            )
                             hf_ids_per_slug[slug] = ids
                         except Exception as e:
                             err_notes.append(f"hf:{slug}: {type(e).__name__}: {str(e)[:160]}")
@@ -1088,18 +1097,29 @@ async def run(args: argparse.Namespace) -> int:
                     "errors": err_notes,
                 }
                 per_org_stats.append(stat)
-                logger.info("[{}] DONE primary={} hf={} unique={} new={}",
-                            org.label, stat["primary_count"], stat["hf_count"],
-                            stat["total_unique"], stat["new_emitted"])
+                logger.info(
+                    "[{}] DONE primary={} hf={} unique={} new={}",
+                    org.label,
+                    stat["primary_count"],
+                    stat["hf_count"],
+                    stat["total_unique"],
+                    stat["new_emitted"],
+                )
 
-                out_fh.write(json.dumps({
-                    "_completed": True,
-                    "org_label": org.label,
-                    "primary_count": stat["primary_count"],
-                    "hf_count": stat["hf_count"],
-                    "total_unique": stat["total_unique"],
-                    "errors": err_notes,
-                }, ensure_ascii=False) + "\n")
+                out_fh.write(
+                    json.dumps(
+                        {
+                            "_completed": True,
+                            "org_label": org.label,
+                            "primary_count": stat["primary_count"],
+                            "hf_count": stat["hf_count"],
+                            "total_unique": stat["total_unique"],
+                            "errors": err_notes,
+                        },
+                        ensure_ascii=False,
+                    )
+                    + "\n"
+                )
                 out_fh.flush()
                 await asyncio.sleep(args.sleep_between_orgs)
         finally:
@@ -1127,7 +1147,9 @@ async def run(args: argparse.Namespace) -> int:
             grand_total.add(r["arxiv_id"])
     for s in per_org_stats:
         errs = "; ".join(s["errors"])[:100]
-        print(f"{s['org']:<22s} {s['primary_count']:9d} {s['hf_count']:6d} {s['total_unique']:8d} {s['new_emitted']:6d}  {errs}")
+        print(
+            f"{s['org']:<22s} {s['primary_count']:9d} {s['hf_count']:6d} {s['total_unique']:8d} {s['new_emitted']:6d}  {errs}"
+        )
     print(f"\nGRAND TOTAL UNIQUE arxiv_ids: {len(grand_total)}")
     print(f"output: {args.output}")
     return 0
@@ -1136,8 +1158,7 @@ async def run(args: argparse.Namespace) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--output", type=Path, default=Path("local_data/playwright_company_pubs.jsonl"))
-    ap.add_argument("--only", type=lambda s: [x.strip() for x in s.split(",") if x.strip()],
-                    default=None)
+    ap.add_argument("--only", type=lambda s: [x.strip() for x in s.split(",") if x.strip()], default=None)
     ap.add_argument("--smoke-test", type=str, default=None)
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--sleep-between-orgs", type=float, default=1.5)

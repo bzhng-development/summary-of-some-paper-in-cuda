@@ -1,0 +1,122 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups, and career growth. Thank you for your readership, we hit 39,000 readers this week 🙏 🎉
+
+This week, I’m sharing how to write an effective self-review for the upcoming perf review season. If you find the post helpful, please share it with your friends and coworkers. Enjoy!
+
+In a perfect world, you’d do impactful work and that would be enough. However, in reality, your work can’t be recognized unless people know about it. Communicating the results of your work well is a necessity.
+
+To show you how to write a good self review, I’ll start by showing an example of a bad review modeled after the first one I ever wrote. Can you tell what’s wrong with it?
+
+
+## Before: An Excerpt From a Bad Review
+
+
+  - Created API to retrieve higher-quality videoAltered existing pipeline to save higher quality rendition and serve it from new API for enhanced qualityUpload quality improved by X% for these videos
+
+Created API to retrieve higher-quality video
+
+  - Altered existing pipeline to save higher quality rendition and serve it from new API for enhanced quality
+
+Altered existing pipeline to save higher quality rendition and serve it from new API for enhanced quality
+
+  - Upload quality improved by X% for these videos
+
+Upload quality improved by X% for these videos
+
+  - Shipped new pipeline for new video productWas the main IC from the server side that built the entire system end to end. This includes the new creation pipeline, the new data model, and the new delivery codeShipped on time according to internal deadline which was a month before public test, which allowed our partner team to move fasterAfter release, pipeline is supporting N uploads per day
+
+Shipped new pipeline for new video product
+
+  - Was the main IC from the server side that built the entire system end to end. This includes the new creation pipeline, the new data model, and the new delivery code
+
+Was the main IC from the server side that built the entire system end to end. This includes the new creation pipeline, the new data model, and the new delivery code
+
+  - Shipped on time according to internal deadline which was a month before public test, which allowed our partner team to move faster
+
+Shipped on time according to internal deadline which was a month before public test, which allowed our partner team to move faster
+
+  - After release, pipeline is supporting N uploads per day
+
+After release, pipeline is supporting N uploads per day
+
+  - Built out a new video encoding pipeline using new partner team systemNew pipeline rolled out to all employees and Y% of public traffic for the past few weeksVerification on encodings produced from the new pipeline vs old pipeline shows no problemsThis new pipeline is an important step to moving from our old codebase to the newer system
+
+Built out a new video encoding pipeline using new partner team system
+
+  - New pipeline rolled out to all employees and Y% of public traffic for the past few weeks
+
+New pipeline rolled out to all employees and Y% of public traffic for the past few weeks
+
+  - Verification on encodings produced from the new pipeline vs old pipeline shows no problems
+
+Verification on encodings produced from the new pipeline vs old pipeline shows no problems
+
+  - This new pipeline is an important step to moving from our old codebase to the newer system
+
+This new pipeline is an important step to moving from our old codebase to the newer system
+
+There’s a lot wrong here. Let’s dive into what could be better.
+
+
+## Less Is More
+
+
+For performance reviews, your manager will condense your self-review into a version other managers can skim in ~3 minutes. To effectively communicate your past year’s work in just a few minutes, you’ll need to cut out fluff. Take these sentences for instance:
+
+> “Verification on encodings produced from the new pipeline vs old pipeline shows no problems”“This includes the new video pipeline, the new data model, and the new delivery code”
+
+“Verification on encodings produced from the new pipeline vs old pipeline shows no problems”
+
+“This includes the new video pipeline, the new data model, and the new delivery code”
+
+These sentences don’t tell us much about the work’s impact and can be removed. Aim for short sentences rich in details that explain your work’s results, not the work itself.
+
+
+## Know Your Audience
+
+
+A room full of managers will read your self-review and final packet. They won’t have as much context on your work as you and your manager. You’ll need to explain your impact in terms of metrics and milestones that these managers can understand.
+
+My example self-review above doesn’t do this well. For instance, the impact of migrating to the new system isn’t clear in the 3rd point. A better framing would be something like:
+
+> Hit planned public test milestone on shared roadmap with partner team (N eng involved). This migration will prevent severe incidents (link1, link2) from reoccurring and make future development faster.
+
+Hit planned public test milestone on shared roadmap with partner team (N eng involved). This migration will prevent severe incidents (link1, link2) from reoccurring and make future development faster.
+
+Also looking at the 1st point, the impact of the X% upload quality improvement isn’t clear to managers without context on that metric. I’d add some additional context to explain the significance of the metric movement:
+
+> Improved upload quality by X% (30% of team goal)
+
+Improved upload quality by X% (30% of team goal)
+
+
+## Managing Limited Attention
+
+
+The managers reading your packet will be skimming it since they only have a few minutes. Because of that, you can’t expect them to read every word that you write. It’s helpful to put your most impactful work first to make sure they see it. In my example self-review, I’d reorder it as 2 > 1 > 3 since (2) was a larger collaboration that had more impact.
+
+
+## After: Applying the Tips
+
+
+  - Shipped new video product - Shipped 1 month ahead of shared goal (N eng involved) with no regressions. Drove X% more video creation
+
+Shipped new video product - Shipped 1 month ahead of shared goal (N eng involved) with no regressions. Drove X% more video creation
+
+  - Launched higher quality video API - Increased upload quality by Y% (Z% of team goal) for those videos
+
+Launched higher quality video API - Increased upload quality by Y% (Z% of team goal) for those videos
+
+  - Built new video encoding pipeline - Hit planned public test milestone on shared roadmap with partner team (N eng involved). This migration will prevent severe incidents (link1, link2) from reoccurring and make future development faster.
+
+Built new video encoding pipeline - Hit planned public test milestone on shared roadmap with partner team (N eng involved). This migration will prevent severe incidents (link1, link2) from reoccurring and make future development faster.
+
+For a manager without context on the work, the outcomes and their significance are much clearer in this version.
+
+Your self-review is just the first step in the performance review process. Your manager then needs to add additional signals and refine it to come up with that final text that all the other managers read to assess your performance.
+
+If you’re great at writing self-reviews, your manager will reuse a lot of what you wrote to represent your work. If you’re not sure if something is worth including, default to keeping it in your self-review. Your manager can easily cut out less impactful items.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already. Also, if you have feedback about how I can make the content better, please share it here 🙏
+
+Thanks for reading,
+Ryan Peterman

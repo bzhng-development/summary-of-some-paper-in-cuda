@@ -1,0 +1,52 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 58,000 readers this week 🙏 🎉
+
+This week I’m sharing how to avoid down-leveling when you interview for FAANG roles. Hope it is helpful; enjoy!
+
+Imagine you’ve worked for 10+ years and are doing well in your current role. You consider interviewing for FAANG roles only to find that they plan to down level you.
+
+Although there’s a compensation bump, it feels like those years of building seniority will go down the drain. This happens all the time, but it doesn’t need to if you understand how recruiters decide levels.
+
+
+## Useful, But Contrived
+
+
+Titles can give us a sense of the scope an engineer can handle. If you know someone is a Senior engineer, you can expect that they can handle more ambiguity for instance. Titles are a concise way for you to market your abilities.
+
+However, titles only mean something in the context of the company they are from. Some companies have significant title inflation which devalues their titles. For instance, engineers who work at banks can get the title of “Vice President” with just a few years of experience.
+
+You can use levels.fyi to see how levels compare across well-known companies. The main risk of down-leveling comes from when you’re at a company that isn’t as well known (e.g. startups or outside of Silicon Valley).
+
+
+## Scope Is King
+
+
+If your company (and therefore title) isn’t well-known, FAANG recruiters will make an educated guess for what level to interview you for. They will base it off your years of experience and the scope of your work. If you have plenty of years of experience, the scope of your work is what is most likely to influence their guess. They will compare it to the expectations of FAANG levels which I wrote about here:
+
+  - Mid-level (IC4) Expectations
+
+Mid-level (IC4) Expectations
+
+  - Senior (IC5) Expectations
+
+Senior (IC5) Expectations
+
+  - Staff (IC6) Expectations
+
+Staff (IC6) Expectations
+
+  - Senior Staff (IC7) Expectations
+
+Senior Staff (IC7) Expectations
+
+You can compare the scope of your work to the expectations of these levels to see where you fit in. You might find that the work you’re doing at your company matches a level with a less senior title. In that case, I would expect a title change but that isn’t a “down level”. It’s just a change in title because companies have different names for their levels.
+
+If you want to interview for higher levels at FAANG companies, focus on growing the scope of your work at your company. Then make sure your resume communicates that larger scope.
+
+Be clear with the recruiter on the level you’re interviewing for before taking interviews. After that, it’s in your hands to interview well enough to retain that level. This can be tough since many engineers get down-leveled during system design interviews. Avoiding this is a topic for a future article.
+
+Down-leveling comes up a lot and was also discussed at the Staff Engineer panel I spoke at a few months back. The clip below from the talk provides a bit more color from other Staff Engineers if you’re curious:
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already.
+
+Thanks for reading,
+Ryan Peterman

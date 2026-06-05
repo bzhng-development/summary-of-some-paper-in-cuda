@@ -33,12 +33,29 @@ GRAPH = ROOT / "src/lib/graph.generated.json"
 OUT = ROOT / "src/lib/neon-metadata.generated.json"
 
 FIELDS = [
-    "id", "title", "abstract", "score", "similar_paper", "score_reason",
-    "tag_category_v2", "tag_categories_v2", "tag_confidence", "tag_reason",
-    "authors", "affiliations", "organization", "org_fullname",
-    "primary_category", "categories", "published",
-    "upvotes", "github", "github_stars", "arxiv_comment",
-    "interested", "is_only_important_because_of_company",
+    "id",
+    "title",
+    "abstract",
+    "score",
+    "similar_paper",
+    "score_reason",
+    "tag_category_v2",
+    "tag_categories_v2",
+    "tag_confidence",
+    "tag_reason",
+    "authors",
+    "affiliations",
+    "organization",
+    "org_fullname",
+    "primary_category",
+    "categories",
+    "published",
+    "upvotes",
+    "github",
+    "github_stars",
+    "arxiv_comment",
+    "interested",
+    "is_only_important_because_of_company",
 ]
 
 
@@ -60,7 +77,7 @@ def main():
         # IN chunks to keep the query bounded
         CHUNK = 500
         for i in range(0, len(arxiv_ids), CHUNK):
-            batch = arxiv_ids[i:i + CHUNK]
+            batch = arxiv_ids[i : i + CHUNK]
             cur.execute(
                 f'SELECT {cols} FROM "nextjs-ui_paper" WHERE id = ANY(%s)',
                 (batch,),

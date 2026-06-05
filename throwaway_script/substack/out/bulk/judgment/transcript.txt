@@ -1,0 +1,82 @@
+Having good judgment isn’t taught in school yet is one of the most critical skills for promotion to Senior and higher levels.
+
+This skill was a large part of my Senior and Staff promotions at Meta.
+
+Not only will it guide you to more senior levels, but also it’ll give you more control over what you work on. This skill extends to any business you work on (even outside of big tech).
+
+Let’s go over what I mean by “judgment” and how I’d recommend developing it based on my experience.
+
+
+## Understanding Judgment
+
+
+Judgment is having an accurate sense of what is important for the success of the business. Everything we do should benefit the business so it’s obvious that this is important. Yet I see a lot of engineers lacking this thinking.
+
+Two ways to develop your judgment:
+
+1) Understand the business and your org’s place in its success - Easiest way to get this information is to discuss it with your manager and/or tech lead. They can teach you what metrics & initiatives matter most and why. Another place to find this information is in your team’s strategy docs. They are your org’s best writing about what is planned and why.
+
+It’s also important to know your org’s specific role in the company’s success. Different teams have impact in different ways. Here are a few high-level examples from an ads business like Google:
+
+  - Ads team - drives revenue for the company
+
+Ads team - drives revenue for the company
+
+  - Growth team - drives new user adoption and retention
+
+Growth team - drives new user adoption and retention
+
+  - Infra team - drives faster dev velocity & capacity cost savings
+
+Infra team - drives faster dev velocity & capacity cost savings
+
+  - Product team - drives increased user engagement
+
+Product team - drives increased user engagement
+
+Just because a team doesn’t directly contribute to revenue doesn’t mean that it isn’t critical to the business’s success. Context matters.
+
+2) Learn by doing - The main way I improved my judgment is by writing strategy and direction docs (sample template I use). By writing out the strategy and having to defend it as I built alignment, I learned a lot about what matters most. Feedback from others who have a good sense of what is impactful helped hone my judgment.
+
+
+## Exercising Judgment
+
+
+> Steve Jobs: “It doesn't make sense to hire smart people and tell them what to do; we hire smart people so they can tell us what to do.”
+
+Steve Jobs: “It doesn't make sense to hire smart people and tell them what to do; we hire smart people so they can tell us what to do.”
+
+Having good judgment isn’t useful by itself. You need to exercise it to make sure you and your team are going in the right direction.
+
+This means that you don’t just do what you’re told. You should think about the business value of what you work on. As you grow into more senior roles, this thinking should extend past yourself. You should care that what your team works on is impactful.
+
+If that isn’t true, you should speak up and influence the team’s direction. Doing this well is beneficial for everyone. Your manager doesn’t want you to complete tasks for the sake of doing work. Your manager wants you and the team to have as much impact on the business as possible. The work is just an implementation detail.
+
+Since promotions are a byproduct of your impact, you can imagine how this skill got me promoted to both Senior and Staff.  For both promotions, I found initiatives outside of my team’s current roadmap and proved that they’d be beneficial for the business:
+
+  - Senior Promo - Started an initiative on video ads even though my team was only focused on non-ads video.
+
+Senior Promo - Started an initiative on video ads even though my team was only focused on non-ads video.
+
+  - Staff Promo - Started an initiative optimizing compute capacity even though it wasn’t something our team cared about at first.
+
+Staff Promo - Started an initiative optimizing compute capacity even though it wasn’t something our team cared about at first.
+
+Aside from helping with career growth, the most compelling reason I enjoy exercising my judgment is it helps me pick work that I find most exciting and fulfilling. If you know what is impactful and can convince others, you can influence your organization to let you prioritize that work.
+
+I hope this was helpful. If you liked the content, you can find more of my stuff here:
+
+  - LinkedIn
+
+LinkedIn
+
+  - Twitter
+
+Twitter
+
+  - Threads
+
+Threads
+
+Thanks for reading,
+Ryan Peterman

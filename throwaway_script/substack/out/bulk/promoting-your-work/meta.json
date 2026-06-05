@@ -1,0 +1,448 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/promoting-your-work",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 145617992,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-06-14T13:00:13.834Z",
+  "updated_at": "2024-06-14T13:00:20.623Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "promoting-your-work",
+  "social_title": null,
+  "subtitle": "How much time to spend and who the audience should be",
+  "teaser_post_eligible": true,
+  "title": "Promoting Your Work",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 6,
+  "reactions": {
+    "❤": 74
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "why-i-switched-teams",
+  "next_post_slug": "from-liberal-arts-major-to-amazon",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/0bae1762-3c25-4916-95dd-42b5d96cdf5f_1118x757.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 145617992,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "How much time to spend and who the audience should be",
+  "body_html": "<p>👋<em> Hi, this is&nbsp;<a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a>&nbsp;with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 63,000 readers this week </em>🙏<em> </em>🎉</p><p><em>This week I’m answering subscriber questions about promoting your work. Hope it is helpful; enjoy!</em></p><div><hr></div><blockquote><p><strong>Related questions from subscribers on self-promotion:</strong></p><ul><li><p>What are your thoughts on self-promotion and how much time did you spend on it? </p></li><li><p>What audience is the most important to promote your work to?</p></li><li><p>Any general tips for promoting your work?</p></li></ul></blockquote><p>People decide promotions (<a href=\"https://www.developing.dev/p/how-promotions-and-ratings-work\">usually committees of managers and staff+ engineers</a>). To get promoted, your work needs to be both impactful and known by the right people. Imagine how smooth a promotion would be if everyone on the committee already thought your work was at the next level.</p><p>In a perfect world, you’d do impactful work and that would be enough. However, in reality, <strong>your work can’t be recognized unless people know about it</strong>. Communicating the results of your work will help you get the recognition you deserve.</p><h3>How Much Time To Spend</h3><p>Although important, you don’t need to spend much time doing it. <strong>Just make sure you always write a summary of the results from your notable projects</strong>. This is the main way people learned about my work. I would take an hour or two to put together launch posts <a href=\"https://docs.google.com/document/d/1RUvEIT_Qh9VrViiDpf0ynLPD9EpteoMJ7IsxHBvuB4Y/edit#heading=h.x2106vzn2dx\">using a template like this</a>.</p><p>Aside from making your work visible, it’ll also make your performance reviews less work since you can just link to these posts.</p><h3>Who To Share It With</h3><p>There are two ways I distributed this writing:</p><ol><li><p><strong>Tagging people</strong> - I tagged relevant engineers and managers on each post. They were usually people who worked on the project and their managers. </p></li><li><p><strong>Org highlights process</strong> - My org writes a biweekly post with all the top wins that shipped in the last two weeks. Many managers read this summary. My launch posts were often pulled into these.</p></li></ol><p>I never targeted people to promote my work to. I just shared it with who I thought it was relevant to and if the work was impactful it often spread further. Sometimes I’d get asked to speak at team meetings to share knowledge about the changes. </p><p>You don’t need to strategize about who knows your work. <strong>The only person I’d say you should always include is your manager.</strong> It will help them represent your work during performance reviews.</p><h3>Launch Post Tip</h3><p>The goal of a launch post is to convey what changed and how impactful it was. If you read <a href=\"https://www.developing.dev/p/writing-tactics-part-1\">my previous post on writing</a> then you’ll know to “make the first line interesting”.</p><p>Here, this means the first line should be a summary of the biggest wins. If it’s impactful enough, people will be curious to read the whole thing. </p><p><strong>Make sure to mention the wins your audience cares most about before you go into the details of what changed</strong>. This will get the critical message across and increase the chance someone reads your whole post.</p><div><hr></div><p><strong>Self-promotion is never a replacement for quality work.</strong> Focus almost all your energy on doing great work.  Once you have results, just make sure to do the incremental work to document and share it.</p><p>If you have a question you’d like me to answer in a future post, <a href=\"https://forms.gle/FToeckHGwywojEkL8\">you can submit it anonymously here</a>.</p><p>If you found this useful,&nbsp;<strong>please share it with a friend and consider subscribing if you haven’t already.</strong></p><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 63,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p></p>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 63,000 readers this week 🙏 🎉",
+  "wordcount": 599,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "5a4683e9-1121-4159-b2d7-6ca77779173f",
+      "publication_id": 1340878,
+      "name": "Career",
+      "slug": "career",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        127.5,
+        127.5,
+        127.5
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        66.3,
+        66.3,
+        66.3
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        188.7,
+        188.7,
+        188.7
+      ],
+      "population": 0
+    },
+    "Muted": {
+      "rgb": [
+        124,
+        124,
+        124
+      ],
+      "population": 16
+    },
+    "DarkMuted": {
+      "rgb": [
+        74,
+        74,
+        74
+      ],
+      "population": 70
+    },
+    "LightMuted": {
+      "rgb": [
+        184,
+        184,
+        184
+      ],
+      "population": 38
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 74,
+  "comment_count": 4,
+  "child_comment_count": 2,
+  "audio_items": [
+    {
+      "post_id": 145617992,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/145617992/tts/c3b03804-a073-4d7d-b0bb-fa2544bad703/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 59161718,
+      "body": "\"Self-promotion is never a replacement for quality work.\" Could not agree more. It's crucial to focus on delivering excellent results. Keeping a brag doc to track your accomplishments is also a great way to keep track of your contributions and share them when needed. ",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "\"Self-promotion is never a replacement for quality work.\" Could not agree more. It's crucial to focus on delivering excellent results. Keeping a brag doc to track your accomplishments is also a great way to keep track of your contributions and share them when needed."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 145617992,
+      "user_id": 9218167,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-06-15T20:18:37.976Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Chemil",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/2dfa8f11-b33e-4088-8ac9-d592dd8ed1f9_1024x1024.png",
+      "handle": "chemil",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "chemil",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "The Comprehensive Engineer",
+          "id": 1094772,
+          "base_url": "https://chemil.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 62826435,
+      "body": "Okay, thanks for sharing, it's very useful and makes sense.\nOne question, I'm curious, if I understood correctly, do you write this \"launch\" write-up at the end of a feature or project you worked on, or do you write it for all tasks at the end of the sprint that you closed?",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Okay, thanks for sharing, it's very useful and makes sense."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "One question, I'm curious, if I understood correctly, do you write this \"launch\" write-up at the end of a feature or project you worked on, or do you write it for all tasks at the end of the sprint that you closed?"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 145617992,
+      "user_id": 114306796,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-07-21T22:23:25.659Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Somix",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/0443254a-13fa-40fb-880c-e99ecc52de43_144x144.png",
+      "handle": "somix967978",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 0
+      },
+      "reaction_count": 0,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "somix967978",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Somix",
+          "id": 3049708,
+          "base_url": "https://somix967978.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": false,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 1,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "2 replies by Ryan Peterman and others"
+    }
+  ]
+}

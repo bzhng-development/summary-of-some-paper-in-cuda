@@ -1,0 +1,40 @@
+There are plenty of resources out there that cover the traits of a good engineering manager (EM) like Project Oxygen from Google. Now that I've had 7 managers, here are a few more points I'd add from what I saw work well.
+
+
+## Putting the “E” in EM
+
+
+Across all my managers, technical fluency made a big difference. This makes all conversations about ongoing work, roadmapping, and performance reviews smoother.
+
+Performance reviews are a great example. The better your manager understands your work, the better they’ll be at defending it. This is especially important when your work isn’t measured by well-known metrics. In these cases, your manager must give context on milestones you achieved and the quality of your work.
+
+I also noticed that managers with technical fluency have a much easier time building rapport with engineers. For example, our team was quick to trust my current manager since he was our old tech lead. On the other end of the spectrum, I had a manager who often said things that were not technically sound. This eroded trust little by little, which was a contributing factor to engineers leaving the team.
+
+Lastly, technical fluency helps EMs coach their junior reports on engineering fundamentals. When I just started at Instagram, my manager coached me out of a lot of the engineering mistakes I made.
+
+Technical fluency is what makes your manager an EM. Without that, they are more like a PM with some people manager responsibilities.
+
+
+## Positioning For Growth
+
+
+I appreciated managers that helped me strategize my career. EMs have a strong influence over who works on what. If they are aware of your career goals, they can place you in areas that have scope for you to grow into.
+
+For example, my growth to senior hinged on my ability to lead a small workstream. Because my manager knew I was motivated, he positioned me as the backend lead of a workstream even though I hadn't led before. This gave me the opportunity I needed to grow quickly.
+
+Besides positioning, your manager can also provide strategic resources to help you grow. For me, my biggest gap in growing to the Staff level was that I had trouble finding large enough scope. My manager recognized that gap, and assigned me a mentor that excelled in that area. Since then, finding staff level scope hasn’t been an issue.
+
+
+## Radical Transparency
+
+
+I’ve always appreciated managers that were transparent. This helped in performance conversations since they clarified the process and were direct about where I had gaps. Having these uncomfortable conversations was worth it since it helped us avoid surprises.
+
+Transparency also builds trust. I remember in a past reorg one of my managers was unusually transparent. He brought the team into the decision-making process and shared the rationale for the change as soon as possible. As a result, the reorg was well received and there was no attrition. In fact, the people who he brought in to the discussion trusted my manager more since they could give input and agreed with the rationale.
+
+Your manager is often the single most important person at work. You can often tell if you have a great one by looking at turnover rates. If the team isn’t stable or you see clear gaps in their behaviors, consider switching teams.
+
+Over to you: In your experience, what behaviors do you think are most important in an EM?
+
+Thanks for reading,
+Ryan Peterman

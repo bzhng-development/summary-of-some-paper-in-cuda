@@ -1,0 +1,470 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/a-simple-pattern-for-finding-next",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 142850484,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-03-22T13:02:20.922Z",
+  "updated_at": "2024-03-22T13:09:43.740Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "a-simple-pattern-for-finding-next",
+  "social_title": null,
+  "subtitle": "Why It Works So Well + Concrete Example",
+  "teaser_post_eligible": true,
+  "title": "A Simple Pattern for Finding Next-level Scope",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 3,
+  "reactions": {
+    "❤": 88
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "how-ai-will-affect-your-career",
+  "next_post_slug": "the-tech-leads-playbook",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!Es5u!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f2f2816-2312-4217-9f85-55e5b59c6d96_721x715.png",
+  "cover_image_is_square": true,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 142850484,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Why It Works So Well + Concrete Example",
+  "body_html": "<p>👋<em> Hi, this is&nbsp;<a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a>&nbsp;with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 54,000 readers this week </em>🙏<em> </em>🎉</p><p><em>This week I’m sharing a tip that helped me find projects that got me promoted. Hope it is helpful; enjoy!</em></p><div><hr></div><p>There are two high-level steps to getting promoted:</p><ol><li><p><strong>Find next-level scope</strong> - You need to find problems that require you to demonstrate the behaviors of the next level.</p></li><li><p><strong>Solve problems, land impact</strong> - Once you find problems that are big enough, you need to deliver with high quality.</p></li></ol><p>Finding next-level scope is often harder than solving problems themselves. This is  especially true if you’re looking for a Staff-level or higher promotion. After seeing many people get promoted to Staff+ levels, I’ve noticed a pattern that helps in finding scope.</p><p>The idea is that you brainstorm project ideas with engineers who are one or two levels higher than you are.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!Es5u!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f2f2816-2312-4217-9f85-55e5b59c6d96_721x715.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!Es5u!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f2f2816-2312-4217-9f85-55e5b59c6d96_721x715.png 424w, https://substackcdn.com/image/fetch/$s_!Es5u!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f2f2816-2312-4217-9f85-55e5b59c6d96_721x715.png 848w, https://substackcdn.com/image/fetch/$s_!Es5u!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f2f2816-2312-4217-9f85-55e5b59c6d96_721x715.png 1272w, https://substackcdn.com/image/fetch/$s_!Es5u!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f2f2816-2312-4217-9f85-55e5b59c6d96_721x715.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!Es5u!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f2f2816-2312-4217-9f85-55e5b59c6d96_721x715.png\" width=\"469\" height=\"465.09708737864077\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/8f2f2816-2312-4217-9f85-55e5b59c6d96_721x715.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:715,&quot;width&quot;:721,&quot;resizeWidth&quot;:469,&quot;bytes&quot;:672042,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!Es5u!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f2f2816-2312-4217-9f85-55e5b59c6d96_721x715.png 424w, https://substackcdn.com/image/fetch/$s_!Es5u!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f2f2816-2312-4217-9f85-55e5b59c6d96_721x715.png 848w, https://substackcdn.com/image/fetch/$s_!Es5u!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f2f2816-2312-4217-9f85-55e5b59c6d96_721x715.png 1272w, https://substackcdn.com/image/fetch/$s_!Es5u!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f2f2816-2312-4217-9f85-55e5b59c6d96_721x715.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><h3>Why It Works So Well</h3><p>Since higher-level engineers are so <a href=\"https://www.developing.dev/p/protect-your-time\">picky with their time</a>, the <strong>projects they don’t have time for are often still big enough to get you promoted.</strong> </p><p>If you take on their projects, these more senior engineers <a href=\"https://www.developing.dev/p/mentorships-role-in-my-staff-promotion\">will naturally mentor you</a> during project execution; <strong>They are the most relevant people to review your designs and code.</strong> This will help you become a better engineer and deliver the project.</p><p>Lastly, if the collaboration goes well, <strong>you will have a champion</strong> who may give consequential peer feedback for your future promotion packet.</p><h3>Concrete Example</h3><p>For instance, <strong>one of the projects that contributed to my Senior (L5) promotion was just something in my tech lead’s backlog.</strong> The initial idea was to address some shortcomings in the video ads pipeline. I thought it was impactful so I volunteered to take it on.</p><p>He helped connect me to the ads team to start the collaboration. He also reviewed my design and code until it was clear I had a full grasp of the work. The <a href=\"https://about.instagram.com/blog/engineering/making-instagram-video-ads-performant\">collaboration grew into a larger project</a>, which I took full ownership of, but you can see how it all started by taking on a stronger engineer’s backlog project. </p><p>I don’t know what was in my Senior promotion packet but I imagine it included some positive feedback from him since we worked together closely.</p><p>Looking back, I realize <strong>I was lucky to be working on a team with much stronger engineers </strong>so I didn’t need to plan to do this explicitly. Project opportunities were free-flowing.</p><div><hr></div><p>If you’re stuck trying to <a href=\"https://www.developing.dev/p/finding-next-level-scope\">find next-level scope</a>, try brainstorming ideas with more senior engineers. Chances are, their expertise will help you come up with good opportunities. Not to mention that their support will make it much easier for you to finish the job too. </p><p>If you found this useful, <strong>please share it with a friend and consider subscribing if you haven’t already.</strong></p><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 54,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 54,000 readers this week 🙏 🎉",
+  "wordcount": 506,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "3ef0124c-3ef3-40c1-b4d8-de1f82d7695c",
+      "publication_id": 1340878,
+      "name": "To Senior",
+      "slug": "to-senior",
+      "hidden": false
+    },
+    {
+      "id": "f4df2d6e-046e-448c-b0bf-6dd4ae5a5a6a",
+      "publication_id": 1340878,
+      "name": "To Staff",
+      "slug": "to-staff",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        69,
+        144,
+        244
+      ],
+      "population": 166
+    },
+    "DarkVibrant": {
+      "rgb": [
+        56,
+        45,
+        122
+      ],
+      "population": 135
+    },
+    "LightVibrant": {
+      "rgb": [
+        98,
+        194,
+        238
+      ],
+      "population": 156
+    },
+    "Muted": {
+      "rgb": [
+        72,
+        110,
+        147
+      ],
+      "population": 226
+    },
+    "DarkMuted": {
+      "rgb": [
+        51,
+        76,
+        104
+      ],
+      "population": 206
+    },
+    "LightMuted": {
+      "rgb": [
+        181,
+        205,
+        211
+      ],
+      "population": 28
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 88,
+  "comment_count": 7,
+  "child_comment_count": 4,
+  "audio_items": [
+    {
+      "post_id": 142850484,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/142850484/tts/9555fd4c-6846-4292-85bf-b21b85b056dd/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 52211766,
+      "body": "Love this simple but powerful tip. Thanks, Ryan 🙏",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Love this simple but powerful tip. Thanks, Ryan 🙏"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 142850484,
+      "user_id": 58854493,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-03-22T13:39:13.770Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Jordan Cutler",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/670bb162-5a63-4fd2-8253-f98c28d446a7_1168x1168.jpeg",
+      "handle": "jordancutler",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "jordancutler",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "High Growth Engineer",
+          "id": 1504485,
+          "base_url": "https://read.highgrowthengineer.com"
+        }
+      },
+      "user_bestseller_tier": 100,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": 100,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "bestseller",
+          "tier": 100
+        },
+        "subscriber": null
+      },
+      "score": 7,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    },
+    {
+      "id": 52338055,
+      "body": "I can confirm this is true. It helped me to my promotion from SDE1 to SDE2.\n\nThe most tenured SDE2 in my team was the POC for 3 incoming projects. The biggest of these, he delegated to me. I was responsible for the design of the project, but this SDE2 helped with communication and alignment with dependent teams.\n\nI got my promotion after this project and he could use this role he played between teams for his promotion to Senior too. If he had been responsible for the entire project, he couldn't have had the scope between multiple teams/projects",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I can confirm this is true. It helped me to my promotion from SDE1 to SDE2."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "The most tenured SDE2 in my team was the POC for 3 incoming projects. The biggest of these, he delegated to me. I was responsible for the design of the project, but this SDE2 helped with communication and alignment with dependent teams."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I got my promotion after this project and he could use this role he played between teams for his promotion to Senior too. If he had been responsible for the entire project, he couldn't have had the scope between multiple teams/projects"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 142850484,
+      "user_id": 170998285,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-03-24T07:56:14.023Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Fran Soto",
+      "photo_url": "https://substackcdn.com/image/fetch/$s_!XWMk!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F10f90fdb-11ac-48b4-8f51-6a59e07763d2_1149x1149.png",
+      "handle": "fransotodev",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "fransotodev",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Strategize Your Career",
+          "id": 1974191,
+          "base_url": "https://strategizeyourcareer.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

@@ -1,0 +1,120 @@
+Last month I was in China for a passion project I’ve been working on. After spending ~$30,000 on it, I’m excited to share what it is. Most projects I work on are internal to Meta so I can’t share how I got things done.
+
+I’m building the ergonomic keyboard I wish existed since I have problems with the ones on the market today. As I worked on the project, I realized I used many behaviors I learned when getting to Staff at Instagram.
+
+Today, I’ll share how I got this project off the ground and how it demonstrates the behaviors you learn as you grow to Staff in big tech.
+
+The high-level steps of technical leadership (past article here) are:
+
+  - Setting direction
+
+Setting direction
+
+  - Getting alignment and staffing projects
+
+Getting alignment and staffing projects
+
+  - Executing the roadmap
+
+Executing the roadmap
+
+Note: as usual, I am not sponsored and there are no affiliate links in this article
+
+
+## Step 1 - Setting Direction
+
+
+Playing a lot of tennis when I was young gave me wrist problems. Since I still have a long career in software engineering ahead of me, I want to make sure my wrists last. That’s why I’ve been a heavy ergonomic keyboard user for a while now.
+
+After doing a lot of research, I could never find exactly what I was looking for. My most important criteria are:
+
+  - Ergonomics - A split keyboard with tenting. This helps you position your wrists to prevent pain. It makes a big difference for me.Examples showing a normal vs split keyboard; guess how I took these pictures.
+
+Ergonomics - A split keyboard with tenting. This helps you position your wrists to prevent pain. It makes a big difference for me.
+
+  - Standard 75% layout (like a Macbook) - I didn’t want to relearn the keyboard layout I had used my whole life. Many ergonomic keyboards have unusual layouts:
+
+Standard 75% layout (like a Macbook) - I didn’t want to relearn the keyboard layout I had used my whole life. Many ergonomic keyboards have unusual layouts:
+
+When you look at all the available ergonomic keyboards on the market today, many of them are:
+
+  - Too ergonomic  - See examples above; they are trying to lay out keys to align with the shape of your hand.
+
+Too ergonomic  - See examples above; they are trying to lay out keys to align with the shape of your hand.
+
+  - Not ergonomic enough - Some popular keyboards like this one have a little tenting and are not split. These don’t fix the wrist pain for me:
+
+Not ergonomic enough - Some popular keyboards like this one have a little tenting and are not split. These don’t fix the wrist pain for me:
+
+  - Poor design and build quality - Keyboards that have the right level of ergonomics are often poorly made, like the Kinesis Freestyle2 (all plastic, lots of wasted space, multiple wires)
+
+Poor design and build quality - Keyboards that have the right level of ergonomics are often poorly made, like the Kinesis Freestyle2 (all plastic, lots of wasted space, multiple wires)
+
+Yet, I have been using the Kinesis Freestyle2 since it has a standard layout and the right amount of ergonomics. It gets the job done, but the design and build quality are poor. Can you imagine Apple or Logitech putting out a product like this? Also, the plastic legs you need to purchase for tenting cost half the price of the entire keyboard, which feels like price gouging.
+
+I did some serious searching for a better option and never found anything that was perfect. Given that I couldn’t find what I wanted, I considered building an ergonomic keyboard that is easy to use and beautifully designed.
+
+I started by writing a direction doc which is one of the first things I do when resolving ambiguity in a project. I wrote down my thoughts on the current problem and why it should be solved. As I flushed out the document a lot more became clear. It also became a central place to pull in all my research and opportunity sizing on if it was worth doing.
+
+Many people think that writing docs is just overhead that big tech engineers are forced to do. To me, writing helps engineers think through the problem and get clarity. It’s an added benefit that you have an artifact to share with others.
+
+After thinking through the opportunity sizing I felt I had decent odds of making back my initial investment. Also money aside, I was excited to work on the project since there’s something satisfying about building what you want. These reasons made me feel it was a worthwhile project so I started thinking through the roadmap.
+
+
+## Step 2 - Getting Alignment and Staffing Projects
+
+
+I decided it would be a good idea to build a prototype to confirm technical details, but I knew I couldn’t do it alone. I felt confident I could write quality firmware in a reasonable amount of time, but learning how to lay out the PCB and do the CAD would take too long. Not to mention that quality would be a big risk if it was my first time doing it.
+
+I knew I needed help with the electrical engineering and industrial design for my project. Here’s how I staffed that work:
+
+  - Electrical Engineering - Since quality was important, I felt it’d be risky to hire someone from Upwork. So I reached out to electrical engineers I went to UCLA with. One of them was interested in the project so I shared my strategy doc with him and talked over it. He was excited about the vision since engineering quality was important and could see the logic behind the plan, so he joined me.
+
+Electrical Engineering - Since quality was important, I felt it’d be risky to hire someone from Upwork. So I reached out to electrical engineers I went to UCLA with. One of them was interested in the project so I shared my strategy doc with him and talked over it. He was excited about the vision since engineering quality was important and could see the logic behind the plan, so he joined me.
+
+  - Industrial Design - For this product to succeed, it needs to be beautifully done. There are already incumbents that get the job done with so-so designs. I found a designer whose work I admired online and reached out. Again, the doc was critical for communicating the project vision, which he thought was compelling. He ended up joining too.
+
+Industrial Design - For this product to succeed, it needs to be beautifully done. There are already incumbents that get the job done with so-so designs. I found a designer whose work I admired online and reached out. Again, the doc was critical for communicating the project vision, which he thought was compelling. He ended up joining too.
+
+Influence without authority is one of the most important skills needed to build teams and get people going in the same direction. That’s why it’s so important for growing to Staff. Aside from promotions, you can see how it was useful here. Without their help, this project would not be possible.
+
+I think one interesting takeaway from this process is how important writing was. Writing down the plan gave me a clearer picture of what I wanted to do and why it seemed like a good opportunity. Having this clarity made me much more compelling in conversation. Sharing the writing was also an easy way to convey the vision.
+
+
+## Step 3 - Executing the Roadmap
+
+
+Now that we have the right team on the project all that is left is to get it done. This is the “easy” part. I say that with quotes because there’s still a lot of challenging work left. However, the remaining problems have a lot less ambiguity.
+
+This is often the case for new projects; there’s more uncertainty in defining a new direction than in carrying out an existing solid plan. That’s why you often see high-level engineers come in and resolve all the ambiguity, then leave projects once they are on a steady course.
+
+For execution, I do whatever the team needs for the overall initiative to be successful. This doesn’t mean just writing firmware. Some examples of work I’ve had to do:
+
+  - Learn and figure out how manufacturing works (visiting China)
+
+Learn and figure out how manufacturing works (visiting China)
+
+  - Owning and protecting the product vision
+
+Owning and protecting the product vision
+
+  - Project management across functions
+
+Project management across functions
+
+  - Reviewing work outside of my immediate domain (hardware, mechanical, design)
+
+Reviewing work outside of my immediate domain (hardware, mechanical, design)
+
+This level of ownership drives me to solve whatever problem is needed. It’s an important part of technical leadership which I learned at Instagram. The main difference is that the work on this project is a lot less software engineering. It’s been a lot of fun learning these other domains throughout the process.
+
+I hope this was a helpful example of some Staff-level behaviors. You can imagine a similar story if you find some underinvested area on your team. Write about the problem and the benefits of solving it. If you’re compelling enough, then you can get people to join you.
+
+This story also shows that you can take Staff-level behaviors with you no matter where you go. A lot of what you need to lead in big tech will help you elsewhere too.
+
+It’s been a lot of fun working nights and weekends on this project. I’ve been learning a lot about consumer electronics and entrepreneurship. No one knows if this project will succeed or not. All I can promise you is that if I learn something I think will be interesting to you, I’ll share it.
+
+I don’t want to spam this email list since not all of it is relevant for software engineering career growth, so I plan to write more about the project here. Consider following if you want to see if we succeed, learn about the process, or you’re interested in the keyboard itself:
+
+Thanks for reading,
+Ryan Peterman

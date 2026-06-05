@@ -1,0 +1,29 @@
+Here are the takeaways from this Ryan Peterman essay (a self-authored article on the top three software engineering skills he picked up on the job rather than through formal instruction):
+
+**The Slow Path of Observational Learning**
+
+Ryan opens by reflecting that most of his career learning happened on the job through observation—working closely with stronger engineers, seeing what they did, and picking up on what worked well. But he acknowledges this is "much slower than it should be." Rather than having someone walk you through it, you learn behaviors by seeing a ton of examples until you can reverse-engineer their decision-making and crack open the "black box" of their thinking. The entire article is his attempt to explain what's inside that black box for three critical skills and to give you tactics for improving faster, short-circuiting the slow, observational slog.
+
+**Code Review: From Approving Blindly to Reviewing with Confidence**
+
+Ryan admits he didn't review any code when he first started working. "I thought I didn't know enough to add anything helpful." Once he was told reviewing was expected of him, he swung to the opposite extreme—approving code changes he knew nothing about. The results were predictable: bugs shipped to production, and a colleague directly asked him why he had approved their code.
+
+For the mechanics of how to actually review code, he points to Google's engineering practices documentation, specifically the guide on what to look for and the strategy for navigating a change. But his practical advice for getting started is a **"dry-run" review** approach: review the code and ask questions, but don't hit approve unless you're certain. This allows a new engineer to learn and provide valuable feedback without the risk of letting bad code through. He also offers reassurance for those who feel they have little to contribute early on. His own ability to give meaningful review feedback only clicked after he completed a pipeline rewrite that earned him a promotion to mid-level (L4). "If at first you don't have much to add, don't worry since that will change after you build a few features."
+
+**Influence: Selling Projects by Tying Them to What Others Already Want**
+
+No one ever sat Ryan down to teach him influence, so he pieced it together by watching others and reading on his own time. The entire skill, he says, can be distilled into a Dale Carnegie quote: "The only way on earth to influence other people is to talk about what they want and show them how to get it." The tactic is to think critically about what people and teams want—often captured in their goals and strategy documents—and then tailor your communication around those goals, explaining your project's benefit in terms of how it moves their goal metrics.
+
+He illustrates this with a concrete story from his promotion to Senior (L5). He needed an ads team to prioritize video performance wins. Initially, he got a small investment by framing the impact in terms of creation reliability—a pain point for that team, which was suffering operational burdens from low reliability. After landing those initial wins, the results showed unexpectedly large gains in the team's own topline goaling metric. From that point forward, he shifted his framing almost entirely to that metric and ways to improve it further. The reframing "significantly increased their level of investment" and led to a collaboration that spanned several halves. His recommended deeper resource is Carnegie's *How To Win Friends And Influence People*.
+
+**Work Communication: Knowing Your Audience and Killing Filler Words**
+
+The key to communication is knowing your audience, and Ryan illustrates this by imagining project updates for three different groups: for engineering collaborators, be detailed and speak about code specifics; for a general engineering audience in an all-hands, give the high-level engineering plan and next steps; for cross-functional partners like a PM, avoid technical depth entirely and tailor the message around user experience implications. This is common advice, but Ryan sharpens it with a workplace-specific principle: **effective communication gets the point across in as few words as possible**. His concrete tactics include removing any word that doesn't change the message, front-loading longer messages with 1-2 lines of the main details before diving in, and using short, punchy sentences with bullets where appropriate. To learn faster, he recommends communicating a lot and getting feedback from skilled communicators, alongside reading *On Writing Well* (especially the "Principles" section) and attending a local Toastmasters club for public speaking practice.
+
+**The Promotional Stakes**
+
+Ryan closes by tying these three skills directly to career growth at the senior levels. Code review helps you grow others and influence your team's code quality. Influence and communication are mandatory for having team-level impact. The subtext is clear: these aren't optional soft skills—they're the practical, learnable behaviors that separate engineers who stay at the mid-level from those who advance.
+
+---
+
+Ryan’s own arc is itself a case study in the skills he prescribes. His **"dry-run" review** tactic is an influence move in miniature—lowering the stakes for himself and his team while building trust. The advice to translate your project into someone else’s goal metric echoes the Carnegie quote that anchors his section on selling projects; it’s not about convincing people to care about *your* thing, but about showing them how your thing gets them *their* thing. And the communication principle that workplace writing **gets the point across in as few words as possible** is the meta-skill that governs the whole essay—every section models the brevity it preaches, tying each hard-won observation back to the "black box" of senior engineering behavior Ryan set out to open.

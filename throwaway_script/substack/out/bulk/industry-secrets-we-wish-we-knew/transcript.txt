@@ -1,0 +1,78 @@
+Ricky (Staff @ Google by 28) and I recently got invited to speak at UCLA for an old club we were in called UPE. When I saw the opportunity, I got really excited because there’s so much that no one taught me in college that I had to learn in industry myself.
+
+We were surprised when the event received over 250 RSVPs. We wanted to make it as useful as possible for these students so we did it Q&A style. We had a lot of fun and appreciate UCLA UPE+ACM for hosting us (thanks Jordan, Ashley, and Lune for making the event & recording possible!)
+
+I’ve also started to put more effort into the beginning of the videos I make since I figured if that part isn’t good, then most people won’t watch the whole thing. Curious what you all think about the editing.
+
+Here are the takeaways from the talk if you want a concise summary:
+
+  - Maximizing luck for promotions – Luck affects promotions, and you can increase your luck to some extent. Having the initiative to look for new opportunities (and being ready when they come) will increase your luck surface area.
+
+Maximizing luck for promotions – Luck affects promotions, and you can increase your luck to some extent. Having the initiative to look for new opportunities (and being ready when they come) will increase your luck surface area.
+
+  - Perfect code isn’t enough to be a good engineer – The best engineers usually weren’t the top programmers we met in college, but rather the students with a balance of technical and soft skills. Knowing how to influence others, work in teams, and write concisely are all important to software engineering.
+
+Perfect code isn’t enough to be a good engineer – The best engineers usually weren’t the top programmers we met in college, but rather the students with a balance of technical and soft skills. Knowing how to influence others, work in teams, and write concisely are all important to software engineering.
+
+  - You need to advocate for yourself – Promotions are ultimately decided by people. Visibility is therefore an important part of growing your career (in addition to doing good work).
+
+You need to advocate for yourself – Promotions are ultimately decided by people. Visibility is therefore an important part of growing your career (in addition to doing good work).
+
+  - Big Tech vs. Startups – Ricky and I agreed that we’d both take Big Tech over a startup after college. It gives you instant credibility and a solid foundation of skills. After a few years you can pivot to startups with the brand equity and skills you learned.
+
+Big Tech vs. Startups – Ricky and I agreed that we’d both take Big Tech over a startup after college. It gives you instant credibility and a solid foundation of skills. After a few years you can pivot to startups with the brand equity and skills you learned.
+
+  - Lines of code != impact – Impact is just another way of saying the concrete, measurable outcomes of your work. The tech industry rewards results, not effort. If anything, the less code you can write and achieve more impact, the better.
+
+Lines of code != impact – Impact is just another way of saying the concrete, measurable outcomes of your work. The tech industry rewards results, not effort. If anything, the less code you can write and achieve more impact, the better.
+
+  - Big Tech won’t make you crazy rich – Working your way up in big tech can give you a high-confidence path to financial stability and freedom. If you’re aiming for crazy rich though, you might want to take your chances at a breakout startup instead.
+
+Big Tech won’t make you crazy rich – Working your way up in big tech can give you a high-confidence path to financial stability and freedom. If you’re aiming for crazy rich though, you might want to take your chances at a breakout startup instead.
+
+  - Job hopping early vs late career – Early in your career job hopping can be a good thing. Promotions after Senior/Staff levels rely on influence and credibility which take time to build at each company. Later in your career, job hopping can be counterproductive.
+
+Job hopping early vs late career – Early in your career job hopping can be a good thing. Promotions after Senior/Staff levels rely on influence and credibility which take time to build at each company. Later in your career, job hopping can be counterproductive.
+
+  - AI won’t replace SWE jobs, at least for the next few years – Engineers already use many non-AI tools to write code. LLMs are tools that enable engineers to be more productive. I wouldn’t worry about SWE jobs for the next 5 years. Further out, it’s impossible to say.
+
+AI won’t replace SWE jobs, at least for the next few years – Engineers already use many non-AI tools to write code. LLMs are tools that enable engineers to be more productive. I wouldn’t worry about SWE jobs for the next 5 years. Further out, it’s impossible to say.
+
+  - College recruiting – The bare minimum is having some projects on your resume. After that, being persistent and willing to take scrappier companies early in your career will help you build experience fast.
+
+College recruiting – The bare minimum is having some projects on your resume. After that, being persistent and willing to take scrappier companies early in your career will help you build experience fast.
+
+  - Getting a return offer from an internship – Most internships have a well-defined project. Companies are looking to see if you can finish the project as quickly as possible with high-quality code. If you can propose improvements afterward, even better.
+
+Getting a return offer from an internship – Most internships have a well-defined project. Companies are looking to see if you can finish the project as quickly as possible with high-quality code. If you can propose improvements afterward, even better.
+
+If you found anything above interesting, you can hear it in more detail in the full talk. You can listen to it wherever you prefer getting your podcasts:
+
+  - YouTube
+
+YouTube
+
+  - Spotify
+
+Spotify
+
+  - Apple Podcasts
+
+Apple Podcasts
+
+I also made a clips Youtube channel in case you don’t have time for the full podcast and just want to see highlights.
+
+And for more from Ricky, you can check out:
+
+  - His Youtube channel
+
+His Youtube channel
+
+  - Our previous podcast episode
+
+Our previous podcast episode
+
+If you have any questions for me or future guests, feel free to drop them here. I will use these questions to make future content so I can answer the questions you care about most.
+
+Thanks for reading,
+Ryan Peterman

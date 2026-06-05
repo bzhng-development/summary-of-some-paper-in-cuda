@@ -1,0 +1,547 @@
+Adrien Friggeri went from a new grad to a principal engineer (IC8) at Meta. He is the original TL who started Bento if you’re familiar with that infra at the company. He got to where he was through a series of promotions across different teams and projects. I interviewed him about everything he learned along the way
+
+Check out the episode wherever you get your podcasts: YouTube, Spotify, Apple Podcasts.
+
+
+## Timestamps
+
+
+00:43 - First team at FB
+
+07:24 - Senior promo /w IG
+
+16:30 - Story behind Bento (Senior staff promo)
+
+25:33 - Taking on perf risk to start the project
+
+29:03 - Learnings from leaving big tech
+
+32:46 - Joining Clubhouse
+
+35:08 - Return to Meta (again)
+
+40:51 - Principal promo (IC8) and tips
+
+51:37 - Maximizing your luck /w people
+
+54:26 - Advice for younger self
+
+
+## Transcript
+
+
+
+## 00:00:43 — First team at FB
+
+
+Ryan:
+
+[00:00:43] Can you tell me a little bit about the first team that you joined and why you picked it?
+
+Adrien:
+
+[00:00:47] So I was actually pre-allocated, I joined what was then called the Data Science team, which you and I have talked about a little, is a little confusing, because what we call data scientists nowadays is very different from what was data science.
+
+[00:01:00] Then in early 2011, 2012, there was this emergence of big data, mainly at LinkedIn and Facebook teams of statisticians and computer scientists, early machine learning researchers leveraging a lot of data to build better products. So that was like the very early days of doing A/B testing and doing A/B testing at scale, doing measurement and proper measurement of things.
+
+[00:01:31] And so that was that team. I was pre-allocated to that team because I had a PhD, I was working on social network analysis. So I was joining this small team of about 20 people. For the people who know the Facebook stack, that team had been behind the whole A/B testing platform for the company.
+
+[00:01:50] Had been behind a lot of the data pipelines that are being used to measure and count everything. We would often joke that, at the end of the day we were just doing big counting, and so I was pre-allocated to the Data Science team.
+
+Ryan:
+
+[00:02:05] Did you see yourself more as a data scientist at the time, or a software engineer?
+
+Adrien:
+
+[00:02:10] You know, it’s very funny. I have this very distinct memory of a conversation. My first one-on-one I had with my manager, Cameron Marlowe, who was managing the data science team at the time, we were standing in line about to have lunch and I was a little pretentious. I was like, I have a PhD.
+
+[00:02:31] I’m not a software engineer. And he was like, Hey, software engineers have power at this company. You are a software engineer. Don’t pigeonhole yourself into a category or an area that is not the most important job of the company. You are a software engineer. Software engineers create the products, obviously in partnership with PMs and designers, but software engineering carries a lot of weight.
+
+[00:02:57] Since then, I’ve always considered myself a software engineer. That is my primary job. My title has always been software engineer. My official Workday title, I think I was a research scientist for a while, in the outwardly displayed things. I was a data scientist for a while, but no, always a software engineer.
+
+[00:03:16] Like I mentioned to you, around 2014 or so, the role of product analytics got renamed to data scientists across the company. So all of a sudden we moved from having 20 data scientists or 30 data scientists, all with PhDs doing data analysis, doing software engineering and stats to having 500 or so data scientists doing mostly product analytics.
+
+[00:03:41] That was kind of a crisis in identity in the team I was on at the time, but we quickly moved on. At the end of the day, the title was not the important part. The important part was the impact of the work we were doing.
+
+Ryan:
+
+[00:03:53] Can you explain the difference between the product analytics and the old data science function?
+
+[00:04:00] I’m curious what are things that an old data scientist would do that a data scientist today would not be expected to do?
+
+Adrien:
+
+[00:04:08] One that was like when we were building Deltoid and all of those A/B testing tools, nowadays data scientists are mostly users of those tools.
+
+[00:04:21] They’re not the ones who have defined the algorithm or the sampling strategy or the bootstrapping that you’re using to compare test groups and whatnot. It was a lot of people like Dean Eckel and Etan Bhi, really amazing statisticians who were building those tools that are now powering the company.
+
+[00:04:41] So they were the tool builders more than the tool users.
+
+Ryan:
+
+[00:04:44] Those tools allowed the data science function to scale. People without that deep statistical understanding could go into a tool and understand data much more easily than someone in the past.
+
+Adrien:
+
+[00:05:01] There was just another example of the stuff we did at the time.
+
+[00:05:04] I worked on how rumors spread on social networks. That was my very first project at the company. I worked with amazing researchers like Lada Adamic, who was eventually my manager and a director of Data Science at the company. Her background was as an academic doing research on social networks.
+
+[00:05:24] With her and Alex Dow and a few others, we spent the first six months I was at the company analyzing how rumors spread on social networks. By rumors, I want to be specific here. I’m not talking about fake news, which is a slightly different flavor. I’m talking about rumors, mostly memes.
+
+[00:05:42] The type of stuff that ends up on say, Snopes. The stuff we were looking at was the shape of those cascades, how do they spread? Do they tend to spread mostly in long chains? Do they tend to fan out? It’s really dependent on a few things, and there were fascinating results we found.
+
+[00:06:03] We found that false rumors have a tendency to spread faster than true rumors. Even if you point out that a rumor is false, that doesn’t really limit its spread. That was the type of work we were doing until I spent about six to eight months doing that and published maybe two or three papers.
+
+[00:06:21] I think the impact we had on the company was affecting the weight of re-shares in the newsfeed. We were like, if we continue doing too many re-shares, we’re going to lose organic content. My manager at the time said, you wrote three papers, helped tweak the newsfeed, now go figure out something impactful for the company.
+
+Ryan:
+
+[00:06:44] It’s super interesting that false rumors spread faster than true ones. It matches intuition. If something’s wrong, people are more likely to reshare because they say this is wrong, which then some percentage of people agree with and will share it because it’s right.
+
+[00:07:02] Another polarizing set of people will share it again and say, this is wrong.
+
+Adrien:
+
+[00:07:07] I think it’s more that false rumors tend to be more egregious, and because they’re more egregious, they are inherently more shareable or more viral. True things tend to be more boring than false things on average.
+
+
+## 00:07:24 — Senior promo /w IG
+
+
+Ryan:
+
+[00:07:24] I want to go into your first promotion story to the senior engineering level.
+
+[00:07:31] Can you talk about the story behind doing that at Instagram?
+
+Adrien:
+
+[00:07:34] So, after this rumor work, I was very lucky to meet Mike Krieger, co-founder and CTO at Instagram. Instagram had been acquired in September of 2012. It was a very small team at the time. I started talking to them in early 2013.
+
+[00:07:53] The team was still relatively small. The core Instagram team at the time was probably 30 people, and there were a lot of Facebook people around helping on the safety side. A few people were starting to help on the data side, just to give an idea of the maturity at the time.
+
+[00:08:10] This is when the very first data pipelines to count how many users were created on Instagram. I was like, Hey, this is a cool product. This little photo social network that we’ve acquired doesn’t really do anything with data. There’s no personalization. There’s an opportunity to do something cool here.
+
+[00:08:32] The first thing I started helping with was the Explore tab. The Explore tab, circa 2012, 2013, was basically the most popular content on Instagram, and with a few others, we decided to add a little bit of personalization to that and surface popular content from your friends, content you might be interested in.
+
+[00:08:52] We started building different sources, and then there was this question of how do we know if it’s good or not? Obviously, it’s probably going to be better than only having popular content on the platform, but there was a desire to understand the impact of what we’re doing.
+
+[00:09:09] Similarly, I was also helping out with some people looking at growth and user acquisition. Can we plug into Facebook and deep link you into Instagram or promote Instagram within Facebook? How do we measure conversions here? Instagram didn’t have any A/B testing system, so as a little IC4, I thought Instagram needed A/B testing. I talked to a few PMs and I talked to Krieger and Kevin Strom, and everyone was like, we have bigger fish to fry right now. Instagram was in the midst of what we were calling integration, which was migrating Instagram from AWS to the Facebook infrastructure for cost and all of that.
+
+[00:09:51] They were like, your little A/B testing idea is good, but we have really important things we need to do now. Please don’t bug us. I thought, let me try and see if I can build that. I roped in a PM, Jeff Canter, to get air cover on what I was doing. I just kind of hacked something together. Facebook had an A/B testing system, so I wanted to reuse this as much as possible.
+
+Ryan:
+
+[00:10:06] But Instagram was running in a different infrastructure, so how can you plug those things and connect them together?
+
+Adrien:
+
+[00:10:28] I did the dumbest hackiest, probably very expensive thing I could do, which was add a custom Facebook API endpoint that was allowed, listed on the Instagram app, which was essentially to log those things.
+
+[00:10:42] And so that way you could log all exposures over the internet, sending that from AWS using the Facebook API. Now you’re logging your exposures. So that’s like half of the problem solved. The other half is how do you hash users into the right groups? It was like 50, a hundred lines of code.
+
+[00:11:01] So I replicated that on the Instagram side. At that point, I just had a system to hash users into buckets, log exposures, and we already had some data in our data warehouse, so I could connect that to the backend of our A/B testing system. All the different pieces. So at that point, I was like, okay, I can kind of run some web experiments.
+
+[00:11:27] Unfortunately, we didn’t have a website or it was very early days of the Instagram website. So I think the first thing I did was a server-side A/A test to prove that it worked. Then I found a mobile engineer who was willing to help me with the iOS code and the Android code.
+
+[00:11:45] We started running one or two small experiments, very small things just to prove that the system worked and that it was scaling, and it did. So that’s the story of how we brought A/B testing to Instagram. Now obviously after integration and all that, everything has been probably rewritten four or five times since then.
+
+[00:12:04] That was the story behind my promotion. I built that thing. By the way, I had no idea that promotions existed at that point. I was a little IC4 who was completely naive, just working on things because I was excited about them. I didn’t pick that because I thought it would be successful.
+
+[00:12:19] I picked that because I needed it for this other thing I wanted to build. Come performance season, at the end of the year, my manager was like, congratulations, we’re promoting you to IC5. I’m like, what does that even mean? What does an IC5? Then I transitioned that A/B testing system to this newly created data ground team, which went on to own and maintain that.
+
+Ryan:
+
+[00:12:43] Interesting. I can already tell in your early career story, there are examples of unusual agency and chasing things down. It sounds like no one told you to build this end. You have a few examples in that story of going up to random people like the CTO of Instagram and a mobile engineer.
+
+[00:13:05] You said, “Hey, do you want to join in on this initiative?” It sounds like that’s pretty standout that you had that behavior so early in your career.
+
+Adrien:
+
+[00:13:14] I never really thought about that this way. It was just the early days of Facebook were very, very bottoms up. Everyone kind of operated like that, or at least that’s how I understood the world, right?
+
+[00:13:25] You need to do something and you can’t do it yourself, so you try and find someone to help you with it. The early days of Facebook, I mean, obviously we still have hackathons nowadays, but there was such a big hackathon culture in the first six months. I probably did six hackathons, once a month.
+
+[00:13:45] Every Thursday evening, you would spend the entire night in the office with other people hacking on something that was not related to your day job. To me, that was the culture of Facebook. So naturally, when it came to my day job, of course I’m gonna hack on something.
+
+[00:14:00] Of course I’m gonna try and figure out how do I achieve the thing I want to achieve.
+
+Ryan:
+
+[00:14:05] Were there cultural differences between the early Instagram team and Facebook at the time?
+
+Adrien:
+
+[00:14:10] So, I never officially joined the Instagram team. On the data science team, we were kind of operating as consultants, helping different teams around the company.
+
+[00:14:21] We would do like six months, two-year stints embedded in a team. But my reporting chain never changed. I was very lucky to have a few managers. I know that a lot of folks have changed managers every six months. In my first two, three years at the company, I had two managers, despite working on very different teams. Not joining Instagram officially is probably one of the biggest mistakes I’ve made in my career.
+
+[00:14:48] Not to say I have any regrets. This is more the flavor of like, I didn’t buy a bunch of Bitcoin in 2013 type of regret. I think my career would’ve been very different if I had decided to join instead of move on to something else. In terms of culture, Instagram really felt like a very small startup within a startup.
+
+[00:15:09] Facebook was like 2000-ish employees. Instagram, like the whole core team, everyone working on Instagram, we all fit in one big conference room. It was like 30, 40 people, and there was such a big focus on design and craft over data. That was very different. But other than that, it was to me like that same energy of just creating stuff.
+
+Ryan:
+
+[00:15:33] When you say it was the biggest mistake that you’ve ever made in your career, what do you mean by that? And where do you think your career would have been if you joined Instagram?
+
+Adrien:
+
+[00:15:44] I think my career growth would have been accelerated. I might have reached certain levels faster if I had joined that team at the time.
+
+[00:15:53] If I look at the folks who were working with me in that space at that time, they went on to have really fantastic careers, hitting like IC sevens, IC eights, IC nines, IC tens way sooner than I have or probably ever will. Like I said, it’s really hard to know what the counterfactual is.
+
+[00:16:15] I’m also very happy with where I’m at in my career. It’s just, this is like a road not taken.
+
+
+## 16:30 - Story behind Bento (Senior staff promo)
+
+
+Ryan:
+
+[00:16:19] After that, I understand that you built some frameworks and you worked on some additional tooling that was highly leveraged at the company. Can you talk about the story behind your IC seven or Senior Staff promo?
+
+Adrien:
+
+[00:16:35] So, I was kind of playing around with different projects, bringing data to non-data teams. I had my hits, and in other cases, it didn’t really pan out. I got roped into this project to count the number of people using one of Facebook’s properties.
+
+[00:16:52] I’m not gonna spend a lot of time talking about it. But in the process of doing that, around 2015, we had to do a bunch of data processing and machine learning inference. The tools we had were just icky. They didn’t really work well; the developer experience was horrible. We would have to work within one data pipelining framework and then move to another thing to do the machine learning inference, then go back and forth. I was wasting so much time just going back and forth. I started building this little library that essentially let you do data pipelining within the machine learning orchestration framework.
+
+[00:17:33] At first, that was just me writing a bunch of helper scripts for myself because I didn’t want to deal with landing code in two different code bases and synchronizing all of that. I wanted my code to live in one thing and do everything in this code base, and then I’d be happy.
+
+[00:17:49] In the process of doing that, I started tinkering a little and thought, why is it that whenever I need to write a data pipeline, I have to write the same boilerplate over and over again? It’s always the same thing. Why can’t I set those things to be the defaults? I whittled away a lot of the boilerplate that you had to write.
+
+[00:18:11] I put together this library where if you were building a data pipeline in the machine learning orchestration framework, FB Learner Flow, what would take you 300 lines of code in the canonical data lining system would probably take you 20 lines of code. You had this escape hatch to add all the configuration, but by default, it did the right thing.
+
+[00:18:33] At that point, I was hooked. I was building a thing that could make people’s lives easier. Forget about counting the number of people on Facebook. Other people are gonna figure that out. I’m gonna help those people move faster. I started looking at other things where people were wasting time.
+
+[00:18:48] At the time, if you were a data scientist, product analyst, or machine learning engineer, the way you worked was by building or setting up your own tools. Half of the company was using Jupyter for notebooks, and the other half was using RStudio, which uses the statistical programming language R. You would look at one of ten different wikis that were all outdated and set that up either on a desk server or on your machine.
+
+[00:19:20] A lot of manual steps. I thought that was kind of silly. We should just make it so everyone has a Jupyter instance running if they want and they don’t have to configure it. I started building that. I remember telling my manager, in February, I said, “Hey, this is the beginning of the half. I’m gonna take two to three months to just hack on this. If it doesn’t pan out by April, I’ll find another project to save the half.”
+
+[00:19:39] I started hacking on this, roped in a couple more people, and we built what eventually became the very first version of Bento, the noble platform based on Jupyter that’s used all across the company. At first, Bento was really dumb. It was just a script that would set up Jupyter for you, but we had this vision behind it. What if instead of just being this external tool that you have to set up that doesn’t communicate with anything at the company, we integrated it better within the rest of the tooling?
+
+[00:20:21] What if you could just open a browser, type Bento, and now you have a notebook that’s running with the libraries built within the company that you can reuse instead of figuring out how to do that manually? What if you could have other programming languages? Eventually, people started hacking into that.
+
+[00:20:41] Over the course of about a year, we started putting the system together. A big thing I worked on after that was building Bento on demand, where instead of having a desk server set up for you, you could just request an on-demand instance, work on that, and then release it. We were doing that for development environments, and it made a lot of sense. You don’t have to maintain a dev server.
+
+[00:21:03] In the process of doing that, I helped lead the development of the platform. More importantly, I put the team together. I transitioned into a tech lead manager role and started building a team. I hired people who were very excited about the tooling world. I hired a bunch of people who were already building tooling on the side in their spare time. I asked, “Do you want this to be your full-time job? Sounds like you like to do this thing. It’s super impactful. Do you want to do this full-time?”
+
+[00:21:37] I brought in a bunch of amazing people, a good team of six, seven, eight people. I got promoted to TLM 2 mostly on my IC work, and the vision I had for Bento.
+
+Ryan:
+
+[00:21:56] And TLM 2 for people who are outside of the company is equivalent to senior manager, which is equivalent to senior staff engineer in the industry.
+
+[00:22:06] And when you hear these great stories of new infrastructure or tooling that everyone takes for granted today. What I wanna know is what is the step-by-step process on how you actually get the tooling from an idea to something that everyone is using?
+
+Adrien:
+
+[00:22:20] So for Bento, the notebook platform, the answer is we didn’t really try to get adoption within people’s existing workflows.
+
+[00:22:32] What I did was twofold. One, we targeted bootcamp and DataCamp. So bootcamp and DataCamp for non-Facebookers is where you go through when you onboard at the company. We just went to DataCamp and we told everyone who was working with data, this is the way you set up your developer environment.
+
+[00:22:52] You just use this thing or you can also go do it manually if you want. But you can also just type this one word and you have your developer environment. The company was growing like crazy at the time, right? And so when you have this amount of insane growth and you know the company is gonna double in size within a year or two, you get your growth from all of those newcomers who don’t know the legacy systems and then you get the stragglers because everyone else around them then uses the new system.
+
+[00:23:22] So that was a lot of the growth strategy behind Bento. The other thing we did with Bento was provide support and maintenance for the legacy systems. We built trust with users that way. So if you were installing Jupyter by yourself, you could go to that group that was unmonitored before us and we’re providing help and support.
+
+[00:23:42] Over time, after building that trust, we would start encouraging people and be like, yeah, you know, this thing you wanna do, I can give you a recipe that’s gonna take 25 steps to do that. Or we’ve actually built that in Bento. It doesn’t really change your workflow, it’ll just make your life easier. You’ll move to that. So to summarize, step one, find an easy way of getting a bunch of users because network effects work. Step two, for the people who are on the legacy systems, just provide value to them.
+
+Ryan:
+
+[00:24:17] That’s super interesting because when I think of these.
+
+[00:24:20] Developer offerings, I just always assume that you’re gonna have to influence a group of people that is using something today to switch off of something. In this particular case, in a growing company, there’s this whole new user base, like all these people coming in, they’re deciding from a fresh slate.
+
+[00:24:39] It sounds like your offering was a superior product in a sense. So it was a pretty easy sell.
+
+Adrien:
+
+[00:24:45] And then the other thing we did too was go to Alex Schultz, who’s now the CMO of the company, but was head of analytics at the time, and Brady Lau back. We just told them, hey, we know that there’s a lot of pain within your teams.
+
+[00:25:00] We want to help. We think that this is the first step. I remember Brady saying, yeah, this is a good first step. There’s like those 20 other things you need to go fix. I was like, okay, let’s take it one step at a time and let’s start talking more. There was no team at the time really building tools for data science and machine learning.
+
+[00:25:21] So this is when I actually ended up leaving the core data science team and I reorganized myself into the dev infra organization to start that team really focused on developer tools.
+
+
+## 00:25:33 — Taking on perf risk to start the project
+
+
+Ryan:
+
+[00:25:33] At the beginning of the story, you mentioned you took on some performance system risk. You literally told your manager, hey, I’m gonna take on and build something that has a lot of potential, but also it might flop entirely, and then we can scramble to figure out performance so that.
+
+[00:25:50] You know, you don’t get a below meets all rating. I’m curious because at that time the industry was not as intense when it comes to churning out short-term results. Do you think that trying to do something like that today would be more difficult? And do you have any advice on more generally how to take on risk to pursue these high rewards?
+
+Adrien:
+
+[00:26:13] I think the consequences of underperforming now are more drastic than they were 10 years ago. I think the strategies when you want to take risks are the same. Make sure you’re on the same page with your hierarchy and your manager. At the end of the day, we are all evaluated based on our expectations.
+
+[00:26:33] If you’re not aligned on what is expected of you with your manager, then that is a problem. I was on a team whose job was to provide help with data, data consulting in a way. The thing I was building was tooling and infrastructure, not at all data consulting. So the first thing I did was, “Hey, manager, I’m not going to do what my job is and what the team is doing because I think there’s an opportunity there.”
+
+[00:27:00] “Are you okay with me doing this? Can we carve out two, three months for me to go explore that and make that part of my expectation? If it pans out, great. If it doesn’t pan out, well, I was expected to go explore this.” It was a calculated risk. We all agreed as a team, my manager, my skip, myself, that this was a thing I was going to do.
+
+[00:27:22] At that point, there’s an agreement. This is the job you’re going to do. Everyone is on the same page. I think it is a lot riskier to go and do your own thing. You lock yourself in a room, do your thing for three months, show up, and you’re like, “I did this thing.” And then everyone’s like, “Yeah, but no one knew you were doing this.”
+
+[00:27:43] Communicate, I think, is really the strategy I would recommend and also be ready to hear no. I was very lucky to have a manager that said, “Yeah, I think that makes sense. It’s risky, but it makes sense. Go do that.” I’ve had instances later on in my career where I wanted to go do a thing, and I tried building that consensus, and what I was told was, no, don’t do that.
+
+Ryan:
+
+[00:28:05] You mentioned that you transitioned to a TLM during this leg of your career as well. What was the thinking behind that transition?
+
+Adrien:
+
+[00:28:12] I was building the team, right? We were building this product. I knew we had to scale and we needed more people. Then the question was, do I go hire someone to manage me and the rest of the team, someone who might come in with a different vision for the team or a different strategy, or do I try this management thing?
+
+[00:28:34] To me, it was really driven by a desire to take this little crew we had assembled and lead them or support them in building this product we wanted to build. It was kind of a natural evolution. It was not really thought out. I want to be a manager. I’m going to transition into management and find a role like that.
+
+[00:28:55] I was tech leading that team. We needed more people. The team needed a manager. I ended up being the manager.
+
+
+## 00:29:03 — Learnings from leaving big tech
+
+
+Ryan:
+
+[00:29:03] So after you got this IC7 promotion, I understand that you left Meta with a desire to start your own company. Yes. What was the thinking there and the story behind you leaving? How did that go at that point?
+
+Adrien:
+
+[00:29:17] I had been at the company for about seven years. That was the only company I had ever worked at. My professional experience before that was doing a PhD, working in my own corner, seven years at Facebook, and growing tremendously, learning a lot, but also not really knowing what happened in the outside world.
+
+[00:29:33] There was also maybe a little bit of hubris. I built this platform that was being used by, at that point, 60% of all people doing data at the company. I thought I could go build that externally. If Facebook needed this in 2018, the world is going to need that in 2020, and I’m going to go build it.
+
+[00:29:54] So I left and I thought I was going to do a startup, and then I realized that I wasn’t an entrepreneur at the time. I really enjoyed going deep into technical problems, and I had underestimated the amount of work needed for me to build or rebuild by myself. Our team of six had spent two years building on a very mature infrastructure.
+
+[00:30:24] I often joke that I left the company to do a startup, and I ended up taking a sabbatical instead. It was wonderful to travel the world. I went to a lot of wonderful places, but I did not start a startup. I built a few prototypes. I found other people to work with, with whom we had different ideas.
+
+[00:30:43] Nothing really crystallized.
+
+Ryan:
+
+[00:30:46] What were the skill gaps between yourself at the time, successful tech lead and an entrepreneur?
+
+Adrien:
+
+[00:30:54] In order to be a successful entrepreneur, you need to be able to delegate the hard stuff, right? You scale yourself through others. To me, at that point, it basically meant that whenever something became interesting, I would have to find someone else to do it.
+
+[00:31:11] My involvement would have to be superficial. I could hack a prototype together, but if I wanted to take it to the next step, I would probably need to find some engineers to work on that while I try to figure out how to get people to use the thing in the first place.
+
+[00:31:26] And I wasn’t really into that.
+
+Ryan:
+
+[00:31:28] So after the sabbatical, you boomeranged back to Meta. What was your thinking behind going to Meta?
+
+Adrien:
+
+[00:31:35] So, COVID happened. I was living in New York at the time, and I was stuck in my tiny apartment. On a whim, I decided to buy a house in Denver.
+
+[00:31:45] So I moved to Denver, bought the house, got a mortgage, and I was like, I need a full-time stable job. I interviewed with a few places. I had a few offers at the end of the day. The reason I came back to Facebook was James Pierce. James Pierce is a fantastic manager. He was a Director of Engineering.
+
+[00:32:04] His claim to fame is he was the manager behind the open source program at Facebook in the early days. He worked on Portal. He worked on so many amazing things, and I always looked up to him. When it came time to find a new role, I reached out to a few people in my network, including James, and he was like, yeah, I’ll take you. Come work for me. I interviewed, did a behavioral interview, and they were like, yeah, you’re still not crazy. You can come back. I got a few other offers, but at the end of the day, it was really the draw of working with a few people I really knew and respected.
+
+
+## 00:32:46 — Joining Clubhouse
+
+
+Ryan:
+
+[00:32:46] And then I understand that you went to Clubhouse after.
+
+Adrien:
+
+[00:32:51] After, this is the crazy thing. I came back to Facebook in the summer of 2020, spent about seven months working on data infrastructure, kind of related to the stuff I had done before. A buddy of mine put me in touch with one of the co-founders of Clubhouse.
+
+[00:33:09] If you remember, Clubhouse went crazy viral and had crazy growth in late 2020, early 2021. I remember talking to them at first, not seriously, because I had just been back at Facebook for seven months. I talked to the two founders and I was like, oh, this is exciting.
+
+[00:33:30] Oh my God. Zuck is on Clubhouse and there are all of those people. It was having a moment, and so yeah, I decided to join Clubhouse. When I joined Clubhouse, the company was maybe 10 or 11 people. Insane amount of hype around it, a lot of users, and yeah, it was a very interesting year I spent there.
+
+Ryan:
+
+[00:33:52] Do you have any interesting insights or stories that you’d like to share?
+
+Adrien:
+
+[00:33:56] I joined the company to help with the data stack. There was one person working on data when I joined, Kenny Damika, who was starting to put together the analytics stack. There was no machine learning at Clubhouse. There was no feed ranking, or at least not machine-learned feed ranking. Clubhouse was spamming people with notifications.
+
+[00:34:18] A lot of the work I did in the early days was just building a lot of those systems. I built A/B testing for Instagram, built A/B testing for Clubhouse, because we wanted to be able to measure the stuff we were building, and introduced some machine learning to Clubhouse to filter out the notifications we were sending because it was very spammy.
+
+[00:34:39] What was the internal culture like? The culture was very hands-on. A lot of people were eager, an extremely talented pool of engineers. Clubhouse was this interesting mix where a large fraction of the company was either former Coinbase, or a firm, or Facebook. A lot of very independent, self-driven, hungry engineers who just wanted to build a really cool, authentic social network.
+
+
+## 00:35:08 — Return to Meta (again)
+
+
+Ryan:
+
+[00:35:08] So after Clubhouse, you went back to Meta for a second. Boomerang for a second time
+
+Adrien:
+
+[00:35:15] I guess I had unfinished business at Meta. When I decided to leave Clubhouse, I did a very thorough job search. I ended up talking to a lot of companies. I had an offer from Apple that I really considered.
+
+[00:35:29] The reason I decided to go to Meta was twofold. One, a manager, Vincent Hardy, who had been my manager in the past, whom I wanted to work with again. Vincent at the time was the engineering director behind Ray-Ban Stories. Ray-Ban Stories is this partnership, the glasses between Meta and Ray-Ban.
+
+[00:35:55] I had never worked on a product or hardware. I have this connection who is working on that, and he’s willing to take a chance on me. I kind of want to see what that pivot would look like, not being the data guy anymore, but working on something else.
+
+Ryan:
+
+[00:36:12] Yeah. That was one thing that I wanted to know, which was you were entrusted with this Uber TL role working in a very different domain than your past experience. It sounds like the key that got you that role was that you came through a referral from a trusted past manager.
+
+Adrien:
+
+[00:36:33] No, not entirely. I was not entrusted with any Uber TL role from the get-go. I came back to the company as an IC7. Ray-Ban Stories had been released in September of 2021, and after launch, there were quality issues and growth issues. When I came in, I was asked to look at our growth story and the data. I spent about eight months to a year working with fantastic leaders, engineers, and data people on Ray-Ban Stories to understand where things were breaking, where we needed to invest more, and where we needed to measure more. That’s how I built trust with that organization.
+
+Then there was a reorg at the end of 2022. We merged a bunch of organizations together, and people started getting different roles. I told my manager at the time, “It’s been fun to do this, but the reason I joined Smart Glasses in the first place was to work on Smart Glasses. I didn’t want to be the data guy anymore. There’s this project I would really like to work on. I know I don’t have experience in hardware and product, but you’ve seen my track record of the last year. I’ve developed this product sense. Can I go help with that?” He said I could move on to that project.
+
+There was another engineer who was the Uber TL and the STO for that entire program. I spent the next couple of years working on that and gaining more scope over time. I ended up supervising all experiences across this specific hardware line. I won’t go into details because the product is not yet released, but my job was to ensure that all of the user experiences on this specific device were good. That meant working with a lot of different teams across Smart Glasses and eventually what became wearables towards the end to make sure we were shipping the right set of user experiences.
+
+Were there any growing pains in switching into this new domain? I think there were a lot of growing pains in the organization as it was growing and maturing, and those rippled onto me. In the early days, I struggled a lot with the cadence around working with hardware. I started working in 2022 on something that will be released at some point, which is currently not released. This extremely long lead time and validation and putting things in the hands of users was kind of missing. But once I got to a point where there was internal fish fooding and dogfooding within the company, we started getting some feedback and signal, which made things a little easier.
+
+Ryan:
+
+[00:39:37] Do you have any advice on how to ramp up successfully in a completely different domain?
+
+Adrien:
+
+[00:39:43] It’s the same thing as ramping up in a new company, or a different flavor of it. I use the boss strategy of doing the social network exploration thing first.
+
+[00:39:53] Talk to people, ask them who I should be talking to. Don’t be afraid to ask dumb questions since you’re new on the team. Everyone knows that you don’t know anything. I’d rather ask a really silly question now rather than six months from now not knowing what we’re talking about and trying to get your hands dirty.
+
+[00:40:13] It’s a thing I’ve always tried to do. Check out the code even if you’re not going to work on it. I never officially worked on firmware, but I did check out the code and made a few tweaks just to get a feel for it and understand it, and then kind of map things out this way.
+
+[00:40:31] The last thing I’d say is pick a hard problem to solve. I learn a lot by doing, so I pick a hard problem to solve where I have an idea of how to solve it, and then I can fill in the blanks as I go.
+
+[00:40:49] That’s where I learn.
+
+
+## 00:40:51 — Principal promo (IC8) and tips
+
+
+Ryan:
+
+[00:40:51] On this team, this is where you got your IC8 promo or your principal engineer promo. I’m curious, what’s the story behind that promotion? What is the scope that actually got you promoted?
+
+Adrien:
+
+[00:41:02] Well, in this case, I was eventually responsible for all experiences on a device.
+
+[00:41:09] I was working across multiple orgs, dozens of teams. I think at some point, the set of PMs I was interacting with was probably around 35 PMs, and however many engineering teams were working with that. My job at that point became a lot of coordination and overall architecture.
+
+[00:41:33] My responsibility was making sure that we were delivering on our milestones from an experiences perspective. The reason I say experiences and on the whole device is that the way we were organized, there were teams working on the OS layer. I would work a little bit with them, communicate requirements, and poke holes into their story.
+
+[00:41:56] But there were partners I was not responsible for in that part of the stack. My responsibility was very specifically on the experiences we were shipping. If you think about Ray-Ban Meta, for example, which is a product that’s in market, the experiences on that would be all of the AI on the device, all of the music listening, the photo capture, and all of the companion app stuff.
+
+[00:42:20] You can imagine something like that for another device. That was the scope. I can go into a little bit of detail on how I actually got the promo because that one was a little bit more work. If I think about my entire set of promotions from IC5 to IC8, at IC5, I had no idea that promo was a thing.
+
+[00:42:42] It was kind of a surprise. At IC6, I had to talk to my manager and be like, okay, do you think we can put me up for a promo? My manager was like, yeah, okay, I think you’re ready. It went through. At IC7, it took a couple of cycles where we did a few revs. At IC8, I went to my manager, who at the time had never done an ICA promo.
+
+[00:43:07] We were like, okay, how do we do this? We partnered on writing the promo packet together. I wrote a substantial amount of the promo packet, obviously with his help. Then, building consensus within the organization, going to multiple VPs early on and saying, this is the work that I’ve been doing.
+
+[00:43:30] Do you see IC8 scope here? Would you be supportive of the promotion? Building that consensus and seeking mentorship was important. In some cases, there was a D2 in the organization who I knew would be absolutely critical in me getting this promotion. I went to him and said, you carry a lot of weight in this organization.
+
+[00:43:49] I’d love to understand how I can make it to that level. Would you mind having a monthly conversation with me, just checking in and helping me course correct? Six months later, I went up for promo, and he was supportive because he had been involved in the process the whole time.
+
+Ryan:
+
+[00:44:06] So identifying who the champions are is even more important for the highest level promotions and working with them to understand what your gaps are so that when it comes time for that discussion, it’s just a matter of logistics, but everyone is already aligned prior to that room.
+
+Adrien:
+
+[00:44:26] Yes. Now to be clear, I don’t want to make it sound like getting promoted is just a social game. You need to have the underlying work too. But you need to have both of those things. You need to have the impact and the underlying work. It is also way easier, at least in my experience, to build the consensus ahead of time so that when you go to a performance calibration session, you don’t have a debate in the room.
+
+[00:44:53] For my IC promo, it took two cycles. The first one we started socializing. My manager didn’t put me up for promo officially in that cycle. He just talked to people around and felt the water. In the following half, people had that context. They were like, oh, we’re having this conversation. This is going to happen eventually. Let’s see what’s missing, what we can do this half. With the amount of work I did in that half and the impact I had and that support and mentorship, that’s how I ended up getting it.
+
+Ryan:
+
+[00:45:28] When it comes to the scope and the role that got you promoted, it is a role that requires permission from those around you to have that role. There’s only one Uber tech lead available. It’s not like your Bento story where you created a role without permission from others and built it up into something. In that first type where there’s a limited role and probably other people who would like to have that role, do you have any advice on how to secure that scope for yourself or go towards that if that’s something you’re interested in?
+
+Adrien:
+
+[00:46:13]  So, funnily enough, that’s not exactly the case because there was an Uber TL for this entire program, and he’s a fantastic engineer, Sung Yu. I identified that there was a lot of work on experiences, specifically on the experiences side, working with product and design that I could help with.
+
+[00:46:32] He could focus on the broader program, and I could tackle that area. Over time, he and I built this trust where I started focusing on that and taking it off his plate. He didn’t have to worry too much about it, instead of coordinating with 10 or 12 different engineering teams on experiences specifically. He could just go through me; the system stuff, everything else he would do himself. I ran a very tight ship on experiences, and I made his life easier. I kind of took that role upon myself. There isn’t really a new TL for experiences on each product line. I carved that out for myself within that specific program.
+
+[00:47:14] At some point, I worked with my leadership and said, “Hey, I’ve been doing this thing.” People were asking, “Why is Adrian doing that?” I asked if we could say that I’m the TL for experiences; that would make my life easier. It became a post hoc thing. Once I was already doing the work and had done it for about a year, I asked to be blessed with a little label so I could explain who I was in a sentence instead of saying I’m just this engineer who’s touching all of the experiences.
+
+[00:47:52] Another thing I want to make clear is that I’ve heard a lot of engineers talking about scope as in stealing scope from other people. That is the wrong way to think about it. Taking something off someone’s plate doesn’t mean that you’re stealing from them, or it is if you’re not talking to them about it.
+
+[00:48:13] Again, this is a constant across everything I’ve been talking about: over-communicate. I went to that engineer and said, “Hey, I am very excited about this space. Do you mind if I help with this?” He said, “Yeah, sure. I’m swamped. If you want to take that on, take it on.” A few weeks later, I came back and said, “Hey, there’s this other related thing. Is it okay if I talk to them?” He said, “Yeah, sure, knock yourself out.” In the process, he could explore other things and broaden his own scope.
+
+Ryan:
+
+[00:48:42] In my mind it’s a win-win for him because I imagine you helped him scale himself so he can chase some other scope.
+
+[00:48:52] Maybe he’s going for IC9 or something like that, and he has evidence that he grew someone to IC8 or helped. I don’t know if that was the case in this example, but oftentimes TLs are gracious to give scope so that they can move on to bigger things and help you grow into their role.
+
+Adrien:
+
+[00:49:11] And similarly, I’ve done that with more junior engineers where I had to actually fight with more junior engineers and tell them, Hey, can you actually take that and just own it?
+
+[00:49:20] It’s gonna be good for you. I also would love to be able to delegate this to you.
+
+Ryan:
+
+[00:49:24] Coming to the end of your career story, I wanted to do some reflecting across some of the things that I saw, but one thing I wanted to ask was, you have a unique skill set that is very software engineering heavy and also very data heavy from your past experience, and I’m curious what unique career experiences were only possible through that lens?
+
+Adrien:
+
+[00:49:50] I think all of them, I’ve always tried to be a well-rounded engineer. In addition to software engineering and data, I’ve always tried to develop a strong product sense and a strong design sense. At Facebook, we have those archetypes once you reach senior staff and principal.
+
+[00:50:14] I’ve always been a product hybrid. To me, this well-roundedness is where I can add value. Being able to have a deep product conversation with product management leaders and the next day go down and debug some firmware code. Being a well-rounded person is one of the things that I’ve always taken pride in. Robert Heinlein has this quote where he says a competent man should be able to do all of those things, write a sonnet, die Calendly and whatnot. He finishes and says, specialization is for insects. It’s one of the things that I’ve always taken to heart.
+
+[00:51:01] I love learning and I want to try and be good at a lot of different things and then bring this panel of things to the table. When I was working in wearables, I would build little prototypes, design my own little circuit boards and hack things together.
+
+[00:51:21] Obviously not production ready. I’m not a hardware engineer, but having the ability to do that type of stuff means that you can start a conversation with people. You can go and talk to a product lead and be like, Hey, I have this idea. Here’s the thing you can play with.
+
+
+## 00:51:37 — Maximizing your luck /w people
+
+
+Ryan:
+
+[00:51:37] One thing you said, and this is evident to me throughout your career, you mentioned that your career is a series of bumping into the right people. Throughout each leg of your story, there tends to be someone who either brought you along or was instrumental in one of the projects that got you promoted.
+
+[00:51:58] I’m curious, do you have any tips on how to maximize your luck when it comes to people opportunity?
+
+Adrien:
+
+[00:52:07] Many thoughts. The first one is, I’ve been talking a lot about myself for the last hour now. None of this stuff I’ve done would’ve been possible if I was working in a vacuum.
+
+[00:52:18] Everything I’ve done has been working on a team, convincing people, getting people to go bad for me. Some younger software engineers, I had rough edges when I was earlier on in my career. I had very strong opinions about things, and that didn’t always work out in my favor.
+
+[00:52:36] I learned very quickly that we’re all in this to succeed, and the best way to succeed is to help others succeed. Not to want anything in return, but just fostering success around you. A rising tide lifts all boats. That’s the thing that I’ve been trying to do in my career, probably for the last decade or so.
+
+[00:53:00] The first two, three years of my career, I was maybe a little selfish, and then I started realizing we can all succeed together. When you build that trust, I’m not saying I’m going to be friends with all of my coworkers. When you have relationships of trust and respect with people, that is a really good way of making sure that eventually, if you have a need, that person is going to be there for you. You don’t do that in order for them to be there for you. You are a good person. You are a trustworthy person. You build trust, and then you’ll reap the benefits of being a good person eventually. That’s one thing.
+
+Two, don’t be afraid to ask. Every career change I’ve made, I have never applied for any job on a website. I have always reached out to someone I know. Once you build this relationship of trust with people, you’re comfortable asking them, and be like, “Hey, there’s no pressure. You can say no if you don’t want to, but would you mind doing me a little favor?”
+
+So don’t be a dick. Build trustworthy relationships with people. Don’t be afraid to ask, but also don’t be afraid to hear no or not hear back from people. People are busy. That’s fine. The way you maximize your luck is you maximize. I was reading something the other day about the surface area for luck. Take more shots. The more shots you take, the more likely you are for one to land.
+
+
+## 00:54:26 — Advice for younger self
+
+
+Ryan:
+
+[00:54:26] And then the last question I’d like to ask you is, if you could go back to yourself when you just graduated college in France and give yourself some advice knowing what you know today, what would you say?
+
+Adrien:
+
+[00:54:38] Be a good person.
+
+[00:54:39] Invest in things that are fun. Invest in your relationship with your coworkers. It doesn’t really matter at the end of the day who gets the credit. Everyone is gonna get credit for something. Early on in my career, I was very credit driven. Be patient. There were a few times in my career where I was pushing for a promo when I wasn’t ready, like my IC7, took a couple of halves to go through. Stay curious and mostly just enjoy it.
+
+[00:55:10] You’re gonna have an amazing adventure.
+
+Ryan:
+
+[00:55:13] Awesome. Well, thanks so much for sharing your career story with us, Adrian. And now if you want to share with the audience where people could find you, maybe they can go and I’ll put it in the show notes.
+
+Adrien:
+
+[00:55:25] Sure. At this point, I’m mostly just active on LinkedIn, so we can put my LinkedIn in there, and then yeah, no plugs.
+
+[00:55:33] I hope that the audience will get something out of this. Awesome. Thanks so much for sharing this with the community. Thank you so much for having me, Ryan.

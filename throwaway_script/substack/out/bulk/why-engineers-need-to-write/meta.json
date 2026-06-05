@@ -1,0 +1,460 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/why-engineers-need-to-write",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 109694278,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-03-24T13:01:01.295Z",
+  "updated_at": "2025-07-29T14:08:03.737Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "why-engineers-need-to-write",
+  "social_title": null,
+  "subtitle": "",
+  "teaser_post_eligible": true,
+  "title": "Why Engineers Need To Write",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 31,
+  "reactions": {
+    "❤": 339
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "the-only-three-classes-that-mattered",
+  "next_post_slug": "how-i-11xd-my-interview-offer-rate",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!T3GM!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F563950db-225a-4580-8083-c68bf3de222a_1200x800.jpeg",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 109694278,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "I hated writing in high school.",
+  "body_html": "<p>I hated writing in high school. It wasn’t objective like my favorite subjects, math and science. It also didn’t help that we had to write about old, hard-to-understand literature like Shakespeare. But my perspective on writing changed once I started working full-time as a software engineer.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!T3GM!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F563950db-225a-4580-8083-c68bf3de222a_1200x800.jpeg\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!T3GM!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F563950db-225a-4580-8083-c68bf3de222a_1200x800.jpeg 424w, https://substackcdn.com/image/fetch/$s_!T3GM!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F563950db-225a-4580-8083-c68bf3de222a_1200x800.jpeg 848w, https://substackcdn.com/image/fetch/$s_!T3GM!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F563950db-225a-4580-8083-c68bf3de222a_1200x800.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!T3GM!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F563950db-225a-4580-8083-c68bf3de222a_1200x800.jpeg 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!T3GM!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F563950db-225a-4580-8083-c68bf3de222a_1200x800.jpeg\" width=\"473\" height=\"315.3333333333333\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/563950db-225a-4580-8083-c68bf3de222a_1200x800.jpeg&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:800,&quot;width&quot;:1200,&quot;resizeWidth&quot;:473,&quot;bytes&quot;:52927,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/jpeg&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!T3GM!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F563950db-225a-4580-8083-c68bf3de222a_1200x800.jpeg 424w, https://substackcdn.com/image/fetch/$s_!T3GM!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F563950db-225a-4580-8083-c68bf3de222a_1200x800.jpeg 848w, https://substackcdn.com/image/fetch/$s_!T3GM!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F563950db-225a-4580-8083-c68bf3de222a_1200x800.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!T3GM!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F563950db-225a-4580-8083-c68bf3de222a_1200x800.jpeg 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">I use my laptop but you get the point</figcaption></figure></div><h3>Writing Is the Job</h3><p>The way I worked started to change around when I became a mid-level engineer. I led a small workstream of a few engineers and to get my work done, I was writing more and more without realizing it. Soon writing became a significant part of my work outside of coding. This became even more true when COVID hit since most conversations moved to async chats and word docs.</p><p>Almost everything software engineers do requires writing. We need to write when we ask technical questions, comment on code reviews, or create design docs. This is because writing software is collaborative. <strong>The better you are at writing, the more effective you will be at building software.</strong> </p><h3>Scaling Yourself</h3><p>Aside from being a necessity, writing is the most efficient way for you to scale yourself. As a concrete example, I have a friend who takes incredible notes at work. His notes become a wiki of common terminal commands, code pointers, and diagrams for the team he works on. The best part is that his writing helps others move faster without any work on his part after sharing it. </p><p>At the end of the day, you can only ship so much code by yourself. You can have much more impact by influencing others to ship what matters most. <strong>Writing is the most scalable way to influence others.</strong></p><h3>What About ChatGPT?</h3><p>Some worry that ChatGPT may make writing obsolete. Even if AI tools write for us, I still think writing is valuable. </p><p>Writing your thoughts down forces them into a coherent, logical narrative. Condensing your writing gives you a deeper understanding. This process improves your thinking.</p><p><strong>Also, writing doesn’t just clarify your existing ideas; it generates more of them</strong>. When I write design docs, I often discover optimizations or edge cases I didn’t think of at first. So long as critical thinking is necessary, writing will not be obsolete.</p><div class=\"twitter-embed\" data-attrs=\"{&quot;url&quot;:&quot;https://twitter.com/paulg/status/1618747829975130115&quot;,&quot;full_text&quot;:&quot;Reading won't be obsolete till writing is, and writing won't be obsolete till thinking is.&quot;,&quot;username&quot;:&quot;paulg&quot;,&quot;name&quot;:&quot;Paul Graham&quot;,&quot;profile_image_url&quot;:&quot;&quot;,&quot;date&quot;:&quot;Thu Jan 26 23:08:52 +0000 2023&quot;,&quot;photos&quot;:[],&quot;quoted_tweet&quot;:{},&quot;reply_count&quot;:0,&quot;retweet_count&quot;:321,&quot;like_count&quot;:2106,&quot;impression_count&quot;:0,&quot;expanded_url&quot;:{},&quot;video_url&quot;:null,&quot;belowTheFold&quot;:true}\" data-component-name=\"Twitter2ToDOM\"></div><div><hr></div><p><strong>It is no coincidence that the strongest engineers I know are all excellent technical writers</strong>. It is one of the key skills engineers need to be effective at work. This is one of the main reasons I’ve committed to writing once a week for this Substack. <strong><br><br></strong>If you found this useful, <strong>please share it with a friend and consider subscribing if you haven’t already.</strong></p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 61,000+ software engineers who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p>",
+  "truncated_body_text": "I hated writing in high school. It wasn’t objective like my favorite subjects, math and science. It also didn’t help that we had to write about old, hard-to-understand literature like Shakespeare. But my perspective on writing changed once I started working full-time as a software engineer.",
+  "wordcount": 445,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "7944911a-7d9b-49e5-a951-df44d652b086",
+      "publication_id": 1340878,
+      "name": "Soft Skills",
+      "slug": "soft-skills",
+      "hidden": false
+    },
+    {
+      "id": "874981f8-464b-461c-9d3e-1d42147927a0",
+      "publication_id": 1340878,
+      "name": "Communication",
+      "slug": "communication",
+      "hidden": false
+    },
+    {
+      "id": "bbec9c1f-66ea-461d-baa6-2a8acc4d8aa9",
+      "publication_id": 1340878,
+      "name": "Blog",
+      "slug": "blog",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        69,
+        140,
+        166
+      ],
+      "population": 6
+    },
+    "DarkVibrant": {
+      "rgb": [
+        43,
+        100,
+        127
+      ],
+      "population": 114
+    },
+    "LightVibrant": {
+      "rgb": [
+        163,
+        205,
+        217
+      ],
+      "population": 8
+    },
+    "Muted": {
+      "rgb": [
+        172,
+        101,
+        100
+      ],
+      "population": 111
+    },
+    "DarkMuted": {
+      "rgb": [
+        62,
+        84,
+        100
+      ],
+      "population": 32
+    },
+    "LightMuted": {
+      "rgb": [
+        199,
+        156,
+        155
+      ],
+      "population": 137
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 339,
+  "comment_count": 45,
+  "child_comment_count": 29,
+  "audio_items": [
+    {
+      "post_id": 109694278,
+      "voice_id": "en-US-AlloyTurboMultilingualNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/109694278/tts/39e40da7-cc99-458d-bdd4-8500f9fdfca1/en-US-AlloyTurboMultilingualNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 36657411,
+      "body": "If you want to learn something in deep then try to explain it to others. This is the famous advice from one of the most famous Nobel Prize winning Physicists Richard Feynman. So, writing something with the intention of communicating it to others is the best way to get to know it better yourself first. And you'll be surprised how little you knew about it!",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "If you want to learn something in deep then try to explain it to others. This is the famous advice from one of the most famous Nobel Prize winning Physicists Richard Feynman. So, writing something with the intention of communicating it to others is the best way to get to know it better yourself first. And you'll be surprised how little you knew about it!"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 109694278,
+      "user_id": 163464345,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-08-17T07:40:35.468Z",
+      "edited_at": "2023-08-17T07:41:15.003Z",
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "NonLinear",
+      "photo_url": null,
+      "handle": null,
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 19
+      },
+      "reaction_count": 19,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "163464345-nonlinear",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 24,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    },
+    {
+      "id": 14977237,
+      "body": "Totally agree. When trying to break down complex ideas into logical structure you also detach yourself from your \"box\" and your perspective and this can bring you new valuable insights. And often does when I do it.\n\nCrafting public documents is also a high leverage activity and can bring you a lot of recognition in the organisation if you do it well.\n\nI started writing on substack too, with one of the goals to improve as a writer, but also that's a different type of writing than I do at my engineering job and I think I'm enjoying it so far\n",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Totally agree. When trying to break down complex ideas into logical structure you also detach yourself from your \"box\" and your perspective and this can bring you new valuable insights. And often does when I do it."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Crafting public documents is also a high leverage activity and can bring you a lot of recognition in the organisation if you do it well."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I started writing on substack too, with one of the goals to improve as a writer, but also that's a different type of writing than I do at my engineering job and I think I'm enjoying it so far"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 109694278,
+      "user_id": 78080025,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-04-20T12:33:44.628Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Hubert Strychalski",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/22f87f8b-ccdf-43b6-8e45-9bfd5ac00853_987x2048.jpeg",
+      "handle": "hstrychalski",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 9
+      },
+      "reaction_count": 9,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "hstrychalski",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 14,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

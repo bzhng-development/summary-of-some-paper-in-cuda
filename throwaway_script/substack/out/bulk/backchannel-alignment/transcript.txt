@@ -1,0 +1,74 @@
+You must influence teams of engineers if you want to grow to Staff. As you scale yourself past smaller collaborations, your tactics must change.
+
+Let’s say you have an idea needing ten engineers to work together from several teams. How do you get everyone to band together to solve the problem?
+
+One of the best ways I know is “backchannel alignment”. It’s a repeatable way to get buy-in from larger groups without authority.
+
+
+## What Is It?
+
+
+Backchannel alignment is when you shop your idea around to stakeholders in smaller groups first. You sell your plan, gather feedback, and address it until they are onboard.
+
+As you convince people, you build organizational momentum and a higher-quality proposal. Once all major stakeholders agree with your plan then your job is mostly done.
+
+The last step of sharing the plan publicly is a formality.
+
+
+## Why It’s Effective
+
+
+Backchannel alignment has many advantages:
+
+  - Warmer cold start - You start with people that are most willing to give feedback and contribute to your plan.
+
+Warmer cold start - You start with people that are most willing to give feedback and contribute to your plan.
+
+  - Feedback loop - Each stakeholder that reviews your proposal will leave some feedback. Addressing it improves your proposal and gains you a supporter.
+
+Feedback loop - Each stakeholder that reviews your proposal will leave some feedback. Addressing it improves your proposal and gains you a supporter.
+
+  - Leverages social proof - As people come on board, new people are more likely to agree given others already support the plan.
+
+Leverages social proof - As people come on board, new people are more likely to agree given others already support the plan.
+
+If you didn’t do it this way, you’d be putting your worst proposal forward in public. This will have much less influence due to the lower quality and lack of support.
+
+Also, people often won’t engage with your proposal unless you sell them in a more intimate setting.
+
+
+## The General Strategy
+
+
+  - Write down the problem and the value of solving it - This is the sales pitch. People won’t be convinced to go in your direction unless it’s worth their time.
+
+Write down the problem and the value of solving it - This is the sales pitch. People won’t be convinced to go in your direction unless it’s worth their time.
+
+  - Build alignment in a smaller trusted group - Your initial proposal may have some gaps in it. Share your ideas with your manager, tech lead, or relevant peers who will give high-quality feedback.
+
+Build alignment in a smaller trusted group - Your initial proposal may have some gaps in it. Share your ideas with your manager, tech lead, or relevant peers who will give high-quality feedback.
+
+  - Expand outward to relevant parties - Now you should have a compelling proposal. Start selling it to partners that need to join to realize the vision.
+
+Expand outward to relevant parties - Now you should have a compelling proposal. Start selling it to partners that need to join to realize the vision.
+
+Once all relevant stakeholders agree with the plan, then share it publicly and start executing. Take ownership and do whatever it takes to help the group succeed.
+
+There are many ways to influence others, but this tactic works best when you need to influence others when you don’t have authority. Your proposal’s credibility grows as you build alignment. This will help you convince people on other teams even though you have no prior relationship with them.
+
+If you have a friend looking to grow to Staff, consider sharing this with them. As always, you can find more of my stuff here:
+
+  - LinkedIn
+
+LinkedIn
+
+  - Twitter
+
+Twitter
+
+  - Threads
+
+Threads
+
+Thanks for reading,
+Ryan Peterman

@@ -1,0 +1,78 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 12,000 readers 🙏 🎉
+
+This week I’m writing the last piece of my “speedrunning guide" for getting to the Staff Engineering (L6) level; enjoy!
+
+When I told my parents about my promotion from Senior Engineer (L5) to Staff Engineer (L6), they thought “Staff” sounded like a step down. In this industry though, the title represents a level of higher technical leadership. Last week I wrote about what sets L5 and L6 apart. Now, I’ll share how to get promoted to L6 as fast as possible and how I achieved it in 1 year.
+
+
+## Logistics Refresher
+
+
+The same points about promotions in big tech from previous articles apply; here’s a quick recap:
+
+  - “Lagging Promotions” in Big Tech - You need at least 6 months of consistent performance at the next level for promotion.
+
+“Lagging Promotions” in Big Tech - You need at least 6 months of consistent performance at the next level for promotion.
+
+  - Your Manager’s Role - They put together your packet and represent you to the promotion committee. Keep in sync with them about if your performance is L6.
+
+Your Manager’s Role - They put together your packet and represent you to the promotion committee. Keep in sync with them about if your performance is L6.
+
+As you go up the IC ladder, your manager will receive more pushback on your promotions. This is because there’s more ambiguity at higher IC levels. What does an L8 even look like? Therefore you’ll need to work with your manager to gather feedback from the promotion committee. Your manager is just the messenger; the promotion committee has the final say.
+
+
+## The Strategy
+
+
+We covered L6 expectations in last week’s article. Besides telling your manager about your goal of getting promoted fast, there are a few critical pieces to optimal L6 growth:
+
+  - Find L6 Scope ASAP - You need to find a workstream that is big enough to prove your capabilities at the next level. The common way is to find work that has influence outside your team. I wrote about how to find Staff scope in-depth here.
+
+Find L6 Scope ASAP - You need to find a workstream that is big enough to prove your capabilities at the next level. The common way is to find work that has influence outside your team. I wrote about how to find Staff scope in-depth here.
+
+  - Learn to Create Scope - You’ll need to develop the behaviors that help you build workstreams in ambiguous areas. This means you figure out what problems to solve and you get buy-in to solve them.
+
+Learn to Create Scope - You’ll need to develop the behaviors that help you build workstreams in ambiguous areas. This means you figure out what problems to solve and you get buy-in to solve them.
+
+  - Uplift Your Teammates - Look for opportunities to uplift and mentor others. These behaviors are necessary for your promotion to L5. It is especially helpful if you are helping L5 peers grow around you. See “people development” here for examples.
+
+Uplift Your Teammates - Look for opportunities to uplift and mentor others. These behaviors are necessary for your promotion to L5. It is especially helpful if you are helping L5 peers grow around you. See “people development” here for examples.
+
+If you do this right, you can expect promotion in these timelines:
+
+  - Promotion in 1 half (Ridiculous) - You’d need to start influencing outside your team as soon as you join. Even then it’s unlikely you’d get promoted this fast unless you created something company-changing.
+
+Promotion in 1 half (Ridiculous) - You’d need to start influencing outside your team as soon as you join. Even then it’s unlikely you’d get promoted this fast unless you created something company-changing.
+
+  - Promotion in 2 halves (Exceptional) - It’s not always possible to find L6 opportunities on your team this fast. It’s a combination of situation and skill to get promoted in 2 halves even if you execute well.
+
+Promotion in 2 halves (Exceptional) - It’s not always possible to find L6 opportunities on your team this fast. It’s a combination of situation and skill to get promoted in 2 halves even if you execute well.
+
+  - Promotion in 3 halves (Great) - If you’re ambitious I’d aim for this goal. Gives you a year to find L6 scope which is a reasonable amount of time to pivot if needed. Also, your track record of successes in the first year will help build the narrative for promotion.
+
+Promotion in 3 halves (Great) - If you’re ambitious I’d aim for this goal. Gives you a year to find L6 scope which is a reasonable amount of time to pivot if needed. Also, your track record of successes in the first year will help build the narrative for promotion.
+
+
+## My Growth Path
+
+
+H1 (L5 Exceeds Expectations) - I led two workstreams that were partnerships with other teams to hit our goals. I also landed a large win in an unplanned ads workstream which is what brought my rating above expectations. I was also one of the top contributors to code review and interviewing in my 70-person eng org. The hidden success here was that I bootstrapped a new workstream towards the end of the half that was certainly L6 scope.
+
+H2 (L5 → L6 Promotion, Greatly Exceeds Expectations) - The L6 workstream I created turned out to be a massive opportunity. This work was a huge success which resulted in a company-wide award and public recognition from Mark Zuckerberg. I also created a cross-org collaboration between 3 large orgs (70+ eng each) which received positive feedback from each director. Lastly, I ran infrastructure preparations for my org resulting in no major incidents during the most critical time of the year. The repeated influence and impact of these large initiatives is what got me promoted to L6.
+
+
+## What I Learned
+
+
+The Value of Momentum - My past context and relationships at Instagram helped me move a lot faster. I was able to lead several workstreams at once because I knew so much about the codebase. Also, it was easier to get work done in collaborations because I knew partner engineers from past work I’d done. Staying at one company for a longer time does have its benefits.
+
+How to Create Scope - When I was an L4, I stumbled upon some L6 scope without realizing it. I had strong initiative so I started solving problems without thinking through why it was impactful. I got lucky that the work had L6 impact. I’ve since learned the importance of understanding the “why” before diving in. It not only helps you have consistent L6 impact but also makes it easier to get buy-in for your work.
+
+The Tech Lead Skillset Scales Well - In my promotion to Senior (L5), I learned how to lead initiatives within my team. This skillset turned out to work well at higher levels too. The difference was just that more people were involved. This skill is a great way to continue your IC growth to the highest levels if you fit the “tech lead” archetype.
+
+It is easy to get stuck at Senior (L5). You need to make significant behavior changes to influence and create scope as an L6. Once you do, some even say growth to L7 is easier since it requires similar behaviors.
+
+Expectations for L7+ engineers are so high, they sound unreal. Next week, I’ll be writing about Senior Staff (L7) expectations, which is a level that most engineers will not achieve in their lifetime.
+
+Thanks for reading,
+Ryan Peterman

@@ -1,0 +1,54 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 62,000 readers this week 🙏 🎉
+
+Last week I shared some general tips for better writing at work. This week I’m diving deeper into tactics focused on longer writing.
+
+“Longer writing” in this context is anything more than a few paragraphs. This often means planning docs, announcements, design docs, and more. Hope it is helpful; enjoy!
+
+Imagine, you just finished a long planning doc. You’ve spent a week working on it. You finally hit send and see that after all that hard work, hardly anyone reads it.
+
+We’ve all been there. The longer your writing is, the more likely it is that people won’t engage with it since it’s asking for more from them.
+
+After writing a ton of docs, I learned some tactics that make a big difference in how much people engage with longer writing. Here are some concrete tips you can apply today.
+
+
+## Too Long, Didn’t Read
+
+
+No matter how good your writing is, people’s attention will still fall off as they read. Therefore, that space at the beginning of your post is your most valuable real estate. Put what your audience must know in a few lines at the top of the post. I even make this explicit by labeling it with “tl;dr”.
+
+For an example of this, check out the launch post template I use. Most people who read my launch posts probably just read the “tl;dr” and skim the rest. Only people who are involved in the details read the whole thing. Take advantage of that space at the top to give the audience the most important takeaways.
+
+
+## Optimize For Skimming
+
+
+For longer posts, only certain parts will be relevant to each reader. People will naturally skim in an F-shaped pattern to find what is relevant to them. Help them get more out of your writing with the following:
+
+  - Add section headings - These give people a sense of how relevant the section is as they skim. Rather than abandoning your wall-of-text post, they can peak at headings and read deeper into the sections that seem relevant to them.
+
+Add section headings - These give people a sense of how relevant the section is as they skim. Rather than abandoning your wall-of-text post, they can peak at headings and read deeper into the sections that seem relevant to them.
+
+  - Add an index with anchor links (for very long posts) - If you’re writing a giant planning doc, consider taking it a step further by adding a table of contents. This dense list of headings lets people jump to what they care about.
+
+Add an index with anchor links (for very long posts) - If you’re writing a giant planning doc, consider taking it a step further by adding a table of contents. This dense list of headings lets people jump to what they care about.
+
+  - Use bullets and lists - Don’t shy away from using bullets if you have a list of points to make. They are much easier to skim than paragraphs are. Also, their spacing separates ideas clearly, which helps the reader get the key points.
+
+Use bullets and lists - Don’t shy away from using bullets if you have a list of points to make. They are much easier to skim than paragraphs are. Also, their spacing separates ideas clearly, which helps the reader get the key points.
+
+  - Bold the main points - Bolding text is a way to draw attention to what matters most. It’s not always appropriate since it can come off as aggressive. Use your judgement.
+
+Bold the main points - Bolding text is a way to draw attention to what matters most. It’s not always appropriate since it can come off as aggressive. Use your judgement.
+
+  - Break up long paragraphs - Big walls of text are difficult to skim since the words blend together. The longer the paragraph, the more likely the reader will abandon it. Add line breaks where it makes sense; don’t let paragraphs get too long.
+
+Break up long paragraphs - Big walls of text are difficult to skim since the words blend together. The longer the paragraph, the more likely the reader will abandon it. Add line breaks where it makes sense; don’t let paragraphs get too long.
+
+These tactics make long posts much more approachable. To give you a sense of that, I asked ChatGPT to show a before and after by applying the tips from this article:
+
+The best way to get better at writing is to learn by doing. There are so many little things you only get through experience.
+
+Write, reflect on how readers receive it, and iterate. It is even better if you can get someone who writes well to give you feedback.
+
+Thanks for reading,
+Ryan Peterman

@@ -1,0 +1,30 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups, and career growth. Thank you for your readership, we hit 48,000 readers this week 🙏 🎉
+
+This week, I wrote about why small diffs are best. If you find the post helpful, please share it with your friends and coworkers. Enjoy!
+
+Note: “diffs” == “code changes” == “PRs”
+
+After writing over 1000 diffs, I prefer smaller ones. Often there’s wisdom in what you naturally tend towards over time. This preference developed after lots of feedback and tweaks.
+
+Having lived this process, it’s clear to me that all engineers should be writing small diffs where possible. If you haven’t written enough code to feel the benefits, let me try to convince you. Here’s why you should keep your diffs small.
+
+1. Small diffs are reviewed faster. Once you’re comfortable with your codebase, you’ll realize the bottleneck for landing code quickly isn’t in how fast you can write it. Often it’s in waiting for people to review it.
+
+The smaller your diffs are, the more willing people are to review them. I’ll even add “[easy]” to the title for my shortest diffs to advertise this.
+
+2. Small diffs are reviewed more thoroughly. The larger a change is, the more likely a reviewer is to skim the contents. This lets low-quality code slip through the cracks:
+
+You should encourage feedback. A true test of your code quality is if it invites feedback yet receives none.
+
+3. Small diffs cause fewer bugs. The less a diff does, the easier it is to understand its effects. This makes it easier to test and confirm the code does what is intended.
+
+4. Small diffs have fewer merge conflicts. Big changes have more surface area and take longer to write. That increases the chance of someone changing code while you’re working on it. When you finally try to land that change, you’ll have merge conflicts to deal with which wastes time.
+
+5. Small diffs are easier to roll back. A simple way to fix broken code is to revert to before the breakage. This can get complicated if the bad diff is large since it’s more likely changes landed on top of it that also need to be reverted.
+
+This doesn’t mean there isn’t a place for large diffs. Sometimes it makes sense if you’re landing a bunch of boilerplate or auto-generated code. As a rule of thumb though, your diffs should aim to do just one thing.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already.
+
+Thanks for reading,
+Ryan Peterman

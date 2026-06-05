@@ -1,0 +1,38 @@
+Junior engineers often focus too much of their time on technical skills. Here’s why I’d argue engineers should spend more time developing communication skills.
+
+
+## Communication Is Higher Leverage
+
+
+Programming is high leverage since it allows us to do useful work through machines. Since code costs almost nothing to replicate, we can write it once and deploy it everywhere.
+
+Communication is even higher leverage since you can influence other engineers to ship what matters. This is strictly higher leverage than writing the code yourself.
+
+
+## Communication Increases Your Visibility
+
+
+Impactful code is only one piece of the puzzle for promotion. To get you promoted, your manager will need to convince the promotion committee. If your work is visible, this process will be much smoother since your manager doesn’t have to explain as much. Excellent writing and speaking help others understand and recognize your contributions.
+
+
+## AI Will Code
+
+
+Products like Github’s Copilot are already producing useful code. Although this code generation is far from superhuman, the technology is improving much faster than expected. If it continues at this pace, programming well will no longer be a scarce skill.
+
+Communication will take much longer for AI to replace since it is harder to replace in-person conversation. Effective speaking will be what sets engineers apart when code flows like water.
+
+By now, I hope you see the value in becoming a better communicator as an engineer. If you’re looking to improve your communication skills, here are two concrete ways to get started:
+
+  - Visit your local Toastmasters to improve your speaking skills. It’s an international public speaking club that provides a supportive environment to practice in. I’ve been doing it since college and it’s helped me better articulate myself during meetings.
+
+Visit your local Toastmasters to improve your speaking skills. It’s an international public speaking club that provides a supportive environment to practice in. I’ve been doing it since college and it’s helped me better articulate myself during meetings.
+
+  - Write more and solicit feedback to become a better writer. That’s one of the top reasons I write this Substack. I can already tell my writing has improved a lot since the first few articles I wrote.
+
+Write more and solicit feedback to become a better writer. That’s one of the top reasons I write this Substack. I can already tell my writing has improved a lot since the first few articles I wrote.
+
+I am always looking to get to know more of my readers. If you’re looking for a tiny opportunity to practice writing, feel free to drop a comment and introduce yourself!
+
+Thanks for reading,
+Ryan Peterman

@@ -1,0 +1,452 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/how-to-write-an-effective-self-review",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 140003035,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-12-22T14:01:50.660Z",
+  "updated_at": "2023-12-22T14:09:07.130Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "how-to-write-an-effective-self-review",
+  "social_title": null,
+  "subtitle": "Can you find what's wrong with my example?",
+  "teaser_post_eligible": true,
+  "title": "How To Write an Effective Self-Review",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 6,
+  "reactions": {
+    "❤": 142
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "the-developing-dev-wrapped-2023",
+  "next_post_slug": "how-promotions-and-ratings-work",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/ed1e3765-dc6b-405b-a74f-bc5cd691dfdf_2143x1181.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Can you find what's wrong with my example?",
+  "body_html": "<p>👋<em> Hi, this is&nbsp;<a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a>&nbsp;with this week’s newsletter. I write about software engineering, big tech/startups, and career growth. Thank you for your readership, we hit 39,000 readers this week </em>🙏<em> </em>🎉</p><p><em>This week, I’m sharing how to write an effective self-review for the upcoming perf review season. If you find the post helpful, please share it with your friends and coworkers. Enjoy!</em></p><div><hr></div><p>In a perfect world, you’d do impactful work and that would be enough. However, in reality,&nbsp;your work can’t be recognized unless people know about it. Communicating the results of your work well is a necessity. </p><p>To show you how to write a good self review, I’ll start by showing an example of a bad review modeled after the first one I ever wrote. Can you tell what’s wrong with it?</p><h3>Before: An Excerpt From a Bad Review</h3><ol><li><p><strong>Created API to retrieve higher-quality video</strong></p><ul><li><p>Altered existing pipeline to save higher quality rendition and serve it from new API for enhanced quality</p></li><li><p>Upload quality improved by X% for these videos</p></li></ul></li><li><p><strong>Shipped new pipeline for new video product</strong></p><ul><li><p>Was the main IC from the server side that built the entire system end to end. This includes the new creation pipeline, the new data model, and the new delivery code</p></li><li><p>Shipped on time according to internal deadline which was a month before public test, which allowed our partner team to move faster</p></li><li><p>After release, pipeline is supporting N uploads per day</p></li></ul></li><li><p><strong>Built out a new video encoding pipeline using new partner team system</strong></p><ul><li><p>New pipeline rolled out to all employees and Y% of public traffic for the past few weeks</p></li><li><p>Verification on encodings produced from the new pipeline vs old pipeline shows no problems</p></li><li><p>This new pipeline is an important step to moving from our old codebase to the newer system</p></li></ul></li></ol><p>There’s a lot wrong here. Let’s dive into what could be better.</p><h3>Less Is More</h3><p>For performance reviews, your manager will condense your self-review into a version other managers can skim in ~3 minutes. To effectively communicate your past year’s work in just a few minutes, you’ll need to cut out fluff. Take these sentences for instance:</p><blockquote><p>“Verification on encodings produced from the new pipeline vs old pipeline shows no problems”</p><p>“This includes the new video pipeline, the new data model, and the new delivery code”</p></blockquote><p>These sentences don’t tell us much about the work’s impact and can be removed. <strong>Aim for short sentences rich in details that explain your work’s results, not the work itself.</strong></p><h3>Know Your Audience</h3><p>A room full of managers will read your self-review and final packet. They won’t have as much context on your work as you and your manager. <strong>You’ll need to explain your impact in terms of metrics and milestones that these managers can understand</strong>.</p><p>My example self-review above doesn’t do this well. For instance, the impact of migrating to the new system isn’t clear in the 3rd point. A better framing would be something like:</p><blockquote><p>Hit planned public test milestone on shared roadmap with partner team (N eng involved). This migration will prevent severe incidents (link1, link2) from reoccurring and make future development faster.</p></blockquote><p>Also looking at the 1st point, the impact of the X% upload quality improvement isn’t clear to managers without context on that metric. I’d add some additional context to explain the significance of the metric movement:</p><blockquote><p>Improved upload quality by X% (30% of team goal) </p></blockquote><h3>Managing Limited Attention</h3><p>The managers reading your packet will be skimming it since they only have a few minutes. Because of that, you can’t expect them to read every word that you write. It’s helpful to <strong>put your most impactful work first to make sure they see it</strong>. In my example self-review, I’d reorder it as 2 &gt; 1 &gt; 3 since (2) was a larger collaboration that had more impact.</p><h3>After: Applying the Tips</h3><ol><li><p><strong>Shipped new video product - </strong>Shipped 1 month ahead of shared goal (N eng involved) with no regressions. Drove X% more video creation</p></li><li><p><strong>Launched higher quality video API</strong> - Increased upload quality by Y% (Z% of team goal) for those videos</p></li><li><p><strong>Built new video encoding pipeline</strong> - Hit planned public test milestone on shared roadmap with partner team (N eng involved). This migration will prevent severe incidents (link1, link2) from reoccurring and make future development faster.</p></li></ol><p>For a manager without context on the work, the outcomes and their significance are much clearer in this version.</p><div><hr></div><p>Your self-review is just the first step in the performance review process. Your manager then needs to add additional signals and refine it to come up with that final text that all the other managers read to assess your performance.</p><p>If you’re great at writing self-reviews, your manager will reuse a lot of what you wrote to represent your work. If you’re not sure if something is worth including, default to keeping it in your self-review. Your manager can easily cut out less impactful items.</p><p>If you found this useful, <strong>please share it with a friend and consider subscribing if you haven’t already</strong>. Also, if you have feedback about how I can make the content better, <a href=\"https://forms.gle/TDAiBbh8UAxgXgjS6\">please share it here</a> 🙏</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 39000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups, and career growth. Thank you for your readership, we hit 39,000 readers this week 🙏 🎉",
+  "wordcount": 884,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "5a4683e9-1121-4159-b2d7-6ca77779173f",
+      "publication_id": 1340878,
+      "name": "Career",
+      "slug": "career",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        127.5,
+        127.5,
+        127.5
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        66.3,
+        66.3,
+        66.3
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        188.7,
+        188.7,
+        188.7
+      ],
+      "population": 0
+    },
+    "Muted": {
+      "rgb": [
+        143,
+        143,
+        143
+      ],
+      "population": 10
+    },
+    "DarkMuted": {
+      "rgb": [
+        76.5,
+        76.5,
+        76.5
+      ],
+      "population": 0
+    },
+    "LightMuted": {
+      "rgb": [
+        188,
+        188,
+        188
+      ],
+      "population": 87
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 142,
+  "comment_count": 7,
+  "child_comment_count": 3,
+  "audio_items": [
+    {
+      "post_id": 140003035,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/140003035/tts/99dd6697-0a73-4c84-b285-a75d14c09ebe/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 45970585,
+      "body": "Interesting!\nI think the key here is not to confuse the notes we collect for ourselves in our brag doc and how we communicate those achievements in a self-review.\n\nThe \"before\" format can be useful for ourselves to remember what we did in a project 10 months ago",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Interesting!"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I think the key here is not to confuse the notes we collect for ourselves in our brag doc and how we communicate those achievements in a self-review."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "The \"before\" format can be useful for ourselves to remember what we did in a project 10 months ago"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 140003035,
+      "user_id": 170998285,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-12-24T08:18:10.685Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Fran Soto",
+      "photo_url": "https://substackcdn.com/image/fetch/$s_!XWMk!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F10f90fdb-11ac-48b4-8f51-6a59e07763d2_1149x1149.png",
+      "handle": "fransotodev",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 3
+      },
+      "reaction_count": 3,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "fransotodev",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Strategize Your Career",
+          "id": 1974191,
+          "base_url": "https://strategizeyourcareer.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 8,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    },
+    {
+      "id": 45904012,
+      "body": "Really insightful! I was used to write plenty of information to provide as much as context possible ",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Really insightful! I was used to write plenty of information to provide as much as context possible"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 140003035,
+      "user_id": 40136239,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-12-22T22:46:11.983Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Marcos F. Lobo 🗻🧭",
+      "photo_url": "https://substackcdn.com/image/fetch/$s_!7roK!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fff9211d7-f06d-4d11-b17c-4f1af3d2df5a_3264x1836.jpeg",
+      "handle": "optimistengineer",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "optimistengineer",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "unsubscribed",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "The Optimist Engineer",
+          "id": 1659382,
+          "base_url": "https://newsletter.optimistengineer.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 7,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

@@ -1,0 +1,481 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/mentorships-role-in-my-staff-promotion",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 142405587,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-03-08T14:02:30.317Z",
+  "updated_at": "2024-03-08T14:13:34.607Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "mentorships-role-in-my-staff-promotion",
+  "social_title": null,
+  "subtitle": "Types of Mentorship and How To Get It",
+  "teaser_post_eligible": true,
+  "title": "Mentorship’s Role in My Staff Promotion",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 1,
+  "reactions": {
+    "❤": 72
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "staff-engineer-panel-summary",
+  "next_post_slug": "how-ai-will-affect-your-career",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!MOvM!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc3ffc4d-5ed0-4d80-b4cf-7596d058474d_1080x892.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 142405587,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Types of Mentorship and How To Get It",
+  "body_html": "<p>👋<em> Hi, this is&nbsp;<a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a>&nbsp;with this week’s newsletter. I write about software engineering, big tech/startups, and career growth. Thank you for your readership, we hit 53,000 readers this week </em>🙏<em> </em>🎉</p><p><em>This week, I wrote about how mentorship helped me get to Staff. If you find the post helpful, please share it with your friends and coworkers. Enjoy!</em></p><div><hr></div><p><strong>Having great mentors is one of the top reasons I grew to Staff (IC6) in 3 years.</strong> There are two stories I’d like to share about mentorship I received that were key to my growth. These examples will help you learn ‌how to find a mentor and what good mentorship looks like.</p><h2><strong>Types of Mentorship</strong></h2><p>Before I get into the stories, it’s helpful to distinguish between the two common forms of mentorship:</p><ol><li><p><strong>Explicit</strong> - You set up regular check-ins with someone to get advice.</p></li><li><p><strong>Implicit</strong> - You work with someone strong in the skills you want to develop. You grow just by collaborating with them.</p></li></ol><p>They each have their strengths, which I’ll show through my two career stories.</p><h2><strong>Explicit Mentorship: Closing My Biggest Gap</strong></h2><p>My manager told me that my biggest gap in growing to Staff (IC6) was in <a href=\"https://www.developing.dev/p/finding-staff-level-scope\">finding staff-level scope</a>. To help me develop this skill he found me a mentor in my org with this strength.</p><p>My manager introduced me to my new mentor and we set up a weekly one-on-one. Each time, I brought more questions than we had time for and took tons of notes. As the mentee, I always drove the agenda. This is important because you can’t expect your mentor to keep track of what you need.<strong> You should own your career growth and pull what you need.</strong></p><p>Here are some examples of the types of questions I asked:</p><ul><li><p>How can I find staff-level scope?</p></li><li><p>How do I influence other teams to take on shared roadmaps?</p></li><li><p>What did your journey to staff look like?</p></li></ul><p>I learned so much from my mentor and made sure to take everything he said to heart. As a mentee, I always felt like I didn’t have much to offer my mentors. <strong>The bare minimum I could give back was honest appreciation and results that came from their advice</strong>. Now, as a mentor, I see that this is one of the best things a mentee can give. One of the most satisfying parts of mentoring someone is seeing them grow quickly.</p><p>Explicit mentorship is great for getting high-level, directional advice. But how do you find one? <strong>Look around your org for someone who is strong in what you want to get better at. Ask them for some one-on-one time.</strong> You’d be surprised at how giving people are if you ask politely.&nbsp;If you don't feel comfortable asking, some companies have mentorship programs that can help you find a match as well. Your manager should help you navigate this search.</p><p>Most people think of this type of mentorship when they talk about finding a mentor. However, I find that “implicit” mentorship is much better for growing your technical skills.</p><h2><strong>Implicit Mentorship: What a “10x Engineer” Really Looks Like</strong></h2><p>Imagine an IC who writes and reviews more code than anyone in your org. Someone who, because of his domain expertise, receives the most questions yet is also the most responsive. This IC also consistently solves problems that many Staff engineers can’t. And if that’s not enough, this IC’s main project work often has industry influence. Hard to believe, but I’ve seen <a href=\"https://www.linkedin.com/in/haixiashi/\">Haixia Shi</a> do this half over half since I started working with him.</p><p>He’s the de facto video domain specialist for Instagram, which is a big deal for an app where video is a central part of the user experience. I have never received formal mentorship from Haixia, but I didn’t need to. Engineering excellence radiates from him. <strong>Strong engineers become even stronger just by asking him technical questions and seeing how he solves problems.</strong> Working with peers like him makes coming to work delightful and is one of the key contributors to my engineering career growth.</p><p>Implicit mentorship tends to feel more natural and is great for hard skill development. There are so many small tips and tricks you learn from building features and debugging issues with stronger engineers.&nbsp;</p><p>My technical skills have come almost entirely through this kind of mentorship. <strong>The best way to find it is to work on teams that have a high density of talent. That way, you’ll grow no matter what you’re working on.</strong></p><div><hr></div><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!MOvM!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc3ffc4d-5ed0-4d80-b4cf-7596d058474d_1080x892.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!MOvM!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc3ffc4d-5ed0-4d80-b4cf-7596d058474d_1080x892.png 424w, https://substackcdn.com/image/fetch/$s_!MOvM!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc3ffc4d-5ed0-4d80-b4cf-7596d058474d_1080x892.png 848w, https://substackcdn.com/image/fetch/$s_!MOvM!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc3ffc4d-5ed0-4d80-b4cf-7596d058474d_1080x892.png 1272w, https://substackcdn.com/image/fetch/$s_!MOvM!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc3ffc4d-5ed0-4d80-b4cf-7596d058474d_1080x892.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!MOvM!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc3ffc4d-5ed0-4d80-b4cf-7596d058474d_1080x892.png\" width=\"451\" height=\"372.4925925925926\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/cc3ffc4d-5ed0-4d80-b4cf-7596d058474d_1080x892.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:892,&quot;width&quot;:1080,&quot;resizeWidth&quot;:451,&quot;bytes&quot;:147764,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!MOvM!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc3ffc4d-5ed0-4d80-b4cf-7596d058474d_1080x892.png 424w, https://substackcdn.com/image/fetch/$s_!MOvM!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc3ffc4d-5ed0-4d80-b4cf-7596d058474d_1080x892.png 848w, https://substackcdn.com/image/fetch/$s_!MOvM!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc3ffc4d-5ed0-4d80-b4cf-7596d058474d_1080x892.png 1272w, https://substackcdn.com/image/fetch/$s_!MOvM!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc3ffc4d-5ed0-4d80-b4cf-7596d058474d_1080x892.png 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">Thanking my “explicit” mentors. If I included all my “implicit” mentors the list would be much longer!</figcaption></figure></div><p>Mentorship is one of the most effective ways to grow your career. I’d start by talking with your manager since they can help position you with the right people and projects for more mentorship.</p><p>If you’re still having trouble finding a mentor, I like to think of my writing as low-commitment way of getting mentorship. If you found this useful, <strong>please share it with a friend and consider subscribing if you haven’t already.</strong></p><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 53,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups, and career growth. Thank you for your readership, we hit 53,000 readers this week 🙏 🎉",
+  "wordcount": 847,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "a0c5c2f9-bc81-4a70-991e-b807fa48fa1a",
+      "publication_id": 1340878,
+      "name": "To Mid-level",
+      "slug": "to-mid-level",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        28,
+        140,
+        208
+      ],
+      "population": 5
+    },
+    "DarkVibrant": {
+      "rgb": [
+        16,
+        96,
+        144
+      ],
+      "population": 2
+    },
+    "LightVibrant": {
+      "rgb": [
+        138.1322033898305,
+        201.06101694915247,
+        239.2677966101695
+      ],
+      "population": 0
+    },
+    "Muted": {
+      "rgb": [
+        169,
+        84,
+        76
+      ],
+      "population": 3
+    },
+    "DarkMuted": {
+      "rgb": [
+        74,
+        92,
+        50
+      ],
+      "population": 6
+    },
+    "LightMuted": {
+      "rgb": [
+        199,
+        167,
+        153
+      ],
+      "population": 7
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 72,
+  "comment_count": 7,
+  "child_comment_count": 4,
+  "audio_items": [
+    {
+      "post_id": 142405587,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/142405587/tts/8cb14c86-d4d1-4556-859a-43035f6cca69/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 51796434,
+      "body": "To grow faster, and learn a specific skill it is great to have someone not too much ahead of you to give you some feedback and clarity. It doesn’t really have to be an explicit mentor as long as you have the accountability and regular feedback.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "To grow faster, and learn a specific skill it is great to have someone not too much ahead of you to give you some feedback and clarity. It doesn’t really have to be an explicit mentor as long as you have the accountability and regular feedback."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 142405587,
+      "user_id": 115684107,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-03-16T18:16:46.883Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Bogdan Veliscu",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/8794f76d-22a4-4475-b0d3-8af9c9cc21b3_800x800.png",
+      "handle": "bogdanveliscu",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "bogdanveliscu",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Strategic Tech",
+          "id": 1897472,
+          "base_url": "https://strategictech.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 51302011,
+      "body": "This is a fun part I found when working with a mentor:\n\nYou bring your questions and subconsciously you think you know the answers.\n\nThen they point you in a new direction based on their experience.\n\nThese insights are what make mentorship worth the time and effort. \n\nA small nudge from a mentor changes the rules of the game for a mentee",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "This is a fun part I found when working with a mentor:"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "You bring your questions and subconsciously you think you know the answers."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Then they point you in a new direction based on their experience."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "These insights are what make mentorship worth the time and effort."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "A small nudge from a mentor changes the rules of the game for a mentee"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 142405587,
+      "user_id": 170998285,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-03-09T19:57:17.642Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Fran Soto",
+      "photo_url": "https://substackcdn.com/image/fetch/$s_!XWMk!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F10f90fdb-11ac-48b4-8f51-6a59e07763d2_1149x1149.png",
+      "handle": "fransotodev",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "fransotodev",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Strategize Your Career",
+          "id": 1974191,
+          "base_url": "https://strategizeyourcareer.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

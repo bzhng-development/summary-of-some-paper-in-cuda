@@ -8,6 +8,7 @@ Usage:
 
 Resumes from last line if --out already exists (skips ids already present).
 """
+
 from __future__ import annotations
 import argparse
 import json
@@ -23,7 +24,6 @@ from psycopg.rows import dict_row
 
 from neon_db import NeonDB, TABLE
 from multi_prompt_pkg.pdf import (
-    arxiv_id_from_url,
     arxiv_url_to_pdf_url,
     download_and_extract_text,
 )
@@ -69,7 +69,9 @@ def main() -> None:
 
     db = NeonDB()
     with db.get_conn() as c, c.cursor(row_factory=dict_row) as cur:
-        cur.execute(f"SELECT id, title, url, abstract, primary_category, organization FROM {TABLE} WHERE interested = 1 ORDER BY id")
+        cur.execute(
+            f"SELECT id, title, url, abstract, primary_category, organization FROM {TABLE} WHERE interested = 1 ORDER BY id"
+        )
         rows = cur.fetchall()
     logger.info(f"Found {len(rows)} interested=1 papers in Neon")
 

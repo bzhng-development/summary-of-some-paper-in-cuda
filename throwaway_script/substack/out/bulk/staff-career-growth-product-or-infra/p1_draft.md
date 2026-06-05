@@ -1,0 +1,15 @@
+Here are the takeaways from this The Peterman Post essay on Staff+ career growth in product versus infrastructure teams:
+
+**What Product and Infrastructure Teams Actually Are**
+
+Product teams build new user experiences, collaborating with product managers and designers to decide what to build and how it should look. These teams are often paced by product launch deadlines, and engineers should be passionate about creating end-user value. Infrastructure teams, by contrast, work on the underlying APIs and systems that product teams use. They are often engineering-driven, and engineers on these teams should be passionate about the availability, efficiency, and performance of the systems they build. You can become a Senior Engineer on most teams in either domain; the differences only emerge when you look at Staff+ growth.
+
+**Growing to Staff+ Engineer**
+
+Staff+ promotion comes from completing projects of “Staff+ scope,” which the industry quantifies in three ways: **workstream size** (number of engineers involved and duration of roadmap), **complexity** (solving problems that the level below can’t), and **impact** (wins should span multiple teams and achieve a significant portion of their goals). Infrastructure teams generally have more opportunity for projects that fit these criteria because complexity and impact at this scale are more common. Infrastructure work requires expertise in areas of high technical complexity—operating systems, storage systems, distributed systems—that are difficult enough that engineers without this expertise cannot solve many of the problems that come up. This provides opportunity to solve problems that many engineers at the level below can’t. There is also more opportunity to have impact spanning a significant portion of several teams’ goals: infrastructure engineers build components used by many teams, allowing their work to have **leveraged impact** since one change benefits all downstream teams. That leveraged impact often fits the criteria needed to promote to Staff+.
+
+That is not to say you cannot become a Staff+ engineer on a product team. The common path is through leading a large enough workstream. The problem is that there are limited spots for a leadership role of this scope. There is much less opportunity to grow through your technical skills the way you can in the infra domain.
+
+**Engineering Management Favors Product Organizations**
+
+Career growth for managers is often proportional to the number of recursive reports they have. While the industry’s current focus on efficiency might change this, it is unlikely to go away entirely. Product organizations tend to have a lot more engineers because of the inherent tree structure in how we build software. Infrastructure teams require fewer engineers since their components are reused, while product teams build unique, less reusable features. Since there are more engineers to manage, there tends to be more opportunity for engineering manager career growth in product organizations. While these general trends hold, there are exceptions, and every career decision should be considered case by case.

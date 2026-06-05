@@ -1,0 +1,17 @@
+Here are the takeaways from this Ryan Peterman essay on product thinking for infrastructure engineers (a principle he developed across 7 years building infrastructure at Meta):
+
+**The bootcamp fork and the status of infrastructure**
+
+Ryan opens by reflecting on his own onboarding at Meta six years ago, and the decision every new hire faced in Bootcamp: join a product team or an infrastructure team. The most technical engineers, including his friends, gravitated toward infrastructure because the work seemed more challenging. The quiet byproduct was that strong engineers "shunned" product work as less serious. After spending his entire career on infrastructure teams, he's concluded that this thinking is limiting—not because infrastructure isn't hard, but because the dichotomy itself is a trap. The value of infrastructure is always downstream, and understanding that downstream is what separates high-impact engineers from those who optimize in a vacuum.
+
+**The downstream value chain**
+
+The core argument is simple: "Infrastructure ultimately contributes to building better products." Sometimes the link is direct—faster database reads mean users wait less. Other times your coworkers are the users, and the infrastructure is the product they consume. In either case, understanding *which* work matters most requires understanding the product. Not all database reads are equally important to the user experience. If you know which user flows are critical, you can focus optimization efforts there rather than spreading them evenly across everything. "Considering the product improves your directional thinking." This is not a call to stop doing infrastructure; it's a call to stop doing *undirected* infrastructure. He quotes John Carmack as the archetype of a world-class technical mind who got this: "Software is just a tool to help accomplish something for people—many programmers never understood that. Keep your eyes on the delivered value, and don't over-focus on the specifics of the tool."
+
+**The two paths to world-class**
+
+Ryan lays out a binary framework for becoming a world-class engineer. Path one: become exceptional at writing code—top 0.01% or beyond—which he describes as "impossible for many," with a talent ceiling comparable to making the NBA. Path two: **become great (top 10%) at many complementary skills**, which is doable with deliberate work. There are diminishing returns to spending all your time on programming alone. Product thinking is one of those complementary skills you can stack onto your engineering foundation—what he calls a "talent stack" play. The deliberate practice he recommends is concrete: dogfood your own product so you have first-person intuition about what matters to users, and refuse to stop at the boundaries of your team's ownership. "Understand the full picture. Don't stop at the boundaries of what your team owns. Think about the end-to-end system. Understand how the changes in your infrastructure code affect the product."
+
+**The infrastructure engineer's identity**
+
+He closes by making clear that he is not renouncing his tribe: "I will always be an infrastructure engineer at heart." The point is not to become a product manager or to abandon depth. It's that product thinking is a multiplier on infrastructure work—one that costs little to develop relative to the years already invested in technical craft, and one that fundamentally changes which problems you choose to solve and why.

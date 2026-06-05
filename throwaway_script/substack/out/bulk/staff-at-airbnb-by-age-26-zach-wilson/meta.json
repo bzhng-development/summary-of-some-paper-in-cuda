@@ -1,0 +1,464 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/staff-at-airbnb-by-age-26-zach-wilson",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 151013041,
+  "podcast_art_url": null,
+  "podcast_duration": 4001.2278,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": "9fb5c84b-51a0-4b90-897b-d1d79eabc4c8",
+  "podcast_url": "https://api.substack.com/api/v1/audio/upload/9fb5c84b-51a0-4b90-897b-d1d79eabc4c8/src",
+  "post_date": "2024-11-01T13:02:39.271Z",
+  "updated_at": "2025-01-13T07:49:14.143Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "staff-at-airbnb-by-age-26-zach-wilson",
+  "social_title": "Staff at Airbnb by Age 26 | Zach Wilson",
+  "subtitle": "Zach shares the behind the scenes of his job hopping and tips on how to build an internal brand each time",
+  "teaser_post_eligible": true,
+  "title": "Staff at Airbnb by Age 26 | Zach Wilson",
+  "type": "podcast",
+  "video_upload_id": "11d54485-c344-4e1e-9a97-3b762caaa1bf",
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 8,
+  "reactions": {
+    "❤": 92
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": true,
+  "previous_post_slug": "what-you-work-on-how-hard-you-work",
+  "next_post_slug": "revealing-my-passion-project",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/36b3a2b7-a96b-4a88-9596-0ff0daa367ce_1456x1048.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "podcast_episode_image_url": "https://substack-post-media.s3.amazonaws.com/public/images/3e54a18d-a5f8-4c25-a29c-21a58e1174b8_3000x3000.png",
+  "podcast_episode_image_info": {
+    "url": "https://substack-post-media.s3.amazonaws.com/public/images/3e54a18d-a5f8-4c25-a29c-21a58e1174b8_3000x3000.png",
+    "isDefaultArt": false,
+    "isDefault": false
+  },
+  "videoUpload": {
+    "id": "11d54485-c344-4e1e-9a97-3b762caaa1bf",
+    "name": "Final :w Transitions Zach Podcast Remastered Audio.mp4",
+    "created_at": "2024-11-01T02:50:38.959Z",
+    "uploaded_at": "2024-11-01T03:36:30.527Z",
+    "publication_id": 1340878,
+    "state": "transcoded",
+    "post_id": 151013041,
+    "user_id": 38830210,
+    "duration": 4001.25,
+    "height": 1080,
+    "width": 1920,
+    "thumbnail_id": 1730436963,
+    "preview_start": null,
+    "preview_duration": null,
+    "media_type": "video",
+    "primary_file_size": 2132563743,
+    "is_mux": true,
+    "mux_asset_id": "Cjh4E1e6XALV73TOx02wEbPbPxMd01d16bYspZ5KZDe8o",
+    "mux_playback_id": "7WbVkDMv5OXbr012bOY5K8UAIB30261iBTvdcnPjVcSXU",
+    "mux_preview_asset_id": null,
+    "mux_preview_playback_id": null,
+    "mux_rendition_quality": "high",
+    "mux_preview_rendition_quality": null,
+    "explicit": false,
+    "copyright_infringement": null,
+    "src_media_upload_id": null,
+    "live_stream_id": null,
+    "transcription": null,
+    "extractedAudio": {
+      "id": "9fb5c84b-51a0-4b90-897b-d1d79eabc4c8",
+      "name": null,
+      "created_at": "2024-11-01T03:36:30.565Z",
+      "uploaded_at": "2024-11-01T03:36:30.527Z",
+      "publication_id": 1340878,
+      "state": "transcoded",
+      "post_id": 151013041,
+      "user_id": 38830210,
+      "duration": 4001.2278,
+      "height": null,
+      "width": null,
+      "thumbnail_id": 1,
+      "preview_start": null,
+      "preview_duration": null,
+      "media_type": "audio",
+      "primary_file_size": 64020209,
+      "is_mux": null,
+      "mux_asset_id": null,
+      "mux_playback_id": null,
+      "mux_preview_asset_id": null,
+      "mux_preview_playback_id": null,
+      "mux_rendition_quality": null,
+      "mux_preview_rendition_quality": null,
+      "explicit": false,
+      "copyright_infringement": null,
+      "src_media_upload_id": "11d54485-c344-4e1e-9a97-3b762caaa1bf",
+      "live_stream_id": null,
+      "transcription": {
+        "media_upload_id": "9fb5c84b-51a0-4b90-897b-d1d79eabc4c8",
+        "created_at": "2024-11-01T03:38:06.477Z",
+        "requested_by": 38830210,
+        "status": "transcribed",
+        "modal_call_id": "fc-01JBJWTFQ7A4031FPF463P6H5Q",
+        "approved_at": "2024-11-01T03:41:40.391Z",
+        "transcript_url": "s3://substack-video/video_upload/post/151013041/9fb5c84b-51a0-4b90-897b-d1d79eabc4c8/1730432300/transcription.json",
+        "attention_vocab": null,
+        "speaker_map": {
+          "SPEAKER_00": "Ryan Peterman",
+          "SPEAKER_01": "Zach Wilson"
+        },
+        "captions_map": {
+          "en": {
+            "url": "s3://substack-video/video_upload/post/151013041/9fb5c84b-51a0-4b90-897b-d1d79eabc4c8/1730432300/en.vtt",
+            "language": "en",
+            "original": true
+          }
+        },
+        "cdn_url": "https://substackcdn.com/video_upload/post/151013041/9fb5c84b-51a0-4b90-897b-d1d79eabc4c8/1730432300/transcription.json?Expires=1780757229&Key-Pair-Id=APKAIVDA3NPSMPSPESQQ&Signature=PMM-5RuiGqYP4oSvjQAm7mzUBsy6G434QoHhoSTMP9BJkpAC~nqwT9MAb7tXgbmFHMTpfUC4hnPGrdDoPf-OuIYOVU-LfeffCPdExew~TIOVBbjKRNdmp3QefuVQK2~1VhIrUw9p4s8d9CSWpUBSEZcrhY39dl7Uo3vEIgm2MkUw5XgWDd8QCNbotyxzidSqxPOjj4kC5d3QoNuBbD3yZzX1ZrKA2MYYHHKuhXcSjeH0Jw2ruhe9sLUn8lgq449KZWcxCcq3AT5b7QiNdXYzKfVOrzxfsAc-z~T7xddE5iYEOYZBSlYDeuYrAZ~iCIfhyKBo4~8pMO-OvlN1l04bHw__",
+        "cdn_unaligned_url": "https://substackcdn.com/video_upload/post/151013041/9fb5c84b-51a0-4b90-897b-d1d79eabc4c8/1730432300/unaligned_transcription.json?Expires=1780757229&Key-Pair-Id=APKAIVDA3NPSMPSPESQQ&Signature=NvCNrSM7z2tgDqq53yMVEr497F9m6q13K78lnFIaFBqKw8tbJYv-2Fnp2ojao7RvhX6wV-86gwyTZ6z~coE1Xyfy0wkT2OnZgs44W7qLw4VwTyCultIcQWHr1g6jUJSImINvJpqdWtTAhEryd70WdvdC9lJqNK7w2WRjQ2b--D9hksaYezwWNNfCbRekLXlSIlDedhiZT7VDGdrT7HvVxPJW-xu7nIcnvjcCTnm9ypY6zWISkx~FBrRwgDDwTN1WI7saE~wt6keCRVSfMhIPKTnqP18BhovfLbHxdJC3qqg6WgsDZTjlancza0WhcnvDpPlkWDEOgYl99gh-i9xmOA__",
+        "signed_captions": [
+          {
+            "language": "en",
+            "url": "https://substackcdn.com/video_upload/post/151013041/9fb5c84b-51a0-4b90-897b-d1d79eabc4c8/1730432300/en.vtt?Expires=1780757229&Key-Pair-Id=APKAIVDA3NPSMPSPESQQ&Signature=DXJr-U-lAAbCHBlIphoIjsNjYZiI9bdeNKXBSZO9Yaz10uQW6seBfT3K3yzf5TucJyV6SIgqkMJL0MYZBAX3fiIoMsZky8Kb8ygcFGEIznromypVNvkpLaDAk-DyQCJfdjyGtJKM8pHFJ4x3HY5Ybb~jt-wuSCmHncP6HhMxMAbSBcmEHzSiJM5Qzzz2ZyABYf7K4DjyzmHdUOZav~2l18lkT2XIEMSP-oeqEZCGFNs6hnn3FJ5C4Ml8e~HXFmnHwGVX-qtJWDWfnvGSHvBjtKH8MQH9db0pGLB-Cx6o-edzmbVDHIYG3NA4xhBvjC4WU~X00ypDmXe5ke8o4V-hhA__",
+            "original": true
+          }
+        ]
+      }
+    }
+  },
+  "podcastFields": {
+    "post_id": 151013041,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": {
+    "id": "9fb5c84b-51a0-4b90-897b-d1d79eabc4c8",
+    "name": null,
+    "created_at": "2024-11-01T03:36:30.565Z",
+    "uploaded_at": "2024-11-01T03:36:30.527Z",
+    "publication_id": 1340878,
+    "state": "transcoded",
+    "post_id": 151013041,
+    "user_id": 38830210,
+    "duration": 4001.2278,
+    "height": null,
+    "width": null,
+    "thumbnail_id": 1,
+    "preview_start": null,
+    "preview_duration": null,
+    "media_type": "audio",
+    "primary_file_size": 64020209,
+    "is_mux": null,
+    "mux_asset_id": null,
+    "mux_playback_id": null,
+    "mux_preview_asset_id": null,
+    "mux_preview_playback_id": null,
+    "mux_rendition_quality": null,
+    "mux_preview_rendition_quality": null,
+    "explicit": false,
+    "copyright_infringement": null,
+    "src_media_upload_id": "11d54485-c344-4e1e-9a97-3b762caaa1bf",
+    "live_stream_id": null,
+    "transcription": {
+      "media_upload_id": "9fb5c84b-51a0-4b90-897b-d1d79eabc4c8",
+      "created_at": "2024-11-01T03:38:06.477Z",
+      "requested_by": 38830210,
+      "status": "transcribed",
+      "modal_call_id": "fc-01JBJWTFQ7A4031FPF463P6H5Q",
+      "approved_at": "2024-11-01T03:41:40.391Z",
+      "transcript_url": "s3://substack-video/video_upload/post/151013041/9fb5c84b-51a0-4b90-897b-d1d79eabc4c8/1730432300/transcription.json",
+      "attention_vocab": null,
+      "speaker_map": {
+        "SPEAKER_00": "Ryan Peterman",
+        "SPEAKER_01": "Zach Wilson"
+      },
+      "captions_map": {
+        "en": {
+          "url": "s3://substack-video/video_upload/post/151013041/9fb5c84b-51a0-4b90-897b-d1d79eabc4c8/1730432300/en.vtt",
+          "language": "en",
+          "original": true
+        }
+      },
+      "cdn_url": "https://substackcdn.com/video_upload/post/151013041/9fb5c84b-51a0-4b90-897b-d1d79eabc4c8/1730432300/transcription.json?Expires=1780757229&Key-Pair-Id=APKAIVDA3NPSMPSPESQQ&Signature=PMM-5RuiGqYP4oSvjQAm7mzUBsy6G434QoHhoSTMP9BJkpAC~nqwT9MAb7tXgbmFHMTpfUC4hnPGrdDoPf-OuIYOVU-LfeffCPdExew~TIOVBbjKRNdmp3QefuVQK2~1VhIrUw9p4s8d9CSWpUBSEZcrhY39dl7Uo3vEIgm2MkUw5XgWDd8QCNbotyxzidSqxPOjj4kC5d3QoNuBbD3yZzX1ZrKA2MYYHHKuhXcSjeH0Jw2ruhe9sLUn8lgq449KZWcxCcq3AT5b7QiNdXYzKfVOrzxfsAc-z~T7xddE5iYEOYZBSlYDeuYrAZ~iCIfhyKBo4~8pMO-OvlN1l04bHw__",
+      "cdn_unaligned_url": "https://substackcdn.com/video_upload/post/151013041/9fb5c84b-51a0-4b90-897b-d1d79eabc4c8/1730432300/unaligned_transcription.json?Expires=1780757229&Key-Pair-Id=APKAIVDA3NPSMPSPESQQ&Signature=NvCNrSM7z2tgDqq53yMVEr497F9m6q13K78lnFIaFBqKw8tbJYv-2Fnp2ojao7RvhX6wV-86gwyTZ6z~coE1Xyfy0wkT2OnZgs44W7qLw4VwTyCultIcQWHr1g6jUJSImINvJpqdWtTAhEryd70WdvdC9lJqNK7w2WRjQ2b--D9hksaYezwWNNfCbRekLXlSIlDedhiZT7VDGdrT7HvVxPJW-xu7nIcnvjcCTnm9ypY6zWISkx~FBrRwgDDwTN1WI7saE~wt6keCRVSfMhIPKTnqP18BhovfLbHxdJC3qqg6WgsDZTjlancza0WhcnvDpPlkWDEOgYl99gh-i9xmOA__",
+      "signed_captions": [
+        {
+          "language": "en",
+          "url": "https://substackcdn.com/video_upload/post/151013041/9fb5c84b-51a0-4b90-897b-d1d79eabc4c8/1730432300/en.vtt?Expires=1780757229&Key-Pair-Id=APKAIVDA3NPSMPSPESQQ&Signature=DXJr-U-lAAbCHBlIphoIjsNjYZiI9bdeNKXBSZO9Yaz10uQW6seBfT3K3yzf5TucJyV6SIgqkMJL0MYZBAX3fiIoMsZky8Kb8ygcFGEIznromypVNvkpLaDAk-DyQCJfdjyGtJKM8pHFJ4x3HY5Ybb~jt-wuSCmHncP6HhMxMAbSBcmEHzSiJM5Qzzz2ZyABYf7K4DjyzmHdUOZav~2l18lkT2XIEMSP-oeqEZCGFNs6hnn3FJ5C4Ml8e~HXFmnHwGVX-qtJWDWfnvGSHvBjtKH8MQH9db0pGLB-Cx6o-edzmbVDHIYG3NA4xhBvjC4WU~X00ypDmXe5ke8o4V-hhA__",
+          "original": true
+        }
+      ]
+    }
+  },
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Watch now | Zach shares the behind the scenes of his job hops and tips on how to build an internal brand each time",
+  "body_html": "<p>Happy Friday everyone; today’s post is different from usual. I’m not revealing the passion project I visited China for yet, but I plan to start sharing occasional podcast episodes. I’ll record conversations that I feel would be interesting or helpful for you.</p><p>My first podcast episode is with <a href=\"https://www.linkedin.com/in/eczachly/\">Zach Wilson</a>, who had a crazy career trajectory. He got to Staff at Airbnb in 3 years through job hopping. Here are the parts of the interview I think you’ll find interesting:</p><ul><li><p><strong>Junior (IC3) -&gt; IC4 in one half</strong> - he talks about how he succeeded early at Meta</p></li><li><p><strong>Senior (IC5) promo blocked at Meta</strong> - how behaviors can block promos even if you have high ratings</p></li><li><p><strong>Interviewing into IC5 at Netflix</strong> - your network &amp; internal brand make a big difference</p></li><li><p><strong>Burning out on Staff (IC6) scope at Netflix</strong> - concrete example of why behaviors block promos</p></li><li><p><strong>Interviewing into IC6 at Airbnb</strong> - getting multiple offers and negotiating on level</p></li><li><p><strong>How to build credibility fast</strong> - His method for building his internal brand from scratch at each company</p></li><li><p><strong>Reflecting on regrets and what he would have changed</strong></p></li></ul><p>It should be available everywhere you listen to podcasts (might take a second for the RSS to sync). If all else fails, <a href=\"https://youtu.be/-ZuewJWJtCo\">here’s the YouTube link</a>.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!x5LI!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd26169dc-7568-43a0-b5f6-2eaec41869f8_1954x1313.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!x5LI!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd26169dc-7568-43a0-b5f6-2eaec41869f8_1954x1313.png 424w, https://substackcdn.com/image/fetch/$s_!x5LI!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd26169dc-7568-43a0-b5f6-2eaec41869f8_1954x1313.png 848w, https://substackcdn.com/image/fetch/$s_!x5LI!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd26169dc-7568-43a0-b5f6-2eaec41869f8_1954x1313.png 1272w, https://substackcdn.com/image/fetch/$s_!x5LI!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd26169dc-7568-43a0-b5f6-2eaec41869f8_1954x1313.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!x5LI!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd26169dc-7568-43a0-b5f6-2eaec41869f8_1954x1313.png\" width=\"1456\" height=\"978\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/d26169dc-7568-43a0-b5f6-2eaec41869f8_1954x1313.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:978,&quot;width&quot;:1456,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:null,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!x5LI!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd26169dc-7568-43a0-b5f6-2eaec41869f8_1954x1313.png 424w, https://substackcdn.com/image/fetch/$s_!x5LI!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd26169dc-7568-43a0-b5f6-2eaec41869f8_1954x1313.png 848w, https://substackcdn.com/image/fetch/$s_!x5LI!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd26169dc-7568-43a0-b5f6-2eaec41869f8_1954x1313.png 1272w, https://substackcdn.com/image/fetch/$s_!x5LI!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd26169dc-7568-43a0-b5f6-2eaec41869f8_1954x1313.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">Zach’s career trajectory visualized</figcaption></figure></div><div><hr></div><h3>Why I’m Getting Into Podcasting</h3><p>I started writing in 2023 because I wanted to become a better writer. I knew that <a href=\"https://www.developing.dev/p/why-engineers-need-to-write\">writing was a critical skill for scaling myself</a>, so it was a no-brainer. The consistency paid off, and now I feel more confident in my writing. There is a noticeable difference between my first posts (<a href=\"https://www.developing.dev/p/how-to-start-reviewing-code\">ex1</a>, <a href=\"https://www.developing.dev/p/move-fast-break-less\">ex2</a>) and my recent ones.</p><p>Speaking is another important skill for influence, which is especially useful at the higher levels. That’s why I’ve gone to <a href=\"https://en.wikipedia.org/wiki/Toastmasters_International\">Toastmasters</a> occasionally, which has been helpful, but I’m still so far from great. I’m going to start recording podcasts to get better at communicating succinctly.&nbsp;</p><p>I held off on doing this for a long time because I wasn’t interested in learning how to make videos. You can probably tell by the hacky video setup in this episode. We’re literally crammed into the corner of my tiny room in SF, using just our iPhones to record.&nbsp;The wall behind Zach couldn’t be any more messy.</p><h3>What I Want the Podcast To Be</h3><p>1) <strong>I want the conversations to be transparent</strong>. There is a lot of privileged information that is shared in 1:1s. I feel lucky to have had access to that kind of information and want more of it out in the open for public benefit. </p><p>2) <strong>I want to cut out as much fluff as possible</strong>. This is similar to what I try to do with my writing. I want to reduce the friction for these ideas to be useful. I’ll cut out all unnecessary words and sounds. I’m also starting with no opening jingle since I don’t like waiting for that when I listen to podcasts. Also, no ads for now since I don’t think it’s worth the effort and listening tax.</p><h3>What I’d Appreciate From You</h3><p>I’d love your honest thoughts on what could make the podcast more helpful and enjoyable. I’m open to feedback on anything (e.g. my speaking, the questions, the A/V quality, editing, video setup). </p><p>I hope this episode serves as a good “before” picture so I can look back on it and see how much I’ve improved.</p><p>I’ll also start testing the waters by posting vertical videos on IG Reels, TikTok, and YouTube Shorts to promote the podcast. This is similar to how I promote this newsletter on my socials. If you want to follow along on the journey you can find me at:</p><ul><li><p><a href=\"https://instagram.com/ryanlpeterman\">Instagram</a></p></li><li><p><a href=\"https://www.tiktok.com/@ryanlpeterman\">TikTok</a></p></li><li><p><a href=\"https://www.youtube.com/@RyanLPeterman\">YouTube</a></p></li></ul><p>Thanks for your time,<br>Ryan Peterman</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 84,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p><br></p>",
+  "truncated_body_text": "Happy Friday everyone; today’s post is different from usual. I’m not revealing the passion project I visited China for yet, but I plan to start sharing occasional podcast episodes. I’ll record conversations that I feel would be interesting or helpful for you.",
+  "wordcount": 643,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "717ee5c0-28f1-4c39-80e0-c8b6dff010ed",
+      "publication_id": 1340878,
+      "name": "Podcast",
+      "slug": "podcast",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        14,
+        117,
+        235
+      ],
+      "population": 46
+    },
+    "DarkVibrant": {
+      "rgb": [
+        28,
+        60,
+        84
+      ],
+      "population": 3
+    },
+    "LightVibrant": {
+      "rgb": [
+        140,
+        156,
+        227
+      ],
+      "population": 967
+    },
+    "Muted": {
+      "rgb": [
+        154,
+        104,
+        106
+      ],
+      "population": 205
+    },
+    "DarkMuted": {
+      "rgb": [
+        46,
+        44,
+        62
+      ],
+      "population": 10
+    },
+    "LightMuted": {
+      "rgb": [
+        202,
+        154,
+        154
+      ],
+      "population": 489
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    },
+    {
+      "id": 10367987,
+      "name": "Zach Wilson",
+      "handle": "eczachly",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/$s_!GhRS!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8a857d08-ec8d-4a0e-9cb5-ad8434fe519e_2333x3500.jpeg",
+      "bio": "1m followers on all platforms. Led data engineering teams at Airbnb and Netflix. ",
+      "profile_set_up_at": "2023-05-07T19:51:23.828Z",
+      "reader_installed_at": "2023-08-15T20:19:27.298Z",
+      "is_guest": true,
+      "bestseller_tier": 100,
+      "status": {
+        "bestsellerTier": 100,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "bestseller",
+          "tier": 100
+        },
+        "paidPublicationIds": [
+          1255136,
+          1429149,
+          3473471,
+          10845
+        ],
+        "subscriber": null
+      },
+      "primaryPublicationId": 1644342,
+      "primaryPublicationName": "DataExpert.io Newsletter",
+      "primaryPublicationUrl": "https://blog.dataexpert.io",
+      "primaryPublicationSubscribeUrl": "https://blog.dataexpert.io/subscribe?"
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 92,
+  "comment_count": 16,
+  "child_comment_count": 8,
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  }
+}

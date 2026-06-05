@@ -1,0 +1,60 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering and career growth. Thank you for your readership, we hit 66,000 readers this week 🙏 🎉
+
+This week, I’m sharing details on how product thinking can help you have more impact. If you find the post helpful, please share it with your friends and coworkers. Enjoy!
+
+When I joined Meta 6 years ago, I enjoyed the unusual onboarding process. Most new hires joined “Bootcamp” which was a time when you aren’t assigned to a team yet. This let me learn and explore teams at a relaxed pace.
+
+One of the big decisions you make in Bootcamp is if you want to join a product or infrastructure team. My most technical friends picked infrastructure teams since the work seemed more challenging.
+
+The byproduct of that thinking was that those strong engineers shunned product work. After working on infrastructure teams for the last 7 years, I’ve realized this thinking is limiting.
+
+
+## Deliver Value
+
+
+Infrastructure ultimately contributes to building better products. In some cases, we directly make the product better (e.g. faster database reads mean users wait less). In other cases, your coworkers are the users and the product is the infrastructure.
+
+Either way, understanding the value of your work to the user will help you know what work is most impactful.
+
+For example, imagine you’re working on speeding up database reads. Not all reads are equally as important in the product. If you know which user flows matter most, then you can focus just on optimizing those. Considering the product improves your directional thinking.
+
+Even some of the strongest engineers like John Carmack, who has insane technical contributions, understand this:
+
+> John Carmack (from this Tweet): “Software is just a tool to help accomplish something for people — many programmers never understood that. Keep your eyes on the delivered value, and don’t over-focus on the specifics of the tool”
+
+John Carmack (from this Tweet): “Software is just a tool to help accomplish something for people — many programmers never understood that. Keep your eyes on the delivered value, and don’t over-focus on the specifics of the tool”
+
+
+## Be World Class
+
+
+There are two paths to being a world-class engineer:
+
+  - Become exceptional (top 0.01%+) at writing code - impossible for many
+
+Become exceptional (top 0.01%+) at writing code - impossible for many
+
+  - Become great (top 10%+) at many complementary skills - doable with work
+
+Become great (top 10%+) at many complementary skills - doable with work
+
+There are diminishing returns to spending all your time only focusing on programming. Not to mention that if you want to be exceptional, there’s some amount of talent involved (think about getting into the NBA for instance).
+
+It is much more in your control to become world-class by taking the second path. Product thinking is another complementary skill that you can add to your skillset (or “talent stack”).
+
+If you want to become more product-minded, there are a few things you can do to get started:
+
+  - Dogfood your product - Use the products that you work on. You will have more intuition about what is important to the user if you are one yourself.
+
+Dogfood your product - Use the products that you work on. You will have more intuition about what is important to the user if you are one yourself.
+
+  - Understand the full picture - Don’t stop at the boundaries of what your team owns. Think about the end-to-end system. Understand how the changes in your infrastructure code affect the product.
+
+Understand the full picture - Don’t stop at the boundaries of what your team owns. Think about the end-to-end system. Understand how the changes in your infrastructure code affect the product.
+
+I will always be an infrastructure engineer at heart, but I still see the benefits of product thinking and hope you do too now.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already.
+
+Thanks for reading,
+Ryan Peterman

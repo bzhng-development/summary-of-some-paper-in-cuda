@@ -1,0 +1,140 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your continued readership, we welcomed almost 2000 new subs last week 🙏🤯
+
+Note: There are no affiliate links in my book list. Enjoy!
+
+The goal for my book list is simple. I wanted it to cover the 20% of reading that you need to do to get 80% of the skills you need on the job.
+
+To make sure this list is high quality, I cross-referenced my recommendations against three sources: Hacker News mentions, Reddit mentions, and Amazon reviews. From my research and experience, here are the top five books every software engineer should read.
+
+
+## Introduction to Algorithms - “CLRS” (link)
+
+
+This book is the most famous algorithms & data structures textbook in the world for good reason. It covers everything you need to know on these topics.
+
+When I read it in college for my algorithms class, I was impressed with how applicable it was for interview prep. All Leetcode questions are applications of the knowledge in this book.
+
+It goes further than just Leetcode though. A basic understanding of common data structures is important on the job. Besides, its popularity and ratings speak for themselves:
+
+  - #1 most mentioned book on /r/programming
+
+#1 most mentioned book on /r/programming
+
+  - #2 most mentioned book on /r/cscareerquestions - second to an interview prep book (CTCI)
+
+#2 most mentioned book on /r/cscareerquestions - second to an interview prep book (CTCI)
+
+  - One of the top all-time mentioned books on Hacker News
+
+One of the top all-time mentioned books on Hacker News
+
+  - Average 4.6 star rating on Amazon (2341 ratings) - much higher than I would have expected for a textbook
+
+Average 4.6 star rating on Amazon (2341 ratings) - much higher than I would have expected for a textbook
+
+
+## Clean Code (link)
+
+
+Engineers must maintain and modify software to handle business needs. This is much easier to do when code is well organized. This book covers how to write maintainable code.
+
+The knowledge in this book is what helps me write high-quality code and provide useful feedback on code reviews. Given how valuable this book is, it makes sense why it’s so popular and highly rated:
+
+  - Top 10 mentioned book on /r/programming, /r/cscareerquestions, and /r/ExperiencedDevs
+
+Top 10 mentioned book on /r/programming, /r/cscareerquestions, and /r/ExperiencedDevs
+
+  - One of the top all-time mentioned books on Hacker News
+
+One of the top all-time mentioned books on Hacker News
+
+  - Average 4.7 star rating on Amazon (5722 ratings) - even higher average ratings than the last book
+
+Average 4.7 star rating on Amazon (5722 ratings) - even higher average ratings than the last book
+
+
+## Designing Data-Intensive Applications (link)
+
+
+System design is a critical skill for experienced developers. This is because senior developers are responsible for their team’s end-to-end systems. Reading this book will help you build modern, scalable systems. I highly recommend this book if you’re looking to expand your system design understanding.
+
+  - Average 4.8 star rating on Amazon (3893 ratings) - highest among all the books I recommend
+
+Average 4.8 star rating on Amazon (3893 ratings) - highest among all the books I recommend
+
+  - Most mentioned book on /r/ExperiencedDevs - makes sense that this subreddit would be the one talking about this book most
+
+Most mentioned book on /r/ExperiencedDevs - makes sense that this subreddit would be the one talking about this book most
+
+  - One of the top all-time mentioned books on Hacker News
+
+One of the top all-time mentioned books on Hacker News
+
+
+## On Writing Well (link)
+
+
+Writing well is valuable for software engineers. Top Hacker News posts (ex1, ex2) and figures like Paul Graham agree. Yet, engineers don’t get any training on how to write and have to figure it out on the job.
+
+On Writing Well should help; It’s a famous book focused on how to write nonfiction better. I recommend this book over The Elements of Style (the other famous book on writing) because this one gives you general guidelines rather than specific rules to memorize. It’s helped make my writing clearer. Not to mention that it has great ratings and is often mentioned on Hacker News:
+
+  - Average 4.8 start rating on Amazon (4872 ratings) - tied for first among my recommendations
+
+Average 4.8 start rating on Amazon (4872 ratings) - tied for first among my recommendations
+
+  - One of the top all-time mentioned books on Hacker News
+
+One of the top all-time mentioned books on Hacker News
+
+
+## How to Win Friends and Influence People (link)
+
+
+Last but not least, if you only have time to read one book, it should probably be this one. The title is a little strange but hear me out.
+
+Just about everything at your job involves other people. You won’t go far if you’re difficult to work with even if you’re talented. The better you are at working with others, the easier it is to get things done. This book is a great guide for soft skills. The popularity of this book matches my recommendation:
+
+  - It is the most-mentioned book across all of Reddit
+
+It is the most-mentioned book across all of Reddit
+
+  - Has the most Amazon reviews by far at 111,401 reviews with an average of 4.7 stars
+
+Has the most Amazon reviews by far at 111,401 reviews with an average of 4.7 stars
+
+To show you that this recommendation comes from personal experience, here’s my copy of the book. It was a gift from my Dad and is older than I am. It’s also a bit worn since I’ve read it a few times:
+
+To go along with my list of book recommendations, I’m announcing the launch of the Developing Dev’s referral program 🎉. I believe the knowledge in these books is valuable enough that I’d be happy to give them away in exchange for spreading the word. I’ll be spending money out of my own pocket to do this. Here’s how it works:
+
+
+## 1) Share the Developing Dev 📣
+
+
+When you use the referral link below or the “share” button on any post, you’ll get credit for any new subscribers. For example, here’s a post I shared on LinkedIn that drove over 600 subscribers to Jordan Cutler’s Substack (can anyone beat that?).
+
+Refer a friend
+
+
+## 2) Earn Benefits 🎁
+
+
+Once enough people subscribe through your link, you’ll receive benefits. I tailored the benefits to revolve around these books:
+
+  - Tier 1 (3 referrals) - Guide of Chapters That Matter - I put together a short guide that explains which chapters of these books are most important to read if you’re strapped for time
+
+Tier 1 (3 referrals) - Guide of Chapters That Matter - I put together a short guide that explains which chapters of these books are most important to read if you’re strapped for time
+
+  - Tier 2 (35 referrals) - Copy of How To Win Friends and Influence People
+
+Tier 2 (35 referrals) - Copy of How To Win Friends and Influence People
+
+  - Tier 3 (100 referrals) - Copy of Designing Data-Intensive Applications
+
+Tier 3 (100 referrals) - Copy of Designing Data-Intensive Applications
+
+You can choose if you want a physical (if Amazon ships to you) or Kindle copy.  I’ve also enabled the leaderboard so you can compare how your referrals stack up with others:
+
+Visit the leaderboard
+
+Thank you for reading,
+Ryan Peterman

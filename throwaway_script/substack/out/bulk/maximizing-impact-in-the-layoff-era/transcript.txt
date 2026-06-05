@@ -1,0 +1,36 @@
+Most big tech companies have done layoffs aside from Apple. We need to change how we work now that we have fewer teammates. Here’s how to have more impact in the layoff era.
+
+
+## Run Towards The Fire
+
+
+Fewer engineers mean more fires and unsolved problems. It’s natural to want to avoid these, but these problems are opportunities for growth.
+
+​​Identifying problems is a good start. Taking the initiative to report bugs or escalate incidents is helpful. Sometimes teams lack visibility into the severity of a problem, so you can have impact by helping others understand how serious it is. But what is more helpful is being the one to fix it. If you can be the person who consistently does this, you’ll develop a reputation that will grow your career.
+
+The skill of solving ambiguous problems separates junior from senior engineers. Junior engineers solve well-scoped tasks, while senior engineers drive resolution for unclear problem areas without any task-level guidance. Each of these unsolved problems is an opportunity for growth to senior levels.
+
+
+## Be Scrappy
+
+
+Peers that you depended on will no longer be at the company. To make progress on your work, you could ping their teams and ask when they’ll staff that work with someone new. This can add weeks to your project timeline. Or, if the ask is simple, you could dive in and do it yourself.
+
+This is what I mean by being “scrappy”. Own your project outcomes and do whatever it takes to make progress. If that means that you perform your own data analysis or work in unfamiliar codebases, so be it. This is more efficient than delegation for simple tasks. This is because delegation comes with the cost of communicating the work and waiting for others to pick it up.
+
+Over time this scrappiness will make you a faster engineer. You can avoid the round trips in waiting for others to do things for you if you can do simple work outside your domain (e.g. unfamiliar codebases, data science, data engineering).
+
+
+## Prioritize Ruthlessly
+
+
+Now that our teams have less bandwidth, it’s more important to prioritize. We must only take on work with the highest impact and be clear on what we can’t staff. For road mapping, we need to determine the return on engineering time before committing. This sounds obvious, but when there are plenty of engineers it’s natural to take on “nice-to-haves” without thinking twice.
+
+If a project isn’t impactful enough, we need to drop it and communicate that decision. Leaving work in the purgatory of “eventually” can waste a lot of company time if collaborators are invested in the outcome. For instance, my team once waited months for something to be done by a partner team. It’s fine that the project wasn’t done since it wasn’t a high priority. The real issue is the time wasted in communication for both sides. Every update from their side was a non-update. We spent time checking in and advocating for the work when in reality it wasn’t a priority for the other team.
+
+Although the cloud of layoffs hangs over us, there is a silver lining. Problems for the company can be opportunities for the individual. Those who solve these problems will have outsized impact and grow a lot.
+
+I’ve received messages from a few of you considering leaving your company since growth has stagnated. Hopefully, this post answers part of your question. If you’re still interested in looking around, I’ll be writing about the current job market next week. Subscribe to learn more!
+
+Thanks for reading,
+Ryan Peterman

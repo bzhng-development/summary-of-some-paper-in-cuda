@@ -1,0 +1,234 @@
+👋 I’m Ryan Peterman, Staff Engineer at Instagram. Welcome to my newsletter and blog. I write about software engineering and how to grow faster on the job for 42,000+ software engineers.
+
+After a year of writing, here’s the best way to find relevant articles organized by what the content will help you with (🎖️ = top 10 article):
+
+
+## 1. I want to improve my soft skills
+
+
+  - Why Engineers Need To Write 🎖️
+
+Why Engineers Need To Write 🎖️
+
+  - 6 Software Engineering Templates I Wish I Had Sooner 🎖️
+
+6 Software Engineering Templates I Wish I Had Sooner 🎖️
+
+  - 5 Skills the Best Engineers I Know Have in Common 🎖️
+
+5 Skills the Best Engineers I Know Have in Common 🎖️
+
+  - How To Write an Effective Self-Review 🎖️
+
+How To Write an Effective Self-Review 🎖️
+
+  - Top 3 SWE Skills I Picked Up On The Job 🎖️
+
+Top 3 SWE Skills I Picked Up On The Job 🎖️
+
+  - How To Drive Meetings
+
+How To Drive Meetings
+
+  - How Promotions and Ratings Work
+
+How Promotions and Ratings Work
+
+  - How To Write
+
+How To Write
+
+  - Efficient Communication
+
+Efficient Communication
+
+  - Be Visible
+
+Be Visible
+
+  - Protect Your Time
+
+Protect Your Time
+
+
+## 2. I want to grow into a mid-level engineer
+
+
+  - FAANG Career Ladder: Junior (L3) vs Mid-level (L4)
+
+FAANG Career Ladder: Junior (L3) vs Mid-level (L4)
+
+  - Speedrunning Guide: Junior (L3)-> Mid-Level (L4)
+
+Speedrunning Guide: Junior (L3)-> Mid-Level (L4)
+
+  - Generalist or Specialist?
+
+Generalist or Specialist?
+
+  - How to Start Reviewing Code
+
+How to Start Reviewing Code
+
+
+## 3. I want to grow into a senior engineer
+
+
+  - What I Wish I Knew As a Mid-Level Engineer🎖️
+
+What I Wish I Knew As a Mid-Level Engineer🎖️
+
+  - How Some Engineers Always Lead🎖️
+
+How Some Engineers Always Lead🎖️
+
+  - FAANG Career Ladder: Mid-level (L4) vs Senior (L5)
+
+FAANG Career Ladder: Mid-level (L4) vs Senior (L5)
+
+  - Speedrunning Guide: Mid-level (L4) -> Senior (L5)
+
+Speedrunning Guide: Mid-level (L4) -> Senior (L5)
+
+  - Finding Next-Level Scope
+
+Finding Next-Level Scope
+
+
+## 4. I want to grow into a staff engineer
+
+
+  - Setting Up Cross-Team Workstreams
+
+Setting Up Cross-Team Workstreams
+
+  - FAANG Career Ladder: Senior (L5) vs Staff (L6)
+
+FAANG Career Ladder: Senior (L5) vs Staff (L6)
+
+  - Speedrunning Guide: Senior (L5) -> Staff (L6)
+
+Speedrunning Guide: Senior (L5) -> Staff (L6)
+
+  - Finding Staff-Level Scope
+
+Finding Staff-Level Scope
+
+
+## 5. I want to grow to staff+ engineering levels
+
+
+  - FAANG Career Ladder: Staff (L6) vs Senior Staff (L7)
+
+FAANG Career Ladder: Staff (L6) vs Senior Staff (L7)
+
+  - Optimizing for Opportunity
+
+Optimizing for Opportunity
+
+  - Staff+ Career Growth: Product or Infra?
+
+Staff+ Career Growth: Product or Infra?
+
+
+## 6. I want help with finding a job/interviewing
+
+
+  - Job Hunting in the Layoff Era
+
+Job Hunting in the Layoff Era
+
+  - Cracking the Coding Interview
+
+Cracking the Coding Interview
+
+
+## 7. I want to learn from other engineer’s experience
+
+
+  - Promotion via Job Hopping🎖️
+
+Promotion via Job Hopping🎖️
+
+  - From Microsoft Intern to Meta Staff Engineer: Raviraj Achar🎖️
+
+From Microsoft Intern to Meta Staff Engineer: Raviraj Achar🎖️
+
+  - Building Experience Faster
+
+Building Experience Faster
+
+  - Why I Stayed at Meta When All My Friends Left
+
+Why I Stayed at Meta When All My Friends Left
+
+  - New Grad to Senior Engineer in 2 years: Jordan Cutler
+
+New Grad to Senior Engineer in 2 years: Jordan Cutler
+
+
+## 8. I want to hone my engineering skills
+
+
+  - Top Tech Company Engineering Blog Posts 🎖️
+
+Top Tech Company Engineering Blog Posts 🎖️
+
+  - Resilient Systems Through Retrospection
+
+Resilient Systems Through Retrospection
+
+  - Threads' Invisible Armor
+
+Threads' Invisible Armor
+
+  - Tools of the Trade
+
+Tools of the Trade
+
+  - Move Fast Without Breaking Anything
+
+Move Fast Without Breaking Anything
+
+I started this newsletter in 2023 with two goals:
+
+  - Become better at writing
+
+Become better at writing
+
+  - Help as many software engineers as possible grow their careers
+
+Help as many software engineers as possible grow their careers
+
+It’s difficult to measure content quality, but looking back at old articles (ex1, ex2) it’s clear to me that new articles are clearer and easier to digest. Practicing writing weekly helped me become a better writer.
+
+I never thought the newsletter would grow as much as it did. I remember telling friends my goal was 100 subscribers by the end of the year. I didn’t have any social media following and thought asking for emails was high friction. If you told me we’d have 42,000+ readers by now I wouldn’t have believed you. Below are highlighted stats from the last year of writing in public.
+
+
+## Inside the Stats
+
+
+After writing for 9 months, here are the highlights:
+
+  - 43 posts (once a week, haven’t missed yet 🤞)
+
+43 posts (once a week, haven’t missed yet 🤞)
+
+  - 946,549 total views (~22k/post)
+
+946,549 total views (~22k/post)
+
+  - Most shared/engaged post = 106 shares + 18% engagement rate here
+
+Most shared/engaged post = 106 shares + 18% engagement rate here
+
+It’s also interesting to see where people are reading from. Writing online lets you reach people from all over the world. I was shocked to see that we have readers from all 50 US states and 174 different countries 🙏
+
+Thanks so much for a great year; it’s been a pleasure spending my time writing this content. I hope it’s been helpful for you.
+
+To help me pick future topics that will help the most people, please pick an option from the below poll:
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already. Also, if you have feedback about how I can make the content better, please share it here 🙏
+
+Thanks for reading,
+Ryan Peterman

@@ -1,0 +1,78 @@
+After I got promoted to Staff, I tried out the TLM role because it was a good fit for my skills and I wanted to learn something new. Before switching, I asked several senior TLMs at Meta about the role and took notes.
+
+In this post, I’ll share what I learned to help you plan your career if you’re considering a switch to management.
+
+
+## What is a TLM?
+
+
+A TLM is an EM with a small number of reports (usually <6 reports). They are evaluated primarily as ICs. You can think of their responsibilities roughly split as 70% IC and 30% EM.
+
+Promotions come from their IC contributions and not their EM contributions due to the small size of their team.
+
+
+## Pros of being a TLM
+
+
+  - Try management, stay technical - If you enjoy being an IC but want to learn management this can be appealing. It can also be a stepping stone to a regular EM position. This is what happened in my case, I started as a TLM and enjoyed management. Eventually, I grew my team and became an “org leader” (regular EM).
+
+Try management, stay technical - If you enjoy being an IC but want to learn management this can be appealing. It can also be a stepping stone to a regular EM position. This is what happened in my case, I started as a TLM and enjoyed management. Eventually, I grew my team and became an “org leader” (regular EM).
+
+  - Career growth regardless of team size - Engineering manager career growth comes from the size of your team (often not in your control). However, since TLMs are evaluated as ICs, you can grow your career independent of team size.
+
+Career growth regardless of team size - Engineering manager career growth comes from the size of your team (often not in your control). However, since TLMs are evaluated as ICs, you can grow your career independent of team size.
+
+
+## Cons of being a TLM
+
+
+  - Higher workload - You need to sustain Staff+ IC expectations yet also take on management responsibilities. In most cases, you’ll work more hours because of thisSlower career growth - The growth path for TLMs is less clear. Your career would grow faster if you were a full IC or EM:IC case - you can focus 100% of your time on IC behaviors that’ll get you promotedEM case - you can grow your team and are more likely to be picked to fill vacant senior manager roles
+
+Higher workload - You need to sustain Staff+ IC expectations yet also take on management responsibilities. In most cases, you’ll work more hours because of this
+
+Slower career growth - The growth path for TLMs is less clear. Your career would grow faster if you were a full IC or EM:
+
+  - IC case - you can focus 100% of your time on IC behaviors that’ll get you promoted
+
+IC case - you can focus 100% of your time on IC behaviors that’ll get you promoted
+
+  - EM case - you can grow your team and are more likely to be picked to fill vacant senior manager roles
+
+EM case - you can grow your team and are more likely to be picked to fill vacant senior manager roles
+
+  - Less career flexibility - It is much more difficult to move around as a TLM. Your role is less common so there are fewer roles you can switch to. Most teams can make room for a Staff+ IC, but the same is not true for TLMs.
+
+Less career flexibility - It is much more difficult to move around as a TLM. Your role is less common so there are fewer roles you can switch to. Most teams can make room for a Staff+ IC, but the same is not true for TLMs.
+
+
+## Optimal Strategy
+
+
+If you want to dabble in management, there are better ways than converting to a TLM:
+
+  - Intern manager (best) - you get to be your intern’s direct manager at most companies. You handle their perf and they report to you.
+
+Intern manager (best) - you get to be your intern’s direct manager at most companies. You handle their perf and they report to you.
+
+  - Tech lead - you get team-level goal ownership, leadership opportunities, and the responsibility to grow others. You don’t handle perf though so it’s not 100% the same.
+
+Tech lead - you get team-level goal ownership, leadership opportunities, and the responsibility to grow others. You don’t handle perf though so it’s not 100% the same.
+
+TLM is worse for your career than being a pure EM or IC in the long term. I would only choose the TLM path as a short-term step if you know you want to become an EM and it’s the only available step in that direction.
+
+Hope this was helpful and if you liked the content, you can find more of my stuff here:
+
+  - LinkedIn
+
+LinkedIn
+
+  - Twitter
+
+Twitter
+
+  - Threads
+
+Threads
+
+Thanks for reading,
+Ryan Peterman

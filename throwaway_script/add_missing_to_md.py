@@ -41,18 +41,20 @@ ARXIV_BODY_RE = re.compile(r"\*\*ArXiv:\*\*\s*\[?(\d{4}\.\d{4,5})")
 SECTION_RANGE = range(1, 8)
 DB_FETCH_CHUNK = 500
 
-PITCH_FAIL_PREFIXES: frozenset[str] = frozenset({
-    "unable to",
-    "the provided text",
-    "i cannot",
-    "i am unable",
-    "the text appears to be",
-    "the input appears to be",
-    "note: the provided",
-    "the provided content",
-    "the provided document",
-    "the provided pdf",
-})
+PITCH_FAIL_PREFIXES: frozenset[str] = frozenset(
+    {
+        "unable to",
+        "the provided text",
+        "i cannot",
+        "i am unable",
+        "the text appears to be",
+        "the input appears to be",
+        "note: the provided",
+        "the provided content",
+        "the provided document",
+        "the provided pdf",
+    }
+)
 
 
 @dataclass(slots=True)
@@ -225,6 +227,7 @@ def main() -> int:
     arxiv_only = [a for a in missing if not a.startswith("ext")]
     print(f"[arxiv-api] fetching titles for {len(arxiv_only)} arxiv ids")
     from daily_papers.hf_daily_papers import fetch_arxiv_metadata
+
     arxiv_meta = fetch_arxiv_metadata(arxiv_only)
     print(f"[arxiv-api] got {len(arxiv_meta)} responses")
 
@@ -250,11 +253,7 @@ def main() -> int:
             stats.skip_no_title += 1
             continue
 
-        sections: dict[int, str] = {
-            n: t
-            for n in SECTION_RANGE
-            if (t := by_section[n].get(aid))
-        }
+        sections: dict[int, str] = {n: t for n in SECTION_RANGE if (t := by_section[n].get(aid))}
         if 1 not in sections:
             stats.skip_no_db_row += 1
             continue

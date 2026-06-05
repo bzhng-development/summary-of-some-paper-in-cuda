@@ -1,0 +1,481 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/backchannel-alignment",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 148563440,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-09-06T13:02:32.396Z",
+  "updated_at": "2024-09-06T13:12:15.191Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "backchannel-alignment",
+  "social_title": null,
+  "subtitle": "A Necessary Skill for Staff",
+  "teaser_post_eligible": true,
+  "title": "Backchannel Alignment",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 8,
+  "reactions": {
+    "❤": 78
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "should-you-become-an-engineering",
+  "next_post_slug": "unlearning-leetcode",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/a496a377-de44-41b4-9ae6-7ebfcb0dd35d_1668x1062.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 148563440,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "A Necessary Skill for Staff",
+  "body_html": "<p>You must influence teams of engineers if you want to grow to Staff. As you scale yourself past smaller collaborations, your tactics must change.&nbsp;</p><p>Let’s say you have an idea needing ten engineers to work together from several teams. How do you get everyone to band together to solve the problem?</p><p>One of the best ways I know is “backchannel alignment”. It’s a repeatable way to get buy-in from larger groups without authority.</p><h3><strong>What Is It?</strong></h3><p>Backchannel alignment is when you shop your idea around to stakeholders in smaller groups first. You sell your plan, gather feedback, and address it until they are onboard.</p><p>As you convince people, you build organizational momentum and a higher-quality proposal. Once all major stakeholders agree with your plan then your job is mostly done. </p><p>The last step of sharing the plan publicly is a formality.</p><h3><strong>Why It’s Effective</strong></h3><p>Backchannel alignment has many advantages:</p><ul><li><p><strong>Warmer cold start - </strong>You start with people that are most willing to give feedback and contribute to your plan.</p></li><li><p><strong>Feedback loop</strong> - Each stakeholder that reviews your proposal will leave some feedback. Addressing it improves your proposal and gains you a supporter.</p></li><li><p><strong>Leverages social proof</strong> - As people come on board, new people are more likely to agree given others already support the plan.</p></li></ul><p>If you didn’t do it this way, you’d be putting your worst proposal forward in public. This will have much less influence due to the lower quality and lack of support.</p><p>Also, people often won’t engage with your proposal unless you sell them in a more intimate setting.</p><h3><strong>The General Strategy</strong></h3><ol><li><p><strong>Write down the problem and the value of solving it</strong> - This is the sales pitch. People won’t be convinced to go in your direction unless it’s worth their time.</p></li><li><p><strong>Build alignment in a smaller trusted group - </strong>Your initial proposal may have some gaps in it. Share your ideas with your manager, tech lead, or relevant peers who will give high-quality feedback.</p></li><li><p><strong>Expand outward to relevant parties - </strong>Now you should have a compelling proposal. Start selling it to partners that need to join to realize the vision. </p></li></ol><p>Once all relevant stakeholders agree with the plan, then share it publicly and start executing. Take ownership and do whatever it takes to help the group succeed.</p><p>There are many ways to influence others, but this tactic works best when you need to influence others when you don’t have authority. Your proposal’s credibility grows as you build alignment. This will help you convince people on other teams even though you have no prior relationship with them.</p><p>If you have a friend looking to grow to Staff, consider sharing this with them. As always, you can find more of my stuff here:</p><ul><li><p><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">LinkedIn</a></p></li><li><p><a href=\"https://twitter.com/ryanlpeterman\">Twitter</a></p></li><li><p><a href=\"https://www.threads.net/@ryanlpeterman\">Threads</a></p></li></ul><p>Thanks for reading,<br>Ryan Peterman</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 75,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "You must influence teams of engineers if you want to grow to Staff. As you scale yourself past smaller collaborations, your tactics must change.",
+  "wordcount": 483,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "f4df2d6e-046e-448c-b0bf-6dd4ae5a5a6a",
+      "publication_id": 1340878,
+      "name": "To Staff",
+      "slug": "to-staff",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        72.85714285714282,
+        182.14285714285717,
+        97.14285714285705
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        37.88571428571427,
+        94.71428571428574,
+        50.51428571428568
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        240,
+        249,
+        242
+      ],
+      "population": 195
+    },
+    "Muted": {
+      "rgb": [
+        124,
+        132,
+        124
+      ],
+      "population": 3
+    },
+    "DarkMuted": {
+      "rgb": [
+        60,
+        60,
+        60
+      ],
+      "population": 5
+    },
+    "LightMuted": {
+      "rgb": [
+        184,
+        188,
+        184
+      ],
+      "population": 71
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 78,
+  "comment_count": 3,
+  "child_comment_count": 2,
+  "audio_items": [
+    {
+      "post_id": 148563440,
+      "voice_id": "en-US-AvaMultilingualNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/148563440/tts/e93ebb92-4c14-423f-95d9-942b5069994c/en-US-AvaMultilingualNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 70041131,
+      "body": "Uh … you’ve rediscovered nemawashi:\n\nhttps://en.wikipedia.org/wiki/Nemawashi",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Uh … you’ve rediscovered nemawashi:"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "https://en.wikipedia.org/wiki/Nemawashi",
+                "marks": [
+                  {
+                    "type": "link",
+                    "attrs": {
+                      "href": "https://en.wikipedia.org/wiki/Nemawashi"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 148563440,
+      "user_id": 2821711,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-09-23T16:22:26.286Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Alan Smothers",
+      "photo_url": null,
+      "handle": "alansmothers",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 0
+      },
+      "reaction_count": 0,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "alansmothers",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 1,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    },
+    {
+      "id": 68025394,
+      "body": "Hi Ryan,\nThank you for the insightful article on backchannel alignment. The strategy of building support and refining proposals before making a public presentation is indeed a smart and strategic approach.\nAs a computer science student working on projects like an e-commerce app and a collaboration platform, I’m eager to secure a remote part-time role at a major tech company before graduation. Given my current situation, I’m interested in applying the principles of backchannel alignment to enhance my job search.\nSpecifically, how can I leverage feedback from my network to build support and strengthen my candidacy, especially when I lack formal work experience? Any strategies for using these principles to find and secure opportunities would be greatly appreciated.\nThank you in advance for your advice!",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hi Ryan,"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Thank you for the insightful article on backchannel alignment. The strategy of building support and refining proposals before making a public presentation is indeed a smart and strategic approach."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "As a computer science student working on projects like an e-commerce app and a collaboration platform, I’m eager to secure a remote part-time role at a major tech company before graduation. Given my current situation, I’m interested in applying the principles of backchannel alignment to enhance my job search."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Specifically, how can I leverage feedback from my network to build support and strengthen my candidacy, especially when I lack formal work experience? Any strategies for using these principles to find and secure opportunities would be greatly appreciated."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Thank you in advance for your advice!"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 148563440,
+      "user_id": 261330387,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-09-06T15:05:19.989Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Imane Idrissi",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/70351c3d-6f8e-496f-8c97-71d729c586db_144x144.png",
+      "handle": "imaneidrissi",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 0
+      },
+      "reaction_count": 0,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "imaneidrissi",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Imane Idrissi",
+          "id": 6198263,
+          "base_url": "https://imaneidrissi.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 1,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    }
+  ]
+}

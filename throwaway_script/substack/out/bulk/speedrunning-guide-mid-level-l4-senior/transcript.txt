@@ -1,0 +1,84 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 10,000 readers this week 🙏 🎉
+
+This week I’m continuing my “speedrunning guide” for big tech levels. Today’s edition is on how to get to Senior (L5) as fast as possible; enjoy!
+
+Senior engineer (L5) is the first level that big tech recognizes as a “terminal” level across all companies. This means there is no pressure to continue to grow past this point. Aside from the fancy title and higher pay (extra ~$120k), you also get to take on more impactful work.
+
+These perks don’t come for free though; this promotion requires major behavior changes. In this guide, I’ll go over the fastest way to get promoted from Mid-level (L4) to Senior (L5).
+
+
+## Logistics Refresher
+
+
+The same points about promotions in big tech from the last article apply; here’s a quick recap:
+
+  - “Lagging Promotions” in Big Tech - You need at least 6 months of consistent performance at the next level for promotion.
+
+“Lagging Promotions” in Big Tech - You need at least 6 months of consistent performance at the next level for promotion.
+
+  - Your Manager’s Role - They put together your packet and represent you to the promotion committee. You should stay in sync with them on if your performance is L5.
+
+Your Manager’s Role - They put together your packet and represent you to the promotion committee. You should stay in sync with them on if your performance is L5.
+
+As you go up the IC ladder, your manager will receive more pushback on your promotions. This is because there’s more ambiguity at higher IC levels. What does an IC8 even look like? Therefore you’ll need to work with your manager to gather feedback from the promotion committee. Your manager is just the messenger, but the promotion committee is the source of truth.
+
+
+## The Strategy
+
+
+We discussed L5 expectations in a previous article. Besides telling your manager about your goal of getting promoted fast, there are a few critical pieces to optimal L5 growth:
+
+  - Find L5 Scope ASAP - Your manager or tech lead can help you out. Once you confirm you have L5 scope with your manager, you can just obsess about delivering it to guide you in the right direction.
+
+Find L5 Scope ASAP - Your manager or tech lead can help you out. Once you confirm you have L5 scope with your manager, you can just obsess about delivering it to guide you in the right direction.
+
+  - Focus On Team Leadership and Influence - Putting out code is not the most important thing anymore. Find opportunities to lead workstreams and influence your team. I provided some examples of what I mean by “team-level influence” in my L4 → L5 expectations article. Shift time from raw code output towards these behaviors.
+
+Focus On Team Leadership and Influence - Putting out code is not the most important thing anymore. Find opportunities to lead workstreams and influence your team. I provided some examples of what I mean by “team-level influence” in my L4 → L5 expectations article. Shift time from raw code output towards these behaviors.
+
+  - Uplift Your Teammates - Look for opportunities to uplift and mentor others. These behaviors are necessary for your promotion to L5. Start these relationships early; you can’t rush mentorship.
+
+Uplift Your Teammates - Look for opportunities to uplift and mentor others. These behaviors are necessary for your promotion to L5. Start these relationships early; you can’t rush mentorship.
+
+If you do this right, you can expect promotion on these timelines:
+
+  - Promotion in 1 half (Exceptional) - This is rare since you need to start exerting team-level influence as soon as you join the team. I could see this happening for someone who was under-leveled and just got promoted to L4.
+
+Promotion in 1 half (Exceptional) - This is rare since you need to start exerting team-level influence as soon as you join the team. I could see this happening for someone who was under-leveled and just got promoted to L4.
+
+  - Promotion in 2 halves (Great) - If you’re ambitious, I’d aim for this goal. It is possible to do this if you find L5 scope in your first half. If not, another half should secure your promotion.
+
+Promotion in 2 halves (Great) - If you’re ambitious, I’d aim for this goal. It is possible to do this if you find L5 scope in your first half. If not, another half should secure your promotion.
+
+Easy to theorize, but what does this look like in practice? Here’s how I achieved L4 → L5 growth as a concrete example:
+
+
+## My Growth Path
+
+
+H1 (L4 Exceeds Expectations) - This half I wrapped up the workstream that got me promoted to L4 and picked up another L4 project. I spent a ton of time on engineering craft this half because I enjoyed it. I deprecated a few legacy systems that no one else would because they were dangerous and not that impactful. I didn’t exhibit any L5 behaviors this half.
+
+H2 (L4 No Rating) - My manager handed me an L5 workstream (~6 eng) to cut video messaging latency in half that I led successfully. I also began a side project which turned into a multiple-half collaboration with another team. Lastly, I took on an intern who did a phenomenal job in helping me execute these two roadmaps I was leading. Although I started exhibiting L5 behaviors the pandemic canceled performance reviews this half.
+
+H3 (L4 → L5 Promotion, Greatly Exceeds Expectations) - My impact this half could’ve met expectations at the L6 level. I doubled down on the cross-org scope I created in H2 and developed a multi-half roadmap. I influenced and led another team to invest several engineers to revamp the IG video ads pipeline with great results. I built out a second workstream and mentored another engineer to deliver it. This half I had massive impact, team-level influence, and mentorship which is what got me promoted.
+
+
+## What I Learned
+
+
+  - The Skill of Tech Leading - If you grew from L3 → L4 right, you should be exceptional at landing code. The L5 behavior of team-level influence is just helping others do the same. In my first half of leading an initiative, I remember feeling unsure about it since I only had 2 years of experience. Leaning on my strong execution skills helped me become comfortable leading others.
+
+The Skill of Tech Leading - If you grew from L3 → L4 right, you should be exceptional at landing code. The L5 behavior of team-level influence is just helping others do the same. In my first half of leading an initiative, I remember feeling unsure about it since I only had 2 years of experience. Leaning on my strong execution skills helped me become comfortable leading others.
+
+  - Working Hard Led To More Opportunities - I worked a lot and had a ton of workstreams in flight at the same time. This approach increased my chances of having one that had a ton of impact. At the time I didn’t know it and was just throwing myself at any problems that came my way. Looking back, it turns out that it was a great way to derisk my promotion.
+
+Working Hard Led To More Opportunities - I worked a lot and had a ton of workstreams in flight at the same time. This approach increased my chances of having one that had a ton of impact. At the time I didn’t know it and was just throwing myself at any problems that came my way. Looking back, it turns out that it was a great way to derisk my promotion.
+
+  - Focus On Impact - In my first half as an L4, I took on projects that were time intensive and not impactful. I did these migrations because I loved cleaning up tech debt. I would’ve had more impact if I influenced someone else to do them while I found L5 scope instead.
+
+Focus On Impact - In my first half as an L4, I took on projects that were time intensive and not impactful. I did these migrations because I loved cleaning up tech debt. I would’ve had more impact if I influenced someone else to do them while I found L5 scope instead.
+
+The promotion to senior engineer requires a shift in behaviors. It’s important to grow your skillset to accomodate for that. Practice your communication skills and shift your time from execution to more on leadership and influence. Once you find an L5 workstream, don’t let your foot off the gas. Obsess over getting shipping it no matter what it takes and you’ll get promoted fast.
+
+Thanks for reading,
+Ryan Peterman

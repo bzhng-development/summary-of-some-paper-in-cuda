@@ -1,0 +1,14 @@
+My career had a rough start, but I learned something that changed my trajectory forever, which helped me grow from a new grad (IC3) to a staff engineer (IC6) in 3 years.
+
+At my first job, I was responsible for maintaining a database script that my manager had written by himself without using source control. The script contained over 10,000 lines of complex queries that were interconnected. Since we didn’t use code review, the script had a lot of typos and bugs that could have been avoided. We made edits to the script directly in production, which caused frequent breakages. These breakages took a long time to recover from because we couldn’t revert without source control. I felt like I wasn’t growing as an engineer and had no idea how to grow since I was a new grad with no mentorship.
+
+After eight months, I decided to accept an offer to work at Facebook. I ended up on a team where I was lucky enough to have incredible mentors who taught me industry best practices. Thanks to their guidance, I became a staff engineer faster than expected.
+
+Mentorship made a huge difference in my career trajectory. I’m grateful and want to help close the gaps for engineers that don’t have dedicated mentorship at work. I’ll share what helped me grow as fast as I did through this newsletter so you can benefit.
+
+Every post from this newsletter will have no fluff and will be readable in less than five minutes. I’ll publish it on Friday mornings since there are often less meetings that day. It’s also completely free so you can just focus on learning.
+
+My top priority is to make the content as good as it can be. If you have any suggestions on how to improve it for the community, you can reply to the newsletter emails. I will read every response.
+
+Thanks for reading,
+Ryan Peterman

@@ -1,0 +1,164 @@
+Evan went from Junior (IC3) to Staff (IC6) at Meta in 3 years. Today, I’m sharing a conversation with him asking how he did that. Since we had similar career trajectories, we went back and forth at every point comparing and contrasting our paths.
+
+There were a few interesting takeaways:
+
+  - Code machines - Both of us were “code machines” (high code output) yet not prodigies. Evan started programming at the end of high school and didn’t feel he was naturally gifted. I didn’t start programming until a year into college.
+
+Code machines - Both of us were “code machines” (high code output) yet not prodigies. Evan started programming at the end of high school and didn’t feel he was naturally gifted. I didn’t start programming until a year into college.
+
+  - Being a tech lead - Evan’s career growth was accelerated by his natural leadership abilities. His manager kept giving him borderline engineering manager responsibilities to scale their growing team. Starting in college it was clear Evan already had some solid soft skills (e.g. leading Cornell’s Hacking Club).
+
+Being a tech lead - Evan’s career growth was accelerated by his natural leadership abilities. His manager kept giving him borderline engineering manager responsibilities to scale their growing team. Starting in college it was clear Evan already had some solid soft skills (e.g. leading Cornell’s Hacking Club).
+
+  - Impact >> complexity (Staff promo) - What got Evan promoted wasn’t a technically complex project. It was a simple project that had extraordinary results. This was similar to my promotion case.
+
+Impact >> complexity (Staff promo) - What got Evan promoted wasn’t a technically complex project. It was a simple project that had extraordinary results. This was similar to my promotion case.
+
+  - Technical growth (big tech vs startups) - Evan feels strongly that startups promote faster technical growth than big tech does. From our discussion, we aligned that big tech gets you depth and startups get you breadth.
+
+Technical growth (big tech vs startups) - Evan feels strongly that startups promote faster technical growth than big tech does. From our discussion, we aligned that big tech gets you depth and startups get you breadth.
+
+If you’re interested in the full conversation, it is available wherever you get your podcasts (YouTube, Spotify, Apple Podcasts). I’ve also gone ahead and wrote up a brief summary if you prefer to read below.
+
+If you’re new to FAANG levels, here’s a side-by-side comparison from levels.fyi that shows his journey:
+
+Here’s the written summary of what we discussed:
+
+
+## Cornell -> Junior Eng @ Meta
+
+
+During his third year at Cornell, Evan became interested in CTF and founded the Cornell Hacking Club. Leading this club helped him develop the soft skills he later needed to get promoted into Senior+ at Meta.
+
+Although programming didn’t come natural to him when he started, his hours spent Leetcoding, building projects, and doing CTF challenges helped him land a role at Meta when they interviewed him at Cornell.
+
+Takeaways:
+
+  - Do “real” side projects - Evan warned that building random projects for your resume isn’t nearly as good as solving real problems you care about. Solving problems you care about will help you learn more and stand out from the crowd.
+
+Do “real” side projects - Evan warned that building random projects for your resume isn’t nearly as good as solving real problems you care about. Solving problems you care about will help you learn more and stand out from the crowd.
+
+  - Learning soft skills early - A lot of the behaviors Evan needed to start a club and get people to run it with him were useful later in his career. Getting more involved isn’t just a way to pad your resume, and will help you develop your leadership skills.
+
+Learning soft skills early - A lot of the behaviors Evan needed to start a club and get people to run it with him were useful later in his career. Getting more involved isn’t just a way to pad your resume, and will help you develop your leadership skills.
+
+
+## Junior -> Mid-level (Promo in 1 Half)
+
+
+With his CTF experience from Cornell, he initially wanted to join the cybersecurity team at Meta. However, during Meta’s onboarding, he found that the team culture didn’t interest him, so he joined Content Integrity instead. This was a backend systems team that helped filter out violating content from Meta’s platforms.
+
+Although promotion wasn’t on his mind, he got promoted within his first half, reassuring him that he was doing well.
+
+Takeaways:
+
+  - The opportunities you seek out >> the opportunities that are seeking you – The opportunities that are most desirable often have many people competing for them. Having the agency to chase those opportunities will make a big difference over your career.
+
+The opportunities you seek out >> the opportunities that are seeking you – The opportunities that are most desirable often have many people competing for them. Having the agency to chase those opportunities will make a big difference over your career.
+
+  - Look for projects outside your scope – Doing projects connected to your work but outside your responsibilities help you stand out. Evan’s intern manager at Zillow called him the “best intern” he’d ever had because of his passion for building things outside of his core responsibilities.
+
+Look for projects outside your scope – Doing projects connected to your work but outside your responsibilities help you stand out. Evan’s intern manager at Zillow called him the “best intern” he’d ever had because of his passion for building things outside of his core responsibilities.
+
+  - How to ship code faster – A clean workflow, extra hours (particularly as a junior engineer), knowing who/what to ask, and strong code search skills will help you ship faster. If you’re interested in learning more about this I did a dedicated writeup last week.
+
+How to ship code faster – A clean workflow, extra hours (particularly as a junior engineer), knowing who/what to ask, and strong code search skills will help you ship faster. If you’re interested in learning more about this I did a dedicated writeup last week.
+
+
+## Mid-level -> Senior (Promo in 2 Halves)
+
+
+At the mid-level, Evan’s manager trusted him to lead a small portion of the team with a few engineers. That was surprising to me since he had only been working in industry for 6 months at that point yet he had built enough trust to lead a team. Several of the folks on that team were more senior than Evan was.
+
+He shared that he did get territorial about his team’s scope versus a more senior engineer he was working with. He realized he needed to be more humble and collaborate since he was clearly learning a lot from the senior engineer.
+
+Takeaways:
+
+  - Value of learning to tech lead - His manager placed him in a leadership role at the edge of his capabilities. He developed skills in these positions that helped him scale himself later which was necessary for the Staff promotion.
+
+Value of learning to tech lead - His manager placed him in a leadership role at the edge of his capabilities. He developed skills in these positions that helped him scale himself later which was necessary for the Staff promotion.
+
+  - Collaboration helps everyone move faster - Once Evan learned to collaborate well with the Senior engineer he once thought was taking his scope, he learned faster and the team overall produced better results.
+
+Collaboration helps everyone move faster - Once Evan learned to collaborate well with the Senior engineer he once thought was taking his scope, he learned faster and the team overall produced better results.
+
+
+## Senior -> Staff (Promo in 3 Halves)
+
+
+During the Christchurch mosque shootings, videos of the event slipped through Meta’s content filtering systems. With his manager on leave, Evan took the lead in addressing the situation. To prevent future incidents, Evan and a PM were tasked with creating and leading a new team to handle real-time integrity. His impact and the visibility of the workstream made an obvious case for his Staff promotion.
+
+Takeaways:
+
+  - Influence without authority – His strong reputation earned him the trust to lead and build the new team from scratch, even at IC5. He couldn’t rely on seniority to gain authority because levels at Meta aren’t public. The soft skills to influence others were critical for his promotion to Staff.
+
+Influence without authority – His strong reputation earned him the trust to lead and build the new team from scratch, even at IC5. He couldn’t rely on seniority to gain authority because levels at Meta aren’t public. The soft skills to influence others were critical for his promotion to Staff.
+
+  - Impact >> Complexity (IC6 promo) - What got Evan promoted wasn’t a technically complex project. It was a simple project that had extraordinary results. This was similar to my promotion case.
+
+Impact >> Complexity (IC6 promo) - What got Evan promoted wasn’t a technically complex project. It was a simple project that had extraordinary results. This was similar to my promotion case.
+
+
+## Starting His Own Company
+
+
+Evan had never planned to enter the startup world. But while a Staff Engineer at Meta, he started working with his manager on a project after hours over a shared interest in crypto. The project got 10k+ users relatively quickly. Evan eventually left big tech when the project work became more interesting than his actual work.
+
+At this point, he had more than enough money to sacrifice a few years of a stable salary to pursue startups. He advises that you do what makes sense financially, which depends for everyone.
+
+Takeaways:
+
+  - Breadth vs depth technical learning - Evan feels strongly that startups promote faster technical growth than big tech does. From our discussion, we aligned that big tech gets you depth and startups get you breadth.
+
+Breadth vs depth technical learning - Evan feels strongly that startups promote faster technical growth than big tech does. From our discussion, we aligned that big tech gets you depth and startups get you breadth.
+
+  - Earnings - Short term he has earned less (despite 2 acquisitions) compared to how much he would have made in big tech. He believes the faster learning from startups compounded over the course of his career will lead to higher earnings.
+
+Earnings - Short term he has earned less (despite 2 acquisitions) compared to how much he would have made in big tech. He believes the faster learning from startups compounded over the course of his career will lead to higher earnings.
+
+
+## Career Reflections
+
+
+At the end of our conversation, I asked Evan a few questions reflecting on:
+
+  - Personal regrets – Evan regrets making his whole life work early in his career. Even though he had the time to invest in outside friendships/relationships, most of his free time and self-reflection was centered around being a software engineer.
+
+Personal regrets – Evan regrets making his whole life work early in his career. Even though he had the time to invest in outside friendships/relationships, most of his free time and self-reflection was centered around being a software engineer.
+
+  - Slowing down – Although Evan got to Staff quickly and had a lot of impact, he took shortcuts to achieve this, partly influenced by Meta’s culture (“move fast and break things”). He sacrificed technical growth and understanding his work deeply for faster promotions, which caught up to him when building his own company.
+
+Slowing down – Although Evan got to Staff quickly and had a lot of impact, he took shortcuts to achieve this, partly influenced by Meta’s culture (“move fast and break things”). He sacrificed technical growth and understanding his work deeply for faster promotions, which caught up to him when building his own company.
+
+  - Work-life balance – He actually had a pretty good work life balance. Worked 9-5 mostly although he admitted when he was really excited about his work he often did more work once he got home.
+
+Work-life balance – He actually had a pretty good work life balance. Worked 9-5 mostly although he admitted when he was really excited about his work he often did more work once he got home.
+
+If you found anything above interesting, you can hear it in Evan’s own words in the podcast. You can listen to it wherever you prefer getting your podcasts:
+
+  - YouTube
+
+YouTube
+
+  - Spotify
+
+Spotify
+
+  - Apple Podcasts
+
+Apple Podcasts
+
+And for more from Evan you can check out him and his company Hello Interview here:
+
+  - YouTube
+
+YouTube
+
+  - LinkedIn
+
+LinkedIn
+
+If you have any questions for me or future guests, feel free to drop them here. I will use these questions to make future content so I can answer the questions you care about most.
+
+Thanks for reading,
+Ryan Peterman

@@ -28,3 +28,12 @@ daily_papers/papers_out/by_score/
 __pycache__/
 
 .vercel
+
+# direnv (secrets injected at runtime; copy .envrc.example -> .envrc)
+.envrc
+
+# Machine-local agent tooling state
+.claude/
+
+# Vendored clone of the arxiv.py library (has its own .git) — kept local, install via uv instead
+arxiv.py/

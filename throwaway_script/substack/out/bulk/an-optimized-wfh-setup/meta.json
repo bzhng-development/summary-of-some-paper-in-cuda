@@ -1,0 +1,428 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/an-optimized-wfh-setup",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 143987910,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-04-26T13:03:08.807Z",
+  "updated_at": "2024-10-24T04:53:25.448Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "an-optimized-wfh-setup",
+  "social_title": null,
+  "subtitle": "Video, Audio, Ergonomics, and What I Wouldn’t Buy Again",
+  "teaser_post_eligible": true,
+  "title": "An Optimized WFH Setup",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 5,
+  "reactions": {
+    "❤": 69
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "time-in-role-gatekeeping",
+  "next_post_slug": "scope-not-titles",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!xn0H!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F51f92f7e-37c2-4201-a747-53a4f70e2715_1426x1426.png",
+  "cover_image_is_square": true,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 143987910,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Video, Audio, Ergonomics, and What I Wouldn’t Buy Again",
+  "body_html": "<p><em>Note: I am not sponsored for any product in this article.</em></p><p>2020 was an unusual year. For the first time in my life, I was working completely remote. Meta had just announced work from home for all employees due to the COVID-19 breakout.</p><p>I realized that my presence at work would become just video and audio on calls. Not to mention that I’d be spending a ton of time using my work from home (WFH) setup.</p><p>I decided to invest over a thousand dollars into my setup since it would pay for itself if it helped me get promoted to Senior/IC5 (<a href=\"http://levels.fyi/\">~$100k per year raise</a>).</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!xn0H!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F51f92f7e-37c2-4201-a747-53a4f70e2715_1426x1426.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!xn0H!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F51f92f7e-37c2-4201-a747-53a4f70e2715_1426x1426.png 424w, https://substackcdn.com/image/fetch/$s_!xn0H!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F51f92f7e-37c2-4201-a747-53a4f70e2715_1426x1426.png 848w, https://substackcdn.com/image/fetch/$s_!xn0H!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F51f92f7e-37c2-4201-a747-53a4f70e2715_1426x1426.png 1272w, https://substackcdn.com/image/fetch/$s_!xn0H!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F51f92f7e-37c2-4201-a747-53a4f70e2715_1426x1426.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!xn0H!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F51f92f7e-37c2-4201-a747-53a4f70e2715_1426x1426.png\" width=\"456\" height=\"456\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/51f92f7e-37c2-4201-a747-53a4f70e2715_1426x1426.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:1426,&quot;width&quot;:1426,&quot;resizeWidth&quot;:456,&quot;bytes&quot;:null,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!xn0H!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F51f92f7e-37c2-4201-a747-53a4f70e2715_1426x1426.png 424w, https://substackcdn.com/image/fetch/$s_!xn0H!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F51f92f7e-37c2-4201-a747-53a4f70e2715_1426x1426.png 848w, https://substackcdn.com/image/fetch/$s_!xn0H!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F51f92f7e-37c2-4201-a747-53a4f70e2715_1426x1426.png 1272w, https://substackcdn.com/image/fetch/$s_!xn0H!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F51f92f7e-37c2-4201-a747-53a4f70e2715_1426x1426.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">My work from home setup</figcaption></figure></div><p>My philosophy with my purchases was to find a middle ground that got me 90%+ of the benefit without overpaying for diminishing marginal returns. At a glance, here’s what I picked:</p><ul><li><p><strong>Video</strong></p><ul><li><p><a href=\"https://www.amazon.com/Sony-Mirrorless-Camera-Interchangeable-Digital/dp/B007GK50X4/\">Sony a6300 camera (already had)</a></p></li><li><p><a href=\"https://www.amazon.com/FIT-POWER-Replcement-Adapter-NP-FW50-Battery/dp/B0744JGWQR/\">Dummy battery (~$24)</a></p></li><li><p><a href=\"https://www.amazon.com/Elgato-Cam-Link-Broadcast-Camcorder/dp/B07K3FN5MR\">Elgato Cam Link 4K (~$94)</a></p></li><li><p><a href=\"https://www.amazon.com/Elgato-Extendable-Center-Compatible-Accessories/dp/B07X49967V/\">Elgato Master Mount L (~$45)</a></p></li></ul></li><li><p><strong>Audio</strong></p><ul><li><p><a href=\"https://www.amazon.com/Blue-Microphone-Recording-Podcasting-Adjustable/dp/B08F82B7LJ/\">Blue Yeti mic (~$100)</a></p></li><li><p><a href=\"https://www.amazon.com/Bose-QuietComfort-Cancelling-Headphones-Bluetooth/dp/B0CCZ26B5V/\">Bose QC35 headphones (already had)</a></p></li></ul></li><li><p><strong>Ergonomics</strong></p><ul><li><p><a href=\"https://www.amazon.com/Kinesis-Freestyle2-Ergonomic-Keyboard-Separation/dp/B0089ZLENA/\">Kinesis Freestyle2 Split Keyboard (~$144)</a></p></li><li><p><a href=\"https://www.amazon.com/Logitech-Vertical-Ergonomic-Bluetooth-Compatible/dp/B09J1TB35S/\">Logitech Lift Mouse (~$61)</a></p></li><li><p><a href=\"https://store.hermanmiller.com/office-chairs-aeron/aeron-chair/2195348.html\">Aeron Miller Chair (bought used ~$250)</a></p></li><li><p><a href=\"https://store.hermanmiller.com/standing-desks/jarvis-bamboo-standing-desk/2542428.html\">Jarvis Standing Desk (~$652)</a></p></li></ul></li><li><p><strong>Total cost = ~$1370</strong></p></li></ul><p>Tech companies have settled on a hybrid working model now. There’s still value in having a good work from home setup. Here’s the full story and rationale behind what I picked.</p><h3>Video</h3><p>I used to be into photography so I had a <a href=\"https://www.amazon.com/Sony-Mirrorless-Camera-Interchangeable-Digital/dp/B007GK50X4\">Sony a6300</a> lying around that was collecting dust. I figured that using it for video calls would be much better than the low-quality USB video camera I had.</p><p>If you have a similar DSLR or mirrorless camera you’re not using, you can hook it up to your computer with three components:</p><ol><li><p><strong>Dummy battery</strong> - Most cameras are battery powered so you need to buy a “battery” that fits into your camera and plugs into the wall so you have persistent power (<a href=\"https://www.amazon.com/FIT-POWER-Replcement-Adapter-NP-FW50-Battery/dp/B0744JGWQR/\">example</a>).</p></li><li><p><strong>Capture card - </strong>You need a piece of hardware that takes the camera’s HDMI output and converts it into something your computer can receive on USB (<a href=\"https://www.amazon.com/Elgato-Cam-Link-Broadcast-Camcorder/dp/B07K3FN5MR\">example</a>).</p></li><li><p><strong>Camera stand</strong> - Something to position your camera pointing at you (<a href=\"https://www.amazon.com/Elgato-Extendable-Center-Compatible-Accessories/dp/B07X49967V/\">example</a>)</p></li></ol><p>A lot of people will tell you that good lighting is more important than a good camera. That’s true, but the lighting in my room is already solid and I wanted to take my video from good to great. Here’s the result:</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!UqaC!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F246e3baf-92c7-47f2-811b-280350476496_1918x1918.jpeg\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!UqaC!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F246e3baf-92c7-47f2-811b-280350476496_1918x1918.jpeg 424w, https://substackcdn.com/image/fetch/$s_!UqaC!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F246e3baf-92c7-47f2-811b-280350476496_1918x1918.jpeg 848w, https://substackcdn.com/image/fetch/$s_!UqaC!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F246e3baf-92c7-47f2-811b-280350476496_1918x1918.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!UqaC!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F246e3baf-92c7-47f2-811b-280350476496_1918x1918.jpeg 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!UqaC!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F246e3baf-92c7-47f2-811b-280350476496_1918x1918.jpeg\" width=\"534\" height=\"534\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/246e3baf-92c7-47f2-811b-280350476496_1918x1918.jpeg&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:1456,&quot;width&quot;:1456,&quot;resizeWidth&quot;:534,&quot;bytes&quot;:null,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!UqaC!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F246e3baf-92c7-47f2-811b-280350476496_1918x1918.jpeg 424w, https://substackcdn.com/image/fetch/$s_!UqaC!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F246e3baf-92c7-47f2-811b-280350476496_1918x1918.jpeg 848w, https://substackcdn.com/image/fetch/$s_!UqaC!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F246e3baf-92c7-47f2-811b-280350476496_1918x1918.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!UqaC!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F246e3baf-92c7-47f2-811b-280350476496_1918x1918.jpeg 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">Screenshot of my video calling setup</figcaption></figure></div><h3>Audio</h3><p>As with all things you can spend a ton of money to get the best of the best. In my case though I was just looking for something simple that would get me most of the way there.</p><p>I ended up picking the popular <a href=\"https://www.amazon.com/Blue-Microphone-Recording-Podcasting-Adjustable/dp/B08F82B7LJ/\">“Blue Yeti” USB mic</a>. It was simple to set up (just plug it in) and made a noticeable difference in the quality of my voice. Since this mic is a “condenser mic”, it doesn’t need to be close to your mouth to pick up sound. This is nice since you can keep it out of the shot and don’t need to buy a stand to keep it close to your face.</p><p>I also use <a href=\"https://www.amazon.com/Bose-QuietComfort-Cancelling-Headphones-Bluetooth/dp/B0CCZ26B5V/\">Bose QC35 headphones</a> with a wire so I don’t have to worry about Bluetooth pairing and battery. The noise canceling is a must since I have roommates.</p><h3>Ergonomics</h3><p>Since I was working more hours and moving around less I started to get some wrist and back pain. I bought some equipment which solved the problem for me.</p><p>For wrist pain:</p><ul><li><p><strong>Split Keyboard</strong> - Most ergonomic split keyboards have some unusual key layout which I didn’t want to learn. The <a href=\"https://www.amazon.com/Kinesis-Freestyle2-Ergonomic-Keyboard-Separation/dp/B0089ZLENA/\">Kinesis Freestyle2</a> worked best for me since it was split and had tenting but didn’t force me to learn a new layout.</p></li><li><p><strong>Vertical Mouse</strong> - I experimented with a few vertical mice that varied in quality. The <a href=\"https://www.amazon.com/Logitech-Vertical-Ergonomic-Bluetooth-Compatible/dp/B09J1TB35S/\">Logitech Lift</a> was by far the best one I tried.</p></li></ul><p>For back pain:</p><ul><li><p><strong>Standing Desk</strong> - Buying a standing desk made the biggest difference for my back discomfort since it made it easy to shift around and stretch during meetings. I did some cursory searching on Reddit and went with the <a href=\"https://store.hermanmiller.com/standing-desks/jarvis-bamboo-standing-desk/2542428.html\">Jarvis standing desk</a> which has worked well.</p></li><li><p><strong>A Nice Chair</strong> - I was sitting so much I wanted to make sure I had an ergonomic chair. The internet is decisive in that the<a href=\"https://store.hermanmiller.com/office-chairs-aeron/aeron-chair/2195348.html\"> Herman Miller Aeron chair</a> is the best chair that money can buy. They cost a lot new (~$1500) but are so durable that the used ones are excellent too. I ended up buying one on Facebook Marketplace for ~$250 with no issues.</p></li></ul><h3>What I Wouldn’t Buy Again</h3><ul><li><p> <strong>3 Monitors</strong> - Productivity increases a lot from 1 → 2 monitors, but from 2 → 3 there’s not much of a difference for me. I often use just two of them most of the time.</p></li><li><p><strong>Under Desk Treadmill</strong> - This is nice in theory, but in practice the friction of having to take it out and move it back affects how often I use it. I wouldn’t get this again unless I had two desks so I could leave the treadmill set up. </p></li></ul><div><hr></div><p>The improvements were a common unsolicited topic of conversation during video calls since the quality was unusually high.</p><p>The ergonomic changes made a difference too since they supported my habit of working a lot of hours. Without those changes I think the discomfort of working for a long time would’ve discouraged me from working as much.</p><p>Hope you enjoyed this post, I’d be curious to hear about your setup as well in the comments. <strong>What are some of the favorite parts of your setup that you’d recommend?</strong></p><p>Also, I’d like to get some feedback on the cadence of this newsletter since I’ve heard from some people that weekly tends to build up in their inbox. <strong>Please vote below to help me decide how often is best for you:</strong></p><div class=\"poll-embed\" data-attrs=\"{&quot;id&quot;:169407}\" data-component-name=\"PollToDOM\"></div><p>If you found this useful, <strong>please share it with a friend and consider subscribing if you haven’t already.</strong></p><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 57,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p></p>",
+  "truncated_body_text": "Note: I am not sponsored for any product in this article.",
+  "wordcount": 1015,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        207,
+        154,
+        95
+      ],
+      "population": 126
+    },
+    "DarkVibrant": {
+      "rgb": [
+        132,
+        148,
+        28
+      ],
+      "population": 2
+    },
+    "LightVibrant": {
+      "rgb": [
+        220,
+        201,
+        163
+      ],
+      "population": 281
+    },
+    "Muted": {
+      "rgb": [
+        174,
+        136,
+        88
+      ],
+      "population": 126
+    },
+    "DarkMuted": {
+      "rgb": [
+        68,
+        62,
+        45
+      ],
+      "population": 266
+    },
+    "LightMuted": {
+      "rgb": [
+        205,
+        194,
+        172
+      ],
+      "population": 212
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 69,
+  "comment_count": 30,
+  "child_comment_count": 14,
+  "audio_items": [
+    {
+      "post_id": 143987910,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/143987910/tts/d37adac0-ed2a-48f0-9345-1ea52dd8b017/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 54951317,
+      "body": "Great setup Ryan! Nice, simple, and efficient :)",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Great setup Ryan! Nice, simple, and efficient :)"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 143987910,
+      "user_id": 201111637,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-04-27T14:56:49.127Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Kevin Naughton Jr.",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/32751fef-8ccd-4ad3-a72d-c1aefb4654b7_400x400.jpeg",
+      "handle": "kevinnaughtonjr",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 3
+      },
+      "reaction_count": 3,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "kevinnaughtonjr",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "The Software Engineer Weekly",
+          "id": 2296047,
+          "base_url": "https://www.thesweekly.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 8,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 54939866,
+      "body": "Beautiful setup🔥",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Beautiful setup🔥"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 143987910,
+      "user_id": 23829717,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-04-27T12:04:47.905Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Kisan Tamang",
+      "photo_url": "https://substackcdn.com/image/fetch/$s_!7aYd!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ff435e274-af79-4720-be77-37bc7e1f9260_1080x1080.jpeg",
+      "handle": "kisanpakhreen",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "kisanpakhreen",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "The Cloud Handbook",
+          "id": 1543488,
+          "base_url": "https://cloudhandbook.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 7,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    }
+  ]
+}

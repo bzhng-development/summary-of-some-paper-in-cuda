@@ -75,7 +75,7 @@ def harvest_hf_models(org_slug: str, seen: set, throttle: float = 0.15) -> list[
         if not mid:
             continue
         # tags often carry "arxiv:XXXX.YYYYY" directly — cheapest signal
-        for tag in (m.get("tags") or []):
+        for tag in m.get("tags") or []:
             tm = ARXIV_TAG_RE.search(tag)
             if tm:
                 aid = tm.group(1)
@@ -120,7 +120,7 @@ def harvest_hf_datasets(org_slug: str, seen: set, throttle: float = 0.15) -> lis
         did = d.get("id") or ""
         if not did:
             continue
-        for tag in (d.get("tags") or []):
+        for tag in d.get("tags") or []:
             tm = ARXIV_TAG_RE.search(tag)
             if tm:
                 aid = tm.group(1)
@@ -149,7 +149,7 @@ def load_seen(main_output: Path) -> set:
                 continue
             try:
                 seen.add(json.loads(line)["arxiv_id"])
-            except (json.JSONDecodeError, KeyError):
+            except json.JSONDecodeError, KeyError:
                 pass
     return seen
 

@@ -1,0 +1,400 @@
+2024 was the biggest year yet for the Developing Dev. Here are some stats to show you how far we’ve come this year:
+
+  - More than doubled the # of subscribers: 41,000 → 94,000 (almost at 100k!)
+
+More than doubled the # of subscribers: 41,000 → 94,000 (almost at 100k!)
+
+  - Tripled page views: ~1M/yr → ~3M/yr
+
+Tripled page views: ~1M/yr → ~3M/yr
+
+  - Launched a podcast that went better than I expected (YouTube, Spotify, Apple Podcasts)
+
+Launched a podcast that went better than I expected (YouTube, Spotify, Apple Podcasts)
+
+  - Wrote a post every week without fail: 51 this year, 97 in total (almost at 100 posts!)
+
+Wrote a post every week without fail: 51 this year, 97 in total (almost at 100 posts!)
+
+I’m most proud of that last one. I’ve stayed up late most Thursday nights getting my weekly post done since I work full-time and have many other commitments. I’ve never missed even when on vacation (I’m writing this article at ~3 am from Cancun).
+
+Even though I haven’t made a dime off of writing this newsletter, I write it because I get to learn from others, explore interesting topics, and solidify what I’ve learned. And the main reason why I never miss is because I promised I’d write weekly when I started. I might change that at some point though and could use your input:
+
+If you want to see my top posts by view count, you can find them here. Looking forward, here’s some stuff I’m planning for next year:
+
+  - More podcasts - I’m just getting started here. You have no idea how good top engineer career stories can be. When I first joined Meta, I discovered a series of posts from Meta’s top engineers detailing their career paths. I loved those stories and want to share something similar with you all.
+
+More podcasts - I’m just getting started here. You have no idea how good top engineer career stories can be. When I first joined Meta, I discovered a series of posts from Meta’s top engineers detailing their career paths. I loved those stories and want to share something similar with you all.
+
+  - Dabbling in video - I’d like to make some videos since it’d be fun to learn and try to make something quality. Today, most of my content is educational, but I am considering making some entertaining videos too.
+
+Dabbling in video - I’d like to make some videos since it’d be fun to learn and try to make something quality. Today, most of my content is educational, but I am considering making some entertaining videos too.
+
+  - Launching my passion project - I plan to launch the product I’m building in 2025. I’ve been drowning in work and content so I haven’t had much time to share about ongoing product development. We’re making a lot of progress here even though I haven’t shared much yet.
+
+Launching my passion project - I plan to launch the product I’m building in 2025. I’ve been drowning in work and content so I haven’t had much time to share about ongoing product development. We’re making a lot of progress here even though I haven’t shared much yet.
+
+  - Branding refresh - So far, I’ve just picked a font and color I liked without much thought. It’s hacky though so I’m thinking about doing a brand refresh to have some consistency.
+
+Branding refresh - So far, I’ve just picked a font and color I liked without much thought. It’s hacky though so I’m thinking about doing a brand refresh to have some consistency.
+
+I appreciate all your support this year; writing this newsletter wouldn’t be the same without you! 🙏
+
+After writing almost a hundred posts, here’s the best way to find relevant articles organized by what the content will help you with (🎖️ = my recommendation) :
+
+
+## 0. I want to become better at writing
+
+
+  - Why Engineers Need To Write 🎖️
+
+Why Engineers Need To Write 🎖️
+
+  - 6 Software Engineering Templates I Wish I Had Sooner 🎖️
+
+6 Software Engineering Templates I Wish I Had Sooner 🎖️
+
+  - Write Down The Plan
+
+Write Down The Plan
+
+  - How To Write
+
+How To Write
+
+  - Writing Tactics - Part 1
+
+Writing Tactics - Part 1
+
+  - Writing Tactics - Part 2
+
+Writing Tactics - Part 2
+
+  - Efficient Communication
+
+Efficient Communication
+
+
+## 1. I want to improve my soft skills
+
+
+  - How To Onboard 🎖️
+
+How To Onboard 🎖️
+
+  - How To Drive Meetings 🎖️
+
+How To Drive Meetings 🎖️
+
+  - What You Work On >> How Hard You Work 🎖️
+
+What You Work On >> How Hard You Work 🎖️
+
+  - Promoting Your Work
+
+Promoting Your Work
+
+  - Earning Trust
+
+Earning Trust
+
+  - Engineering Confidence
+
+Engineering Confidence
+
+  - 5 Skills the Best Engineers I Know Have in Common
+
+5 Skills the Best Engineers I Know Have in Common
+
+  - Top 3 SWE Skills I Picked Up On The Job
+
+Top 3 SWE Skills I Picked Up On The Job
+
+  - Be Visible
+
+Be Visible
+
+  - Protect Your Time
+
+Protect Your Time
+
+  - Judgment
+
+Judgment
+
+  - How AI Will Affect Your Career
+
+How AI Will Affect Your Career
+
+
+## 2. I want to learn how promotions work
+
+
+  - How Promotions and Ratings Work 🎖️
+
+How Promotions and Ratings Work 🎖️
+
+  - IC Promo “Champions”
+
+IC Promo “Champions”
+
+  - Ratings != Promotions
+
+Ratings != Promotions
+
+  - How To Write an Effective Self-Review
+
+How To Write an Effective Self-Review
+
+
+## 3. I want to grow into a mid-level engineer
+
+
+  - How To Get Promoted (Without Getting Lucky) 🎖️
+
+How To Get Promoted (Without Getting Lucky) 🎖️
+
+  - Speedrunning Guide: Junior (L3)-> Mid-Level (L4) 🎖️
+
+Speedrunning Guide: Junior (L3)-> Mid-Level (L4) 🎖️
+
+  - FAANG Career Ladder: Junior (L3) vs Mid-level (L4)
+
+FAANG Career Ladder: Junior (L3) vs Mid-level (L4)
+
+  - Generalist or Specialist?
+
+Generalist or Specialist?
+
+  - How to Start Reviewing Code
+
+How to Start Reviewing Code
+
+
+## 4. I want to grow into a senior engineer
+
+
+  - What I Wish I Knew As a Mid-Level Engineer 🎖️
+
+What I Wish I Knew As a Mid-Level Engineer 🎖️
+
+  - How Some Engineers Always Lead 🎖️
+
+How Some Engineers Always Lead 🎖️
+
+  - FAANG Career Ladder: Mid-level (L4) vs Senior (L5)
+
+FAANG Career Ladder: Mid-level (L4) vs Senior (L5)
+
+  - Speedrunning Guide: Mid-level (L4) -> Senior (L5)
+
+Speedrunning Guide: Mid-level (L4) -> Senior (L5)
+
+  - Finding Next-Level Scope
+
+Finding Next-Level Scope
+
+
+## 5. I want to grow into a staff engineer
+
+
+  - The Tech Lead’s Playbook 🎖️
+
+The Tech Lead’s Playbook 🎖️
+
+  - Scaling Yourself 🎖️
+
+Scaling Yourself 🎖️
+
+  - Setting Up Cross-Team Workstreams
+
+Setting Up Cross-Team Workstreams
+
+  - Finding Staff-Level Scope
+
+Finding Staff-Level Scope
+
+  - Tech Lead Manager (TLM) Roles
+
+Tech Lead Manager (TLM) Roles
+
+  - How To Influence Without Authority
+
+How To Influence Without Authority
+
+  - Backchannel Alignment
+
+Backchannel Alignment
+
+  - Staffing Your Projects
+
+Staffing Your Projects
+
+  - Staff Engineer Panel Summary
+
+Staff Engineer Panel Summary
+
+  - FAANG Career Ladder: Senior (L5) vs Staff (L6)
+
+FAANG Career Ladder: Senior (L5) vs Staff (L6)
+
+  - Speedrunning Guide: Senior (L5) -> Staff (L6)
+
+Speedrunning Guide: Senior (L5) -> Staff (L6)
+
+
+## 6. I want to grow to staff+ engineering levels
+
+
+  - Optimizing for Opportunity 🎖️
+
+Optimizing for Opportunity 🎖️
+
+  - FAANG Career Ladder: Staff (L6) vs Senior Staff (L7)
+
+FAANG Career Ladder: Staff (L6) vs Senior Staff (L7)
+
+  - Staff+ Career Growth: Product or Infra?
+
+Staff+ Career Growth: Product or Infra?
+
+
+## 7. I want help with finding a job/interviewing
+
+
+  - Cracking the Coding Interview 🎖️
+
+Cracking the Coding Interview 🎖️
+
+  - Staying Sharp
+
+Staying Sharp
+
+  - Job Hunting in the Layoff Era
+
+Job Hunting in the Layoff Era
+
+  - Scope, Not Titles
+
+Scope, Not Titles
+
+  - Why Leetcode Is So Popular
+
+Why Leetcode Is So Popular
+
+  - Big Tech vs Startups (for New Grads)
+
+Big Tech vs Startups (for New Grads)
+
+
+## 8. I want to learn from other engineer’s experience
+
+
+  - New Grad to Staff at Meta in 3 years: Evan King 🎖️
+
+New Grad to Staff at Meta in 3 years: Evan King 🎖️
+
+  - From Microsoft Intern to Meta Staff Engineer: Raviraj Achar 🎖️
+
+From Microsoft Intern to Meta Staff Engineer: Raviraj Achar 🎖️
+
+  - 28 Year Old Staff Engineer @ Google
+
+28 Year Old Staff Engineer @ Google
+
+  - Junior (IC3) to Staff (IC6) via Job Hopping
+
+Junior (IC3) to Staff (IC6) via Job Hopping
+
+  - From Liberal Arts Major to Amazon Principal Engineer: Steve Huynh
+
+From Liberal Arts Major to Amazon Principal Engineer: Steve Huynh
+
+  - The Best Manager I’ve Had
+
+The Best Manager I’ve Had
+
+  - Promotion via Job Hopping
+
+Promotion via Job Hopping
+
+  - Building Experience Faster
+
+Building Experience Faster
+
+  - Why I Stayed at Meta When All My Friends Left
+
+Why I Stayed at Meta When All My Friends Left
+
+  - New Grad to Senior Engineer in 2 years: Jordan Cutler
+
+New Grad to Senior Engineer in 2 years: Jordan Cutler
+
+
+## 9. I want to hone my engineering skills
+
+
+  - Shipping Code Faster 🎖️
+
+Shipping Code Faster 🎖️
+
+  - A New Era of Writing Code 🎖️
+
+A New Era of Writing Code 🎖️
+
+  - Standing on the Shoulders of Giants
+
+Standing on the Shoulders of Giants
+
+  - Why Write Small Diffs
+
+Why Write Small Diffs
+
+  - Top Tech Company Engineering Blog Posts
+
+Top Tech Company Engineering Blog Posts
+
+  - Resilient Systems Through Retrospection
+
+Resilient Systems Through Retrospection
+
+  - Threads' Invisible Armor
+
+Threads' Invisible Armor
+
+  - Tools of the Trade
+
+Tools of the Trade
+
+  - Move Fast Without Breaking Anything
+
+Move Fast Without Breaking Anything
+
+  - Unlearning Leetcode
+
+Unlearning Leetcode
+
+All my writing fits into the above index except this post on my WFH desk setup.
+
+If you have any questions you’d like me to address in 2025, feel free to drop them here. I will use these to make sure I answer the questions you care about most.
+
+As always, you can find more of my stuff here:
+
+  - LinkedIn
+
+LinkedIn
+
+  - Twitter
+
+Twitter
+
+  - Threads
+
+Threads
+
+  - Youtube
+
+Youtube
+
+Thanks for reading,
+Ryan Peterman

@@ -1,0 +1,787 @@
+Bjarne Stroustrup is the creator of the C++ programming language and a former researcher at Bell Labs. We talked about what Bell Labs was like, programming language design, and interesting anecdotes from his experience.
+
+Check out the episode wherever you get your podcasts: YouTube, Spotify, Apple Podcasts.
+
+
+## Timestamps
+
+
+0:50 - The origin of C++
+
+8:46 - What Bell Labs was like
+
+17:24 - Dennis Ritchie
+
+24:00 - When to build a programming language
+
+31:59 - Bootstrapping a language
+
+33:58 - C++ is not object-oriented
+
+37:32 - Discussing type systems
+
+46:20 - Memory safety
+
+49:26 - Standards committee anecdotes
+
+1:09:40 - Adding automatic garbage collection to C++
+
+1:18:25 - Template instantiation is Turing complete
+
+1:21:57 - Abstraction and performance
+
+1:28:51 - AI writing code
+
+1:35:54 - His motivation
+
+1:39:18 - Famous quotes
+
+1:46:48 - Reflecting on building C++
+
+1:49:12 - Top C++ book recommendation
+
+1:50:59 - Advice for his younger self
+
+
+## Transcript
+
+
+
+## 0:50 — The origin of C++
+
+
+Ryan:
+
+[0:50] What is the origin story behind C++?
+
+Bjarne:
+
+[0:54] Well, let’s start from the real beginning. I got a job at Bell Labs, which is a really great place in New Jersey. It’s not like that anymore, but at the time it was the best applied math, applied engineering place in the world. I looked around at the great people who were there; they built Unix. They did a lot of the theory behind it, and I realized I had to do something important; otherwise, it didn’t belong.
+
+[1:30] So I decided I was going to build a distributed Unix because it was clear that computers were getting better, networking was getting better, so we needed one of those. If I had succeeded, we would have had Unix clusters ten years earlier or something like that. But of course, I couldn’t do it. That’s not a one-person job. The first thing I realized was there wasn’t a language in the world that could do what I needed.
+
+[2:05] It needed two things: low-level access to hardware, such as memory managers, process implementations, process schedulers, network drivers, and device drivers. Then it needed high-level features that indicate, well, there’s a module here on this computer and there’s a module there on that computer, and here’s the communication protocol they’re using, things like that. There are lots of languages that could do either, but none that could do both.
+
+[2:43] The obvious language for the low-level stuff was C because Dennis Ritchie and Brian Kernighan were down the hall, and I said distributed Unix because I was in the home where Unix was invented and still being built. For the high-level languages, there were a fair number, but they were all too slow and they couldn’t manipulate hardware. But I learned to use Simula. I knew Kristen Nygaard and Ole-Johan Dahl, who invented object-oriented programming and Simula.
+
+[3:22] And so I decided I had to merge these two. The way that was practical was to take the class concept from Simula and stick it into C so that it could run much faster and be used for systems programming. At the same time, I made the type system a bit more regular. User-defined types and classes were handled the same way as built-in types. That’s basically the start of what neither C nor Simula could do, which gets us to generic programming.
+
+[4:03] Eventually, many years later, I had to add overloading. We have always had overloading. You can add two integers, you can add two floating-point numbers, you can add a floating-point number to an integer with a plus. That’s a single name, right? So I had to generalize that to be able to have a unique set of rules for both built-in and user-defined types. That’s where it came from.
+
+Ryan:
+
+[4:36] In one of the lectures that I saw that you gave, you talked about rewriting a simulator in BCPL. Is that the distributed Unix work?
+
+Bjarne:
+
+[4:46] No, that’s before that. I went to Cambridge, England, to get a PhD, and at some point, I decided I needed a simulator of software on a distributed system to do the PhD work on distributed systems. Of course, the idea of distributed Unix three or four years later came out of the same way of thinking. What I did was I wrote a really nice simulator in Simula. Simula is very good at that. It’s misnamed because it was a general-purpose programming language, and its bad name didn’t help it at all.
+
+[5:37] But anyway, I wrote this simulator and I wrote little examples, test cases, etc. It all worked nicely. Then I tried the first real run full scale and I took the department’s mainframe and used it for a very significant time. Well, PhD students can’t do that. The chemists and the astrophysicists would never accept it. So I was kicked off the machine, and it was clear that Simula.
+
+[6:19] I could write the program in Simula very well, but I couldn’t afford to run it. So I took the ideas and moved them to a little-used experimental computer, which was the CAP computer, which had hardware protection and capabilities and great stuff for hardware. It was somewhat unusual, so the astrophysicists couldn’t use it. They weren’t computer scientists as such, but I could. The only problem was I couldn’t run Simula there because Simula was never ported to that kind of machine; it was being used on mainframes and it was proprietary, and everything was wrong in the context of the CAP computer.
+
+So I basically rewrote my simulator in BCPL. BCPL is a language that will make C look like a high-level language and has only one data type, the word. It was a very painful exercise, but once I’d done it, my program ran, I guesstimated about 50 times faster. I got my data and I got my PhD. So that was good. But I was convinced I would never again attempt a problem with tools that inadequate as I had tried on the mainframe in Cambridge.
+
+[7:13] So I basically rewrote my simulator in BCPL. BCPL is a language that will make C look like a high-level language and has only one data type, the word. It was a very painful exercise, but once I’d done it, my program ran, I guesstimated about 50 times faster. I got my data and I got my PhD. So that was good. But I was convinced I would never again attempt a problem with tools that inadequate as I had tried it on the mainframe in Cambridge.
+
+[8:07] And so I had a list of things that my ideal language should have, and, well, C didn’t have all of that, but it came closer than any other language that existed. C++ came out of there.
+
+Ryan:
+
+[8:25] Yeah, in that lecture you said something like that. Writing that program in BCPL was so difficult you lost half your hair debugging.
+
+Bjarne:
+
+[8:35] That’s almost exactly true. And I lost the other half getting C++ going over the years. But anyway, it worked.
+
+
+## 8:46 — What Bell Labs was like
+
+
+Ryan:
+
+[8:46] You mentioned Bell Labs, and I think there’s a lot of curiosity about that topic just because it’s such a legendary place. When you graduated from your PhD and were thinking about where to work, what was Bell Labs known as at that time?
+
+Bjarne:
+
+[9:04] Bell Labs was the place to go if you wanted to do practical engineering at a large scale, at sort of world class. I think it was easily the best. We probably had twice as many computer scientists as MIT at the time, things like that. The Computer Science Research Center had great people, and some of them had come from Cambridge. One day, in my last year in Cambridge, one of the people from Bell Labs came along to give a talk.
+
+[9:54] And the tradition in England and in the computer lab is, after a day’s work, you go to the pub and you chat with other people to see what has been going on. He said, “Well, when you need a job, give us a buzz.” So I did, and I flew over to New Jersey on my own tab, actually. My later boss, Sandy Fraser, a great guy working with networking, told me that I’d come at a wrong time. They didn’t have any jobs. This is not what you want to hear when you’ve just flown over the Atlantic. Anyway, the next day I gave a talk to a development group, not the research group, and then they changed their minds and took me up to the research group, and I worked there for the next couple of decades.
+
+[10:34] This is not what you want to hear when you’ve just flown over the Atlantic. Anyway, the next day I gave a talk to a development group, not the research group, and then they changed their minds and took me up to the research group. I worked there for the next couple of decades.
+
+Ryan:
+
+[10:53] What was the interview process like?
+
+Bjarne:
+
+[10:56] You just talk to some people. I remember having a long chat with Dennis Ritchie, for instance, and I talked to people doing networking mostly. There wasn’t an interview process as such. They hadn’t actually hired anybody new for five years. So no, they just did it by the seat of the pants.
+
+Ryan:
+
+[11:27] So it’s kind of like the belief and credibility that other people say that you have. Like Dennis Ritchie talked to you and he knew that you knew what you were talking about?
+
+Bjarne:
+
+[11:38] Sandy Fraser and such. They just talk to you, see what you know and don’t know. At the end, they go to the director and say, in this case, we’ve got a good guy; can you let us have him? I, of course, didn’t know anything about that. I wasn’t there. I was out talking to somebody in California, and I get a phone call from the director saying, would you like to come and work here a week later?
+
+Ryan:
+
+[12:10] What gave you the conviction to fly on your own tab to go? And there wasn’t even a promise of a job yet?
+
+Bjarne:
+
+[12:17] No. Well, it was the best place in the world, right? Do you need any more? If it worked, it was the best. And if it didn’t work, so what? You can’t succeed at everything.
+
+Ryan:
+
+[12:35] Today, there are more industries that have a stronger pull than at that time. Would it have been IBM or something? That would have been the best industry.
+
+Bjarne:
+
+[12:43] I talked to IBM; they weren’t as good as the Bell Labs Computer Science Research Center. I was up at Yorktown Heights, and I talked to the researchers and the young researchers. I just didn’t think they were doing the right stuff and not in the right way. They were much more controlled and directed than the researchers at Bell Labs.
+
+Ryan:
+
+[13:12] At a place like Bell Labs, how does project selection go?
+
+Bjarne:
+
+[13:19] I think still there are two philosophies about how to get good research. The one is that you have a well designed project chosen carefully by management and higher management, seriously funded and maybe you do put 20 or 30 people at the problem and you solve it and you have something great. The other philosophy is you hire the best people you can find and don’t tell them what to do.
+
+[14:01] My job was described as do something interesting in a year’s time, tell us what you did, and if we like it, we’ll extend. We will give you the same deal next year. By the way, the way you tell us is you write one sheet of paper using more than a nine-point font or more. Because if you can’t say what you did fairly briefly, you probably haven’t done something interesting enough, very unusual. So there they were actually worrying when they built Unix because it eventually involved five or seven people, and it was getting too big for that model of the world of individuals doing interesting things.
+
+[15:03] Very different. I would say that on average, this fairly anarchic organization did better than the well-organized one. Most of the things you’ve heard of from Bell Labs came out of there. In another part of the building, they were doing hardware things. So fibers, as we use them today, came out of there. A lot of the wireless technology came out of there. The charge-coupled devices that are our cameras came out of there.
+
+[15:43] They tried to do videophones and couldn’t get it to work because hardware hadn’t grown up to it, but they were trying to do it. The system of cells for cell phones came out of not that building, but another building. For Bell Labs, it was just a great place. The computer science people tended to talk to people doing other things. I remember when I was doing simulations, I was helping somebody build a simulator for some networking stuff.
+
+[16:18] A lot of early C++ had to do with doing things like what happens when a network get overloaded, how do we handle the overload protocols. And in this particular case, they did a good job. And they called me back and they had a slightly bigger problem. They wanted to simulate the computer traffic of Manhattan. Even then, my answer was no, we don’t have the compute power to do that.
+
+Ryan:
+
+[17:02] Back then, though.
+
+Bjarne:
+
+[17:04] Now they probably could, but of course the computer traffic has become much more. So maybe they can’t; I don’t know. I don’t have the numbers now. Then they gave me the numbers. That was why I declined to help them because it was impossible.
+
+
+## 17:24 — Dennis Ritchie
+
+
+Ryan:
+
+[17:24] I saw somewhere when I was doing research that you said you had gotten lunch with Dennis Ritchie once a week for like 16 years or something like that. And you know, he’s also a very legendary name. And I was curious, you know, if there’s anything that you, you learned from him or anything that impressed you about him that maybe influenced you or C++.
+
+Bjarne:
+
+[17:49] He was a great guy and we talked about a lot of things. He never said anything rude or negative about C++. Actually, in his Hubble paper, he points to C++ as the obvious successor to C. So all of these C versus C++ language wars are ridiculous. They should never have happened, and they certainly didn’t happen because, well, I knew Dennis. We were not fighting. I still know Brian Kernighan. I was talking to him this Friday.
+
+[18:33] We’re good friends. And yeah, language wars are silly. Dennis helped me design Const, for instance, for C++. It used to be called Read Only and Write Only, but the C guys couldn’t handle two words and they were too long. So we got what we got. But that’s one specific thing I remember Dennis being helpful with. He was a bit worried. Worried about overloading because you had to look at the declarations of functions before you knew what the meaning of a call was.
+
+[19:21] But that’s a very reasonable way of thinking. It just happens that it works. Anybody who writes see today are using my handiwork essentially all of the time, because the modern syntax for function definitions and function declarations and the call semantics came out of the early C++, early serial classes work of mine. So when people start ranting, they should remember that they’re actually using my handiwork every day.
+
+Ryan:
+
+[20:04] You had written these almost like historical accountings of the history of C++, like maybe three really long papers. I think for some conference I forgot the exact. And so in there, there was one anecdote about Dennis Ritchie. It was about this concept where he proposed to the C Standard committee this idea of a fat pointer where it also has. It stores its size as well. You mentioned the C Committee didn’t approve.
+
+Bjarne:
+
+[20:43] Dennis did see, but he didn’t take part in the Standards Committee. I’ve even heard people from the C Standards Committee say, no, Dennis isn’t a C expert. He’s never come to meetings. Very strange attitude. But anyway, we knew the problem about buffer overflow and range errors. The obvious solution is to use what Dennis called a fat pointer, which is a pointer with its number of elements it points to attached to it.
+
+[21:24] But that’s two words. And that’s probably— no, that is why it wasn’t used in early C++, because then they had 48 kilobytes of memory. When I had this discussion with Dennis, I think we had a whole megabyte. When I started with C++, we had 256 kilobytes. I knew that we were going to get a megabyte. We were talking about it, and he called them fat pointers. Today in C++, they’re called span.
+
+[22:04] And the span came out of my work with others on the C++ core guidelines. We needed something like that. We couldn’t provide the degree of control and safety that we needed. So we built span, and it came into the standard a bit later. But some of these ideas are very old.
+
+Ryan:
+
+[22:30] When you put together really impressive people, like the world’s greatest people, you look around and see how great the others are. Even though each individual is great, just the greatness of others can give people this feeling of imposter syndrome that’s not necessarily founded. Is that something that you ever felt or saw at Bell Labs?
+
+Bjarne:
+
+[22:52] Definitely, maybe I still have a bit of it, but certainly when I came to Bell Labs and saw the names on the doors and I had read the papers, they had created the fields I like to work in. Yeah, I thought I have to up my game. I have to do something bigger and better than what I had imagined. Also, you talk to them and you learn things. I learned a lot over lunch where there were a bunch of them talking about what they’re doing and why they’re doing it.
+
+[23:30] There are some places that have that effect on people and have the density of talent. Cambridge University was one of those places. I learned a lot there. The doors were always open. It was almost a policy that we kept the doors open because of Howells.
+
+
+## 24:00 — When to build a programming language
+
+
+Ryan:
+
+[24:00] And when we talk about a programming language and just generally about language design, if I wanted to build a programming language today, what are all the pieces that I’d need to create to make a programming language?
+
+Bjarne:
+
+[24:17] Well, that’s a relatively easy question to answer. Everybody asks that question, and I think it’s the wrong question. What you need is a problem that needs a solution. A lot of people just want to build a language that is better at what they are doing now and what they particularly are doing. Most of the time, that can be done reasonably well with existing languages. If you build a very specialized language, that’s fine.
+
+But if we’re talking about more general-purpose languages, you’re then building something that, when you want to work with somebody else, it’s not ideal for them. I’m sometimes asked why C++ is so big and complicated. There are two reasons. One is history. I could not build the C++ I wanted back in the 80s for a variety of reasons—partly technology, partly computers, and partly because I didn’t know enough and I had to learn.
+
+[24:55] But if we’re talking about more general-purpose languages, you’re then building something that, when you want to work with somebody else, it’s not ideal for them. I’m sometimes asked why C++ is so big and complicated. There are two reasons. One is history. I could not build the C++ I wanted back in the 80s for a variety of reasons—partly technology, partly computers, and partly because I didn’t know enough and I had to learn.
+
+[25:37] So you do the standard engineering thing, you do the best you can, then you see what works and what doesn’t work and try to fix the problems. Then you repeat. That’s how C++ grew. There are some leftover things that just get in people’s way now. You have spans, you very rarely use pointers, and you should certainly not use pointers for resource handling. That was already built in with your classes in ‘79, but people didn’t get it, so there’s teaching to do.
+
+[26:19] But anyway, once you figure out that you have a problem that requires a new language, then you start looking at what there is, and you have lots of help, lots of books about analysis and about code generation. You have frameworks like LLVM that most of the modern languages use to generate decent code. So most of the languages that compete with C++ do it by using a C infrastructure. It’s highly amusing.
+
+[27:02] But anyway, focus on the problem and don’t think you’re the only user. If you think you’re the only user, you build a special-purpose programming language, and that’s fine. Domain-specific languages are great when you find the right solution to the right problem, but identify the problem first. In my case, the problem was I needed high- and low-level facilities in the same language. Otherwise, I had to use two languages, and I had to have them communicate properly.
+
+[27:41] High-level languages at the time tended to use interfaces that took away performance. Quite often, they required garbage collection, which is not very good for device drivers, for instance, or for building garbage collectors. So yes, identify the problem and try to solve it.
+
+Ryan:
+
+[28:06] Back when you were creating C++ and you had identified the problem, you went off to build C++, and there were all these pieces, right? There’s the compiler, there’s a linker, and in the implementations of those, there’s a parser and all those things. When you were building the original thing, what was the most technically challenging part to implement?
+
+Bjarne:
+
+[28:33] I don’t think any part was particularly challenging. It was more those many parts, as you point out. One of the things I decided that caused trouble later was that I wasn’t going to touch the linker. It came simply because I asked around and realized people were using about 25 different linkers at Bell Labs, just in Bell Labs. If I wanted to serve my obvious initial uses, I would have to write interfaces or modifications to 25 linkers.
+
+And nobody wants you to touch their linker because if you make a mistake, everything breaks. So I decided on a rule: don’t mess with a linker. Later, people have messed with the linkers and made them better for C++. But that was after C became a major issue. The other thing was that there were many different optimizers. Every computer from different sources had a different optimizer, and again, I couldn’t write a dozen optimizers.
+
+[29:14] And nobody wants you to touch their linker because if you make a mistake, everything breaks. So I decided on a rule: don’t mess with a linker. Later, people have messed with the linkers and made them better for C++. But that was after C became a major issue. The other thing was that there were many different optimizers. Every computer from different sources had a different optimizer, and again, I couldn’t write a dozen optimizers.
+
+[29:56] I mean, I’m going to write a language here, right? And I can’t write. If I wanted to be an optimizer specialist for deck computers, I could become that. I have the background, I have the training, but that wasn’t what I wanted to do. I wanted to build first a distributed system, and then when my friends and colleagues started using Simula classes, I wanted to help them. They were doing things like network simulations, hardware layout, positioning of satellites, all kinds of interesting stuff.
+
+[30:39] So that was worth doing. I decided that actually there was a common interface to all these optimizers and code generators. It’s called C. So let’s use C as the assembler, and that worked nicely. C was very good at the low level, part of the reason I chose it. So let’s use it for the low level. I could have hidden C and recreated probably a better interface, but I decided that I’ll just use C and have C compatibility.
+
+[31:21] At the time, what I said was that we can have Dennis Ritchie‘s mistakes, which we know, and we can have my mistakes, which we don’t know yet, so we’ll take Dennis’s. That’s much more manageable and understandable, and I don’t have to teach people how to write a for loop and things like that. So that’s how C compatibility came in, partly as an implementation technique and partly to get into the culture and tool support and such.
+
+
+## 31:59 — Bootstrapping a language
+
+
+Ryan:
+
+[31:59] I saw somewhere in my research that C++ was used to write some part of the language toolchain, and immediately I had this thought of a chicken and egg problem. How do you use this language to build something that it is using itself? How does that work?
+
+Bjarne:
+
+[32:23] This is bootstrapping, and it was not an unusual thing. So I started with C++. I wrote a preprocessor that did some of the fundamental things in what became C++ classes, including fairly simple inheritance and overloading. Then, in that, I wrote a simple compiler for a subset of C++. Now I can use operator overloading and overloading in general classes, so I can build a scope class that handles lookup and naming and things like that.
+
+[33:22] And then you work from there, just writing the next version in the previous version. You keep going, and after a couple of years, you have something that became known to the world as C++. I wrote a book about it, and a compiler came out in the world. But I didn’t invent this technique. This was known as bootstrapping. I think I was taught it as an undergrad that you could do things like that.
+
+
+## 33:58 — C++ is not object-oriented
+
+
+Ryan:
+
+[33:58] Most people look at C++ and think that’s an object-oriented language. I’ve heard you say multiple times that that’s not the case or that’s not your immediate thought. Why is that?
+
+Bjarne:
+
+[34:10] Yeah, I never called it an object-oriented programming language. If you look at the C++ programming language, the first edition, the closest I come is to say some people call these techniques object-based. Actually, it’s more focused on classes; it’s type-oriented, class-oriented. It actually supports the techniques of object orientation very well. In particular, it follows Simula‘s model of defining types, defining classes, and defining class hierarchies to handle groups of related classes.
+
+[35:00] But that was never all it was. For instance, I do not want object-oriented complex numbers. I don’t want to say 2 dot something to get to some parts of numbers. I really want to say two plus Z, and I want that to end up being roughly the same as Z plus 2—no dots, no arrows. Math has developed a notation over the last 300 years or so. Descartes was, I think, the first one to use this notation, and it is very good.
+
+[35:54] I didn’t want everything to be object-oriented. Furthermore, I wanted things that did not require inheritance, that did not require runtime resolution, not to use it. So for arithmetic and for complex numbers and such, I wanted Fortran compatibility. I was rather keen on what’s called reuse in those days. But I saw it slightly different from a lot of researchers. A lot of researchers wanted to build a language, a system that allowed reuse.
+
+[36:38] I wanted to reuse things that existed. Fortran was there with some great software, C was there with some great system software, and actually helped with compilers and such. There was a Simula that was used a fair bit too. So I wanted to reuse that, and I wanted to make sure that worked. And that meant I couldn’t go too far away from the hardware. I couldn’t build all of the things that were considered ideal, or even the things I would consider ideal.
+
+[37:19] This is the real world; this is the real set of problems you are attacking. You have to respect the constraints that come with that view of what you’re doing.
+
+
+## 37:32 — Discussing type systems
+
+
+Ryan:
+
+[37:32] At the time that you wrote C++, C was already there and it had a weaker type system than what C++ eventually had. Just give your thoughts on the trade-offs behind that. Why did you choose to make the typing system stronger in C++?
+
+Bjarne:
+
+[37:47] Because we needed it. The weakness in the type system is one of the most obvious sources of errors, and it’s certainly one of the sources of endless testing and debugging. I hate debugging. I would much rather do design. You can’t really have either design or debugging. Some people claim they can, but they can’t. So I want to move the arrow towards more design that helps the debugging and makes fewer mistakes at runtime.
+
+[38:33] And the type system is one of them. And actually what you get and see today to a large extent is much stronger. Well, no, it is a much stronger type than it was in those days, and partly because of C++. Also, there are things you can’t express unless you have a strong type system. I mentioned overloading before. Overloading is essential for generic programming. And if you want to write, say, a vector of T where T is a parameter type, you have to have overloading because you can only operate on T’s, providing all the T’s have the same interface for what you need.
+
+[39:17] So you need the type system to resolve those things, and that can be resolved at compile time. The compiler gets a bit more complicated, probably a bit slower, but you don’t need to do so much debugging. There was a large-scale experiment done at Bell Labs in Chicago where they had some groups using C switching to C++, and they wanted to know whether they were more or less productive. Some people claimed that the slower compilation slowed them down.
+
+[40:04] Somebody simply measured how much compile time was used before and after switching to C++, and they found that the amount of compilation time on compute power was roughly identical. That is, C++ was slower by about a factor of two at that time. But the C++ people compiled twice as often. This is just one experiment. The factor of two is just one experiment, but I wanted to move towards using more compile time resolution.
+
+[40:51] Still doing that.
+
+Ryan:
+
+[40:53] I mean, for every language there’s this dichotomy of having it being statically typed versus dynamically typed. And C++ is one of the most famous statically typed languages. Why did you choose a statically typed language?
+
+Bjarne:
+
+[41:09] Because of the problems I wanted to attack. What do you do when you get a runtime error in something like Smalltalk? You go into the debugger, and that makes a lot of sense. If there’s a programmer sitting at a screen getting the error, it doesn’t make any sense. If a telephone switch finds a runtime error, then you have to resolve it. Furthermore, you want performance, and you want small programs to fit into memories.
+
+[41:48] This is true even today because I think 99% of all computers are embedded systems, and they tend to be memory constrained. Again, if you do runtime resolution, you need to have enough information, enough data to do the runtime resolution. I wanted to fit into small memories—small meaning 120k, 250k, 1 megabyte, things like that. I think it’s still relevant for many systems.
+
+[42:32] You can build a camera like that; it can still have several megabytes of memory. But if you put in a lot of memory, it gets bigger, costs more, and the battery runs out quicker. So we don’t do that. Phones, cameras, and things like that are still memory constrained. Statically typed languages, languages optimized for memory consumption, are just better at that. That’s why we use it; we’re using it right now.
+
+[43:10] I suspect that the microphones have chips in them too. There’s a lot of C++ in that world. The composition there is C and assembler.
+
+Ryan:
+
+[43:24] And you mentioned the research that was done on the compile time on
+
+Bjarne:
+
+[43:32] If you catch things earlier, you compile less often, but maybe it takes longer in this case. I could see a similar analogy where you catch errors way earlier if you have a statically typed language because the compiler is yelling at you before you put together that final thing. Whereas in a dynamically typed language, the errors may come later.
+
+Ryan:
+
+[43:32] You catch things earlier, you compile less often, but maybe it takes longer in this case. I could see a similar analogy where you catch errors way earlier if you have a statically typed language because the compiler is yelling at you before you put together that final thing. Whereas in a dynamically typed language, the errors may come later.
+
+Bjarne:
+
+[44:00] I don’t know any solid research on that, but you can look at it. JavaScript and Python are very popular, and they are runtime checked and they run much slower. I mean, raw Python runs something like 70 times slower than raw C++. The reason it’s viable is that a lot of key Python libraries are written in C or C++ to get the performance. So you get the performance by actually getting to the point that I was starting out with.
+
+[44:43] You need high-level stuff, and you need the thing that can manipulate hardware. Here they are using two languages, but still the same fundamental needs. It’s easier to try out things in a dynamically typed language because you don’t have to know enough about the language; you don’t have to know about type systems. Your average web developer or astrophysicist is not a computer scientist and doesn’t want to become one.
+
+[45:20] So there are advantages there. But the problem is that errors found by the type system in a statically typed language are discovered at runtime later. As systems grow, performance problems start. Furthermore, it becomes harder to write reliable software. You need much more unit testing, for instance, in a dynamic language because the compiler doesn’t do it for you. If you want things to guarantee to work—like the telephone switch mustn’t crash, your car mustn’t crash, your plane mustn’t crash—you want guarantees, and they’re harder to provide in a very flexible dynamic type system.
+
+
+## 46:20 — Memory safety
+
+
+Ryan:
+
+[46:20] One thing that I think C++ is infamous for is memory safety issues or foot guns that exist there.
+
+Bjarne:
+
+[46:31] I’m so tired of that. I haven’t had those problems for years. Somebody did a study of the obvious problems with buffer overflows and people hacking in using that kind of stuff. Almost all of these cases involve people writing C-style code or in C. Herb Sutter has a talk with actual numbers, and they are quite significant. It’s sort of that kind of problem. More than 90% are from people who don’t write modern C++.
+
+They use raw pointers to pass things around without the number of elements. No fat pointers, no spans. You have them in C++; you can use them, you can use vectors. We have hardened libraries; everybody has hardened libraries that do the runtime checking. Apple has it, Google has it, Microsoft has it. It’s just not standard until now. C26 has a hardened option that is standard. The work I’m doing on profiles will give you a way of guaranteeing that you don’t do the stupid things.
+
+[47:24] They use raw pointers to pass things around without the number of elements. No fat pointers, no spans. You have them in C++; you can use them, you can use vectors. We have hardened libraries; everybody has hardened libraries that do the runtime checking. Apple has it, Google has it, Microsoft has it. It’s just not standard until now. C26 has a hardened option that is standard. The work I’m doing on profiles will give you a way of guaranteeing that you don’t do the stupid things.
+
+[48:12] So anyway, fundamentally, theoretically, the problem was solved many years ago, and people just do what they’ve always done and get the problems they’ve always had. That makes me sad. It’s one of the things that makes me work on coding guidelines, enforced profiles, and education.
+
+Ryan:
+
+[48:40] I mean, education is one way to solve the problem. Is there a way to get the compiler to just prevent people from doing all those risky things? And is that enabled by default in modern C++ today?
+
+Bjarne:
+
+[48:53] No, but it should be. I’m proposing that for C++29, the simpler versions of that should have been in C++26. But there are still a lot of people, even in the C++ Standards Committee, that are very devoted to their old code and their old ways of doing things. There are people who say you should only standardize what is common in industry, but when the bugs are common in industry, you should do something else.
+
+
+## 49:26 — Standards committee anecdotes
+
+
+Ryan:
+
+[49:26] The Standards Committee is a topic I want to talk about. It’s interesting. I mean, the language is now run by a democracy. One question I wanted to ask you is if it was a dictatorship, and you had full say over what language features would be included, would that make it harder to get by?
+
+Bjarne:
+
+[49:48] First of all, it never was a dictatorship. I never had full control. Once you have some users, in my opinion, you gain some responsibility for making sure that they’re helped and their stuff works. You can’t keep breaking the language. That’s what academic language development does. They break to improve all the time, and then they can’t maintain a user population. I didn’t actually choose to have a standards committee.
+
+[50:23] I chose responsibility to the community. But one day, two guys came in representing IBM and HP, and I can’t remember if it was Sun or DEC that was the third thing they represented. But anyway, the biggest computer and software suppliers in the world at the time came into my office in SH9 and said, “Well, Bjarne, do you want to help us standardize C++ under ISO rules?” I said, “No, I can’t do that.”
+
+[51:10] I’m still doing experiments. It’s still not complete. So they said, “No, Bjarne, you don’t get it. Our organizations cannot use a language that’s not standardized. They cannot use a language that’s owned by a corporation that we might compete with. And we do sometimes, okay, we trust you, of course, but not your employer. We compete with them sometimes. And you can get run over by a boss. No, no, no.”
+
+[51:49] We need a standard, and we need a standards committee. So this goes on for about an hour. They twist my arm. Ow, ow, ow. In the end, they said, okay, I will standardize C++ under ANSI rules just like you suggest. The computer community needs that. By the way, what’s the ANSI rule for standardization? They told me, and we started a year later. But this was the way it came about.
+
+[52:25] Some very important organizations wanted that standardization. C++ was on track to get standardized, and AT&T, being primarily a user of software, was also in favor of standardization. I found out, and so they supported it. The documentation I had written was based on it. Actually, I rewrote the documentation that became the ARM, the Annotated C++ Standards Manual, which provided the definition, the manual of the language, and for every feature, some rationale and some way it could be implemented or was implemented.
+
+[53:16] And that became the foundation document for the standardization.
+
+Ryan:
+
+[53:21] When they were strong-arming you, what if you had just said no? What would have happened?
+
+Bjarne:
+
+[53:26] Well, I think C++ would have faded into becoming an academic cube language that was loved by some small community, and it would have disappeared out of the mainstream of computing. There are people who say this stronger than I do. They say that C is spread and its usage is that it has a standard; it’s not owned by a corporation. It is one of the things that sometimes blocks the wannabe C++ killers.
+
+[54:17] I remember the ads for Java and people standing up saying, “We’ll kill, absolutely kill C++ in two years.” I thought that was rude. Anyway, we have 10, 12 times more C++ developers today than we had when they said it, so it didn’t work.
+
+Ryan:
+
+[54:43] How is it that C++—not exactly that it’s a war—but just if we looked at adoption, clearly C++ gained a lot more adoption than Java. Yet I know Java had the backing of a big company that was putting a lot of marketing dollars in, and C was kind of, I think you’ve said that it had almost zero, next to zero marketing done for it.
+
+Bjarne:
+
+[55:13] Next to zero was $5,000 to be used over three years. Sun used much more money on advertising and marketing Java than was ever used in C++ development. To this day, the standards committee has a problem. It has no funding, and that means it’s hard to do extra experiments; it’s hard to deploy things. Other language communities keep sort of stealing C++ compiler and tool developers because they’re good.
+
+[55:59] But it makes it hard to predict how fast we can implement things today. Last I checked, the C++ standards committee had 527 members. We work on consensus because if you don’t have consensus, then you get dialects. We don’t want to have a feature that’s voted in say 60 to 40 or even worse, 52 to 48. No percent. We don’t do that. And that’s painful and tedious and good.
+
+Ryan:
+
+[56:45] When you say consensus, that 100% need to approve is not necessary. We don’t need unanimity. We need a massive majority. And basically, I would like to see 90%, and we often do 80%. I start to worry.
+
+Bjarne:
+
+[56:47] To approve 100% is not necessary. We don’t need unanimity. We need a massive majority. And basically, I would like to see 90%, and we often do 80%. I start to worry.
+
+Ryan:
+
+[57:08] What’s the lower bound that’s coded into the rules?
+
+Bjarne:
+
+[57:10] There’s no lower bound coded into the rules. The rule says that the convener of the ISO committee determines what is consensus. Pure numbers don’t say it. Could you imagine you had a vote, 95% versus 5%? But the implementers of C++ compilers and standard libraries from Google, Apple, Microsoft, and others were all in the 5%. Is that consensus? I can reassure you that no convener would call that consensus.
+
+Ryan:
+
+[58:02] And that makes sense intuitively. I kind of wonder, with democratic decisions, there need to be objective rules. So what if the convener made the wrong decision?
+
+Bjarne:
+
+[58:13] It happens. But you can’t just have numeric rules. Not everybody cares for the whole language. Not everybody understands what’s going on. You can vote at your third meeting. So you might have somebody with a vote that has eight months of experience with the standardization and doesn’t understand standardization and knows only what they know from their development organization that they have been part of, which might be a small one.
+
+[58:55] You need some judgment, and you hope that the convener has that judgment. The convener always asks the national representatives. I mean, the other way of getting a consensus is that you have a massive consensus, but you have ten countries where the representatives didn’t agree. That’s not consensus. And even when there looks, if there is a look, if everybody is for it, if it’s massive and all of that, there’s not a problem.
+
+[59:35] But if there’s a problem, the convener asks the national body heads, he asks the implementers, sort of key people that are necessary for getting the voted change into real use. Sometimes educators also before they make that decision. Not everybody weighs equally once there’s a disagreement.
+
+Ryan:
+
+[1:01:45] I saw in some of your writing you said one of the most negatively received ideas you’d ever presented was Auto. I know Auto eventually made its way in there, but what’s the story behind why it was so negatively received?
+
+Bjarne:
+
+[1:02:02] At that time, it was just unusual. People thought it was weakening the type system. It also opened the door to fairly general generic programming that is not heavily syntax-based. Auto is the beginning of concepts, which is the ability to put constraints on generic code. Auto is just the simplest constraint; it must be a type as opposed to seven. Maybe I didn’t explain this well enough, and there’s a variety of backgrounds in the committee. Maybe they didn’t know languages of the generic types, such as ML and Haskell.
+
+[1:03:04] So it was a horrible ache. Anyway, we still got it because we needed something like that, but it wasn’t enough. I have looked at industrial software and problems with the overuse of Auto. You should only use Auto when you have an idea about what is needed there. It’s good in generic code where you go and eventually check that the type is correct, that Auto has resolved to something that supports the operations that you’re going to do on it.
+
+[1:03:50] And that’s what concepts formalize. But it was always checked at the end, and I noticed a group of people that was overusing auto, actually in a framework for networking. They were saying that they were being slowed down, not so much with bugs, but they had to look up the functions being called to see what that auto could possibly bind to. And then they had to put in comments that said what the auto was meant.
+
+[1:04:31] So you have auto, and the comment says must be an input channel. Now you simply define input channel, and then instead of saying auto, you say input channel auto. Fine. That’s what the system is. My design of that simply said that auto is the simplest concept, and you should simply only set input channel C++ equals blah blah blah. But anyway, the committee wanted an indicator that this was going on.
+
+Ryan:
+
+[1:05:10] Oh well, I saw another anecdote about the standards committee being heated at times. You mentioned there’s this thing about shuttle diplomacy between two corners of the room. I think it was IBM and Intel. They both needed different support. What’s the story behind that?
+
+Bjarne:
+
+[1:05:30] I was actually talking to Brian McKnight, who was the IBM representative at the time. We were discussing some of the things that were happening then, and it’s still remembered. So basically, IBM was doing the... What’s that architecture called?
+
+Ryan:
+
+[1:05:54] PowerPC. And Intel was doing well. They had different models of the underlying hardware, especially coordination with the caches and things like that. The guy representing Intel wasn’t actually an Intel guy. Anyway, also a good guy. I used some of his slides in my presentations. I knew these guys, but they were totally deadlocked.
+
+Bjarne:
+
+[1:05:55] PowerPC and the x86. The Intel was doing well. They have different models of the underlying hardware, especially coordination with the caches and things like that. The guy representing Intel wasn’t actually an Intel guy. Anyway, also a good guy. I used some of his slides in my presentations. I knew these guys, but they were totally deadlocked.
+
+[1:06:36] I mean, these are massive organizations with massive amounts of code out there. Basically, some things could be done. But the IBM guy, Brian, said that they had a lot of software, mostly in the lowest level, even down in the microcode, that was relying on the way they had done it. The people who had done it had left the company a long time ago, and they just couldn’t rewrite all of that code and get it right, even if the Intel guys were right.
+
+[1:07:38] Okay. And the Intel guys had similar arguments and similar points. This is better. We are using it. I was shuffling; they were in different corners of a large room. So I go up to the Intel guy, the guy representing Intel here, and what’s the problem? Tell me about it. Explain it. I go down, explain. He’s saying this. They say, well, there’s this, this, this. I go back again and I spent a couple of hours literally doing shuttle diplomacy, walking from one corner of the room to the other.
+
+[1:08:18] And we reached an agreement. That’s in C++. A couple of years later, they both agreed that they were now using a combination of what they had before and what the other guys brought in. So actually, the result was improvement, cross-pollination.
+
+Ryan:
+
+[1:08:45] That’s funny. Why did you have to do shuttle diplomacy? Why not just a group conversation?
+
+Bjarne:
+
+[1:08:50] Because they’ve been trying that for days and probably for meetings before that, and it didn’t work. So I guess I was just translating and asking questions. I mean, those were experts. I don’t consider myself an expert at that level. I’ve done hardware, I’ve done microcode, so I’m not an amateur, but these guys are really good. So the IBM guy is now the guy doing most of the synchronization on the Linux.
+
+[1:09:30] We’re still using his stuff today. He has a C++ version of it, so he can get it into the bottom of the Linux kernel.
+
+
+## 1:09:40 — Adding automatic garbage collection to C++
+
+
+Ryan:
+
+[1:09:40] When I was reading your writing in these papers, there’s this part where it seems like in 1995 you had this idea to introduce some form of automatic garbage collection into C++. That kind of surprised me because when I think about C++, one of my immediate thoughts is, no garbage collector. We’re going to manage the memory ourselves. How would that even work?
+
+Bjarne:
+
+[1:10:10] There’s two things there. One, I wanted to automate resource management in general, not just garbage, not just memory. For that, you have constructors, destructors, and the techniques later known as RAII—Resource Acquisition Is Initialization—which is probably my worst naming ever. But I was busy at the time. So in the standards committee, those people insisted that we needed to be able to do garbage collection.
+
+[1:10:50] And there were garbage collectors out there. Oh, there was Hans Boehm here. He was the one representing the Intel model of stuff. He has a conservative garbage collector still used today. We thought we needed an interface so that it could be standardized how you used such a garbage collector. Basically, I was listening to the users, expert users, and they thought it was necessary. I thought that support for memory management and resource management was important.
+
+[1:11:32] I’ve thought that from the beginning. I didn’t think garbage collection was appropriate for a lot of what I was doing. But certainly, automating the management was ideal. After a long set of discussions, we found an interface that people agreed on, and we put it into C++. What we found was that over the next 10 years, the amount of usage of garbage collection decreased as RAII, the resource management that had been there all the time, got more and better understood and was used more.
+
+[1:12:24] Furthermore, the people who still used garbage collectors didn’t use the standard interface because they had figured out ways of doing it better. Today, there are still a few people doing garbage collection, but it’s not part of the standard.
+
+Ryan:
+
+[1:12:43] How does that work? Is it kind of like a wrapper around the memory allocation methods?
+
+Bjarne:
+
+[1:12:48] Yeah, okay. You have a different implementation of new or malloc or operate a new or whatever it is you’re using at your lowest level, and then delete becomes something slightly different too.
+
+Ryan:
+
+[1:13:11] There’s this cautionary tale in the C++ community about this ship, Vasa, and I was kind of curious why that’s popular.
+
+Bjarne:
+
+[1:13:21] Oh, we had a meeting in Stockholm at some point, and they have a wonderful ship that, if you ever get to Stockholm, you should see: the Vasa. It’s a battleship from the 1600s. There’s a story to that, and that’s the one I tell people. The King was ordering a battleship that should be the best and most beautiful battleship around. It was going to be a good fighting battleship and used for diplomatic visits. So it should be beautiful. They laid down the keel and started building it. Then they heard that a likely opponent was building battleships with two gun decks. This was an old-fashioned battleship with only one gun deck. If you put a one gun deck battleship next to a two gun deck battleship, the highly predictable result is a lot of holes in the one gun deck battleship, and it’s gone.
+
+[1:14:05] So it should be beautiful. And they laid down the keel and they started building it. Then they heard that a likely opponent was building battleships with two gun decks. This was an old-fashioned battleship with only one gun deck. If you put a one gun deck battleship next to a two gun deck battleship, the highly predictable result is a lot of holes in the one gun deck battleship, and it’s gone.
+
+[1:14:42] So the King orders that this ship should now have two gun decks. And they’ve already started building it. So they add another gun deck; they add cannons up there. And the King also watched. Now the ship is bigger, they want more statues and beautiful things. So it becomes a bit top-heavy. And rumor has it—I’ve never checked this rumor, so it might be wrong—that the ship designer committed suicide out of horror.
+
+[1:15:23] Also, a thing that I don’t believe is just a rumor was when it was built, they tested it for stability. The way you test a ship like that for stability is you take the whole crew and you run them from one side to the other back and forth, creating harmonic sway. If you can do that 14 times, then it will stand up to the Baltic and the North Sea. Rumor has it—actually, as I said, I think it’s a fact—that they did it seven times and then they stopped because it looked dangerous.
+
+[1:16:08] So this was 1624, I think the ship gets finished. It’s sailing out, the most wonderful ship you’ve ever seen. It’s sailing out in Stockholm harbor, trumpets blaring, flags flying, families of crew on board, the whole thing. It gets halfway across the harbor, a gust of wind comes, it kills a roar, and it’s gone. And it ends down in some place where there’s not much oxygen. So it was well preserved, and they fished it up again, and you can see it.
+
+[1:16:56] And so I tell this story to the standards committee and I point out there’s something they did wrong. They built more features on top without improving the foundation. Always improve the foundation to make sure that it’s not just a random set of features that you have added, because that’s complexity. Furthermore, do not compromise your testing. That’s really dangerous. And furthermore, you’ve all noticed when your high bosses say something should be done, and the high bosses don’t always know what’s right. Sometimes the professional thing is to say, no, we are not doing this.
+
+[1:17:43] We have to take it easy. If they had said, okay, we’ll build a one-gun deck battleship, we’ll just not call it the Vasa, call it something neutral. Then next year, you can have a battleship that’s been designed from the bottom up to be a two-gun battleship. You wouldn’t have any problems with that. But the high management, meaning the king who was in Poland at the time, so he couldn’t even see it, says, nope, must be delivered on time.
+
+[1:18:17] And so they delivered something on time that just couldn’t do the job. But go see the ship. It’s great.
+
+
+## 1:18:25 — Template instantiation is Turing complete
+
+
+Ryan:
+
+[1:18:25] At some point, someone demonstrated that the C++ template instantiation mechanism was Turing complete. So what the compiler is going to do to kind of preprocess that C++ program can actually be used for computation. I was just trying to understand how that is possible. It was mentioned something about calculating prime numbers at compile time. How does that work?
+
+Bjarne:
+
+[1:18:57] Well, the prime number thing was just a curiosity. It used the error messages to report the result. But when you build something, you can get Turing completeness. You need some form of iteration or recursion, and you need a comparison. That’s about it. Then you can achieve Turing completeness. At least some of the theoreticians say, “Hey, we can’t do that. It’ll run forever.” The guy who came up with the first example of this, Erwin Unruh, actually thought I should prohibit it somehow.
+
+[1:19:50] I should ban it. My reaction was, “This looks useful. Great.” I think I was right. Furthermore, nothing runs forever. If you have a Turing machine, you have the tape, and the tape has to be infinite. So if you imagine building a real Turing machine the way Turing designed it, you have to have a bunch of navigators building track all the time when it gets out there. Of course, we don’t do that. The point is that the compiler will run out of resources long before we get into real problems.
+
+[1:20:30] Machines are finite, so the problem doesn’t become real unless there are bugs and the bugs get caught. Guaranteed. So, it’s not a problem. What happened, though, was that people were misusing templates to do simple calculations like prime numbers or trustworthiness. Sieve or calculating factorials and such. It’s so awful, and it’s so expensive, and it uses up so much memory that it becomes a problem. So that was why I and Gabbitas Reyes built constexpr, which basically says you can calculate perfectly ordinary code at compile time. It is much simpler, much more what we’re used to, and much faster to compile, usually resulting in much faster code.
+
+[1:21:37] And you have that today, and you have Constexpr if you want to guarantee that this is done. That takes care of the obvious misuse of the idea of templates being true and complete. It turns them into ordinary functions.
+
+
+## 1:21:57 — Abstraction and performance
+
+
+Ryan:
+
+[1:21:57] Generally with programming languages there’s this high level intuition that the closer to the machine you are, the higher the performance is. And I tend to see C as closer to the machine than C++, for instance.
+
+Bjarne:
+
+[1:22:18] No, it’s not the case, it’s not the case. It’s not as good as compile time calculation that C++ is. And anyway, we have exactly the same machine model because C borrowed the C11 machine model. So if you write the same code in both languages, you get the same result. Except the C++ compilers can do more at compile time and so C++ runs as faster, faster than C. In most cases there’s more information. If you give Optimizer more information, it can do a better job.
+
+Ryan:
+
+[1:23:00] Okay. Yeah, because that was what I was going to ask you. You had said somewhere that C++ can be more performant than C, but I tend to think that more abstraction costs you something.
+
+Bjarne:
+
+[1:23:12] It’s compiled away. This is why I talk about zero overhead abstraction, and people are beginning to take me to task for that because that’s understating the ability of the C++ compiler. We can do negative overhead abstraction.
+
+Ryan:
+
+[1:23:34] What if I was really good at writing assembly and I had all the time in the world to write it? How does that compare?
+
+Bjarne:
+
+[1:23:42] If you are very smart and you have infinite time, you can do better. By and large, we are not as smart as the optimizers anymore, and we don’t have infinite time. So if we are smart enough, we can only do a small piece of code. And now the question is, did we get enough time to use our smarts? This is even starting to affect clever code. I gave a talk to Slack last year, which is a group of very performance-oriented people from the finance industry.
+
+[1:24:33] My title was “Don’t Be Clever.” Actually, the written title was “Don’t Be (Too) Clever,” but I can’t pronounce parentheses. I got out alive. My main point was that C++ is good enough for more than 98% of your code. So if you want time to be clever, you use these techniques, and I showed modern C++. That way, you get time so you can do all the clever optimizations. The problem is, clever optimizations these days tend to be machine dependent.
+
+[1:25:15] That is, if you get a new computer or if you get a new version of the compiler, you might actually have pessimized your code. I’ve seen this repeatedly ever since the 80s. There are people who do nothing but use different optimizations on the next generation hardware. My standard techniques for improving things actually are to first throw away the clever stuff and then see if you run faster or slower.
+
+[1:25:58] Usually, you run faster because clever stuff, at least 1990s store style clever stuff, which there’s a lot of it still today, because the techniques carry on in people’s heads and some of the code remains, tends to use a rats nest of pointers, and that gives the compilers and optimizers problems. They also sometimes use more allocations, which is not good. You want to minimize memory access, you want to maximize your cache performance and things like that.
+
+[1:26:41] And compilers are getting very good at that. I have seen this kind of thinking. I wrote a paper about it together with a friend of mine in Spain doing fluid dynamics, and we threw away the clever stuff—actually a performance test suite example. So it was not a toy, and we got only a 20% improvement by reducing the code to about 80% of what it was before. Some people didn’t think that was significant.
+
+[1:27:26] I thought it was a significant proof that the technique was appropriate. You apply optimizations only when you need them. Knuth says don’t do premature optimization, but he also pointed out that 2 to 3% is where you should optimize, which is exactly the number I’m using. First, build the stuff using high-level facilities, see if it’s good enough, and if it isn’t, and you have to time it, you don’t guess your time. Then you figure out where the time is spent and then you optimize that.
+
+[1:28:10] But a lot of the time, you don’t need to go to that stage; it’s fast enough.
+
+Ryan:
+
+[1:28:15] I see. So when you say cleverness here, it’s like human-level manual management to eke out performance.
+
+Bjarne:
+
+[1:28:23] Yes.
+
+Ryan:
+
+[1:28:24] And you’re saying that actually if you don’t do that, you’re giving the compiler more to optimize, and it can do a good job. It’s much, much better than it used to be. Code that was cleverly and correctly optimized in the 1990s is often pessimized today because machine architectures have changed and the compilers have improved.
+
+Bjarne:
+
+[1:28:31] A good job, and it’s much, much better than it used to be. Code that was cleverly and correctly optimized in the 1990s is often pessimized today because machine architectures have changed and the compilers have improved.
+
+
+## 1:28:51 — AI writing code
+
+
+Ryan:
+
+[1:28:51] When I look at the industry today, more and more code is being written by machines than by humans. I feel like a lot of programming language design is thinking about how to make it amenable to humans solving problems and writing the code. I’m curious if you have any thoughts on whether you think programming language design will change if more and more of the code is written by models and machines.
+
+Bjarne:
+
+[1:29:23] I think that in the field I’m mostly interested in, code will still be written by humans, and they will use abstraction. The examples I’ve seen of attempts for AI to generate code in this domain have not been successful. They generate more bugs, more security holes. They have bloated code, which pessimize again because you use more memory, and it’s hard to validate. The senior developers that would be needed to validate it have started to retire because they don’t want to deal with the validation of something that changes every time you make a change in your code or your prompts. Furthermore, a lot of the things I think about involve regulatory bodies for this validation. You have to be able to validate what you changed. When you make a change and the AIs, the tools change, even if you make a slight difference in the prompt, a lot of the code will change, and you have to check it again.
+
+[1:30:08] I’ve seen some of them starting to retire because they don’t want to deal with the validation of something that changes every time you make a change in your code, in your prompts. Furthermore, a lot of the things I think about involve regulatory bodies for this validation. You have to be able to validate what you changed. When you make a change and the AIs, the tools change, even if you make a slight difference in the prompt, a lot of the code will change, and you have to check it again.
+
+[1:30:47] All of the code that was generated knows more code generated than if it was written by humans. When a human makes a change, it will make a change that’s localized. You can look for the effects of that localized change. If an AI writes it, you don’t actually know where it’s changed. You have to try and figure that out. So if you’re doing something that has been done many times before, like writing a standard web app, what you say is correct.
+
+[1:31:22] Also, AI is not useless. That’s not what I’m saying. It can be used to write documentation. Again, it has to be humanly validated, but it helps write things. It’s good at text. It’s not, at least now, good at safety-critical, performance-critical code. Now, let’s say that 70 or 80% of the world’s code doesn’t fit that pattern. But it’s that 10 or 20% of the code that I’m interested in. And there, it’s not there.
+
+[1:32:09] And I don’t see it coming with the LLM model. Furthermore, when fed with training data, it has to be trained with old code. My job, as I see it, is to make sure people write new things and use new techniques that are improvements over the old code. I find that LLM-based code is imitating old code and getting old performance and old bugs again. Maybe you can improve that. I hear rumors of Bjarne apps being written that fit my writings, but even that is problematic because I’m not saying exactly the same as I did 20 years ago.
+
+[1:33:06] But anyway, we’ll see. Also, even Dijkstra was looking into the possibility, and he claimed that the idea of having natural languages as the programming language was idiotic. He’s less polite than I am. I think that a language like English is very flexible, and what we say is often very ambiguous. We need a programming language that’s precise, that’s engineering, that’s math; it’s not English.
+
+Ryan:
+
+[1:33:48] And for that code that is performance or safety critical, I imagine there will be some group of people using LLMs for that. Based on what you’re saying, the intuition is that you would foresee more breakages and bugs because it’s not valid.
+
+Bjarne:
+
+[1:34:10] People that are really good at that kind of stuff tend to not want to spend all their time validating. Another problem is that they want to eliminate junior programmers because there are lots of them. But if you do that, where do you get the senior programmers from? We’ll see. I mean, you can ask me the same question again in ten years, and there will be more knowledge. Undoubtedly, some of what I said will not be correct. And my guess is some of what I say will be correct in ten years. I’m always told by AI proponents that either the problem has already been solved or it’ll be solved in the next release. But I hear Anthropic 4.7 is having more problems than 4.6 for reasons I don’t understand. The idea that the next version will solve the problem is always a dangerous assumption. Furthermore, it’s getting more and more expensive.
+
+[1:34:42] And my guess is some of what I say will be correct in 10 years. I’m always told by AI proponents that either the problem has already been solved or it’ll be solved in the next release. But I hear Anthropic 4.7 is having more problems than 4.6 for reasons I don’t understand. The idea that the next version will solve the problem is always a dangerous assumption. Furthermore, it’s getting more and more expensive.
+
+[1:35:23] If you have to build a $100 million center and use and run the electricity for it, how many junior developers does it take to be cheaper? They’re starting to need money. It’s not unproblematic. And I’m in a subfield where it is probably more problematic than most.
+
+
+## 1:35:54 — His motivation
+
+
+Ryan:
+
+[1:35:54] One thing I saw in a profile that you did is they asked you what keeps you going on C++ or what motivates you, and you said one is the fun of kind of building the future. The second thing was the obligation to make sure C++ moves forward. When you started C++, I can’t imagine you knew that you were embarking on a journey for decades.
+
+Bjarne:
+
+[1:36:21] And so not decades, but I knew it was a longer journey because I knew I couldn’t build the language I wanted. I could build a subset of it. There were two reasons for that. One was, well, I was the team that did it. Secondly, there was a lack of resources and a lack of time. I didn’t have the input needed to make sure that what I designed was right. So we have the engineering issue: build what you can, see what works, improve it.
+
+[1:36:59] And so I knew I was getting into something like that. I knew I was building a language meant to evolve. And meant to evolve means that you make certain decisions in knowing that that is different. For instance, that’s one reason C++ wasn’t just an object-oriented programming language. Because I could see in the world that there were things that didn’t seem to fit that paradigm. And so I knew we would evolve.
+
+[1:37:35] The other half of that answer to that question, what keeps me going is applications. It’s really nice to see interesting uses and such. I was at JPL and I talked to the people who are doing the Mars rovers. That’s cool stuff. I’ve been to CERN. I’m going to CERN this summer to see how you do high-energy physics. I don’t know anything about high-energy physics. Well, probably more than the average, but nowhere near being a physicist.
+
+[1:38:10] And so you can go there and see they do interesting things, and there are things that surprise you. I was talking to a guy at CERN some years ago, and his job was to open and close doors. These doors weigh a couple of tons and are made of lead; they move across to close off an area to protect against radiation or something like that. I don’t know the details, but the point is he has to start up this door, which is not too hard. You have engines. But then you have to make sure you stop it. Because when you have a couple of tons this wide going into a wall, it will not stop. Normally, you have to write. And the code for that was interesting. I learned something. I still travel around and talk to people and see what C++ is being used for, what it can be used for, and what it can’t be used for. Just learning and learning is fun.
+
+[1:38:45] You have engines, but then you have to make sure you stop it. Because when you have a couple of tons this wide going into a wall, it will not stop. Normally, you have to write. The code for that was interesting. I learned something. I still travel around and talk to people and see what C++ is being used for, what it can be used for, and what it can’t be used for. Just learning is fun.
+
+
+## 1:39:18 — Famous quotes
+
+
+Ryan:
+
+[1:39:18] There’s a few quotes that you have which I thought would be interesting. If you could just give some context behind them. One of the quotes is, “C++ makes it easy to shoot yourself in the foot. C makes it harder, but when you do, it blows your whole leg off.”
+
+Bjarne:
+
+[1:39:38] Somebody asked a question at a talk I was given in Boston back in the 80s, and I shot that one back not thinking, but it’s a good quote and it’s correct. Arno Penzias got a Nobel Prize in Physics, so he’s not a nobody. I was trying to explain to a large group of Bell Labs managers about C++, and he said, “You can’t have a power tool without knowing how to use it.” So if you have a saw, you saw like this.
+
+[1:40:22] If you have a power saw and you try to do that, it’ll bounce, and you will have to be very lucky not to get hurt. Notice it’s roughly the same story. What is behind that is if you get a power tool and you misuse it, you will encounter more problems. Get a car that accelerates faster, and it can wrap you around a tree in a way an old-fashioned, slow-accelerating car can’t. It’s fundamental to having power tools.
+
+Ryan:
+
+[1:41:03] You also have this other great quote: nobody should call themselves a professional if they only know one language. Obviously, you’d recommend people learn C++, but if they had to know a second or a third language for the sake of being a better engineer or programmer, what would you recommend?
+
+Bjarne:
+
+[1:41:22] Yeah, and if you’ve heard, if you’ve seen that interview, you’ll know I waffle on that deliberately. It is not so much which other languages you know, but that you get a set of ideas that are embedded in those languages. So what you should do is learn languages that are different from yours. I’m not too fuzzy about which languages they are. I think I said learn a scripting language today that would be Python or JavaScript.
+
+[1:42:07] Then I guess it was Unix shell or something like that. Have a look at a functional language. ML or Haskell would be obvious solutions. Or just pick something different. The point is that you mustn’t get stuck with just what’s in your language. It’s not good for you to be monoglot. I mean, you know what you call somebody who knows three languages? Trilingual. Who knows two languages? Bilingual. One language? American is a very popular joke, at least outside America. And it’s the same idea with programming languages. But it’s more important with programming languages, I think, because you’re building things, and you should broaden your mind with ideas and techniques.
+
+[1:42:43] American is a very popular joke, at least outside America. It’s the same idea with programming languages. But it’s more important with programming languages, I think, because you’re building things, and you shouldn’t. You should broaden your mind with ideas and techniques.
+
+Ryan:
+
+[1:43:08] Another quote is, “People who think they know everything really annoy those of us who know we don’t.” I was curious about the context behind that or your thoughts on it.
+
+Bjarne:
+
+[1:43:19] Well, that’s. I mean, that’s very simple. There’s so many people who think they’re simple solutions to just about everything in the world. In this context, they’ll come and tell me how much simpler C++ could be. And this is true. If you only want to do one thing, usually the one they have in mind, you can make a much simpler language. But this is like if we threw away this part of C++, it will be much simpler and nicer.
+
+[1:43:57] Usually, they want to throw away things like C++, but then you annoy a few million people, and you don’t actually succeed because they’ll stick to the old stuff. So it’s a way of expressing my frustration with people who oversimplify. People think they can program without learning to program. They think they can be engineers without learning engineering. They think they can be politicians without knowing how to run a company or a country.
+
+[1:44:36] Oversimplification annoys me, and I probably shouldn’t express annoyance. I very rarely do, but in this particular case, my frustration showed.
+
+Ryan:
+
+[1:44:50] Yeah, I saw somewhere in response to C++ being difficult for some people, that programming should be approachable and anyone can learn programming. I think you expressed the opinion that C++ is not necessarily for everyone; it’s for serious programmers.
+
+Bjarne:
+
+[1:45:11] Yeah, I mean, the first line of the C programming language, version one, first edition, was, “C is designed to make life more pleasant for the serious programmer.” I took away the first version, which was professional, because I saw amateurs, and it was really, really good. A serious programmer is probably programming for somebody else. If you program for yourself, it doesn’t matter; it’s you, and that’s your problem.
+
+[1:45:56] If you do it for your friends, you can lose friends. If you build something for a million people, you can do harm in the world. And so that’s what it’s for. I mean, Guido van Rossum built Python with the explicit aim of allowing many people, or even everybody, to program. And he succeeded. I designed C++ to be a really good tool for serious programmers, engineers, mathematicians, and such. And I succeeded too.
+
+[1:46:38] It’s just not the same problem. Remember where we started? I said the problem, look at the problem, and then learn from what worked and what doesn’t.
+
+
+## 1:46:48 — Reflecting on building C++
+
+
+Ryan:
+
+[1:46:48] Looking back on C++ and the whole journey, is there any part where you think, “Oh, that was a mistake,” or something that you learned from in the design?
+
+Bjarne:
+
+[1:47:00] Many, many times I learned something. I think most of the things never made it into C++. That is, this is what you have experiments for, and that’s what you have initial uses for. I think I got the major part of the language right, and I think I could improve every single detail. But stability and compatibility are essential. If you make an insignificant change, it will annoy a few people, and it wouldn’t matter. If you make a significant change, you will annoy a lot of people, and it will not work because, say, a million people will stick to the old way. So I try to grow the language without breaking it. I have this thing that happens again and again. I explain it. People come up and say to me, “C++ is too complicated. You must simplify it.” And I need these two features. I need them yesterday. You must, when you’re doing this, give me these two features.
+
+[1:47:48] If you make a significant change, you will annoy a lot of people, and it will not work because, say, a million people will stick to the old way. So I try to grow the language without breaking it. I have this thing that happens again and again. I explain it. People come up and say to me, C++ is too complicated. Yeah, you must simplify it. And I need these two features. I need them yesterday. You must, when you’re doing this, give me these two features.
+
+[1:48:34] Yes. And whatever you do, don’t break my code. I have a million lines of it that doesn’t work. That’s impossible. And so that is why I’m working on coding guidelines and on profiles, which are enforced guidelines. That way, you can design a profile that ensures you can use the libraries that you need and ensures that you don’t misuse the features that are unnecessary and dangerous in your field.
+
+
+## 1:49:12 — Top C++ book recommendation
+
+
+Ryan:
+
+[1:49:12] For anyone who wants to learn C++, what is the top technical book recommendation you have?
+
+Bjarne:
+
+[1:49:22] There’s a book I wrote when I was teaching undergrads. This is accidental; I didn’t mean it to be there. Anyway, this is the second edition of Programming Principles and Practice Using C++. This is a big fat book written for undergrads. The third edition is not as thick because the language has improved, and I can actually get the ideas across better with less text.
+
+[1:49:59] But use the latest C++. Learn the modern way first. Don’t start learning all the bad ways of writing C as the starter. A lot of courses still say you learn C first, so you learn to misuse malloc and pointers. Then later, you can learn how to use a vector and a string and not have the problems. But yeah, profiles are there to enable compiler and static analyzer support for that kind of thinking.
+
+[1:50:40] And educators are asking for something like that too. A lot of people think profiles are simply to deal with memory safety and performance. No, it has to give people a better tool both for learning and for doing specific kinds of work.
+
+
+## 1:50:59 — Advice for his younger self
+
+
+Ryan:
+
+[1:50:59] And then the last question for you is, if you could go back to the beginning of your career and give yourself some advice, what would you say?
+
+Bjarne:
+
+[1:51:06] Oh dear. Yeah, that’s the time machine question. I sometimes set that for my students. You have a time machine. Go back and give Dennis some advice. And once you’ve done that, step 10 years forward and give me some advice. It’s a good exercise. I usually get some really good stories out of it. Some suggestions. I think a lot of—I tried to avoid the two-way conversions of the building types in C++. I should have fought harder for that.
+
+[1:51:58] I tried but was stopped by the people in Bell Labs, and these were more experienced people than me. I should have gone further there. Furthermore, I should have delayed the release of C++ until I could have something template-like so I could do a better standard library. It wouldn’t have been good enough, but it would have gotten people into the habit of using a standard. Everybody was building standard libraries, and we got saved by Alex Stepanov with the STL.
+
+[1:52:41] But that was real luck because I made a mistake in not delaying until I could have built a good vector and class hierarchy. And then finally, if I’d known what I know now about standards committees and bloated bureaucracies—and we have more subgroups now than we had members to start out with—I would have tried very hard to set up some kind of steering group so that people could make suggestions.
+
+[1:53:27] But we wouldn’t have a vote with, say, 500 people. We would have suggestions from a community of 500 people, and we would have maybe a group of five or six people with vast experience who cared for the whole language and made the decisions based on what was proposed. Something like that. But I did not have the experience or the knowledge to make such a suggestion. Notice that I did not mention tools.
+
+[1:54:03] C++ has a weakness in tools, and that was because it grew up early in a time with limited tools, limited compute power, and limited memory. One constraint on the exercise I give to the students for time machines is to try and make sure that it would be possible to follow your advice. If I just said I want this, then a lot of the things couldn’t be done until 20 years later and therefore would never have happened.
+
+[1:54:49] There’s a lot of languages designed to be perfect for the future computers and the future programmers. Most of them die because by the time ten years later they get the language, the world has changed.
+
+Ryan:
+
+[1:55:07] On that first one, I imagine that would have been really tough to do because the Bell Labs people were so senior.
+
+Bjarne:
+
+[1:55:15] I failed. I tried, but it’s obvious that you don’t want narrowing conversions. I even wrote a paper about how to get rid of them last year in a library. But it is a fundamental flaw in the type system of C++. It came because they needed, being people like Dennis Ritchie and the Unix team, to handle both integers and floating point. They didn’t think of explicit type conversion and thought explicit type conversion was too clunky.
+
+[1:55:59] They didn’t actually get casts until about five years after they got floating point integers. And of course, you have to be able to turn a floating point into an integer, right? So that you get implicit conversions whenever you can. Also, things like integers into characters are problematic. But since you are writing fundamental software, you didn’t want to write something complicated, and you didn’t want to have runtime checking.
+
+[1:56:33] You couldn’t afford that. It was established long before I came, and my attempts to deal with that failed.
+
+Ryan:
+
+[1:56:47] It sounds like it wasn’t for no reason. It saves resources, maybe, or is very limited.
+
+Bjarne:
+
+[1:56:53] They didn’t have the resources to deal with it. They built lint, the static checker, to deal with some of it and small machines. Another thing was that that group of programmers was significantly smarter and significantly more experienced than the average developer. Today we have the law of large numbers. I think the latest estimate I’ve seen on the number of software developers in the world is 47 million.
+
+[1:57:28] And at that time with Unix, the number of programmers was probably a few dozen. The ones that didn’t have a PhD from a good university were geniuses. It’s easier to get a PhD than to be a genius. They offered a different set of problems with a different set of machines and a different set of people. Boy, it was a pain and still is.
+
+Ryan:
+
+[1:58:02] Awesome. Well, thank you so much for your time, Bjarne Stroustrup. I really appreciate it.
+
+Bjarne:
+
+[1:58:05] Okay, thank you.

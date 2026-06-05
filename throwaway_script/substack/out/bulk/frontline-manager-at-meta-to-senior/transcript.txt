@@ -1,0 +1,421 @@
+Rong Yan went from a frontline manager at Meta to a Senior Director at Snapchat in 3 years. I interviewed him to ask what led to that rocketship career trajectory in management. We went over how he job hopped into a Director role and much more.
+
+Check out the episode wherever you get your podcasts: YouTube, Spotify, Apple Podcasts.
+
+
+## Timestamps
+
+
+00:46 - Joining Facebook
+
+03:06 - Job hopping to Director
+
+05:09 - Director skill gaps
+
+15:31 - Domain knowledge & management
+
+18:45 - LA vs SF cultures
+
+20:48 - Senior Director growth at Snapchat
+
+22:43 - Evan Spiegel stories
+
+24:59 - Recruitment at higher levels
+
+32:05 - Career planning in hindsight
+
+34:08 - Biggest career regret
+
+35:33 - How much of growth is luck?
+
+38:19 - Advice for younger self
+
+
+## Transcript
+
+
+
+## 00:00:46 — Joining Facebook
+
+
+Ryan:
+
+[00:00:46] I’d like to go into one of the first legs of your career, which is when you joined Facebook. What is the story behind you joining Facebook?
+
+Rong:
+
+[00:00:53] Yeah. So, I think that’s an interesting story. My career path is a little non-traditional. I was a PhD. I used to be in research for more than eight years. After I graduated, I spent five years in a PhD program, and then I spent another three years at IBM as a research scientist, mostly focused on computer vision and machine learning.
+
+[00:01:13] Then I started to realize that the industrial research model like IBM Research or Microsoft Research, with this kind of 50% mix between research and engineering, is probably not going to be sustainable. I have to choose either 100% on research or 100% on engineering. That was back in 2009 when I started to reflect on that.
+
+[00:01:38] Then I started to question myself, okay, which path should I go? There are three paths in front of me. One is that I can be a faculty in some school. In fact, I interviewed with some top schools at that time, or I can be a coin developer or coin trader in a financial engineering firm. I also had offers from some of the top quantitative trading firms, or I could go to a software engineering company like Facebook.
+
+[00:02:04] When I was thinking deeper, I wanted to be a software engineer. I think that’s the way to create things that will influence more people than just doing trading. The second thing is that I want to go to places that can make engineering the first-class citizens. In the financial world, engineering is always second class.
+
+[00:02:27] I can be a faculty, but being a faculty, I think the impact is smaller because you can only impact the scale of a school or maybe the community, but not the entire world. That was the year I made up my mind that I want to be in the software engineering world. If I want to be in the software engineering world, I want to join a company that is fast-growing and has the potential to influence a lot of people.
+
+[00:02:54] I think Facebook fits my criteria. That’s why I’m lucky enough to be part of Facebook during their fast-growing years, like in the early 2000s.
+
+
+## 00:03:06 — Job hopping to Director
+
+
+Ryan:
+
+[00:03:06] So I think at Facebook you transitioned into management, and the things in your career that I’m most interested in are at the subsequent two companies, Square and Snapchat. Your career had explosive growth because at Square I saw you were there for a little over a year and you went from a frontline manager to a director.
+
+[00:03:30] Your team was around 40 plus engineers. I’m kind of curious to dig into how you got that opportunity and how that growth came.
+
+Rong:
+
+[00:03:40] Yeah, I’ll be very transparent here. In fact, when I joined Square, I was taking a director offer to join Square.
+
+Ryan:
+
+[00:03:46] Oh, okay. So you signed up with a team that was already at director size.
+
+Rong:
+
+[00:03:49] Exactly. Yeah. Of course, Square is a smaller company, so that’s why they’re willing to give me the opportunity to perform at a director level. After I joined the company, when I started the team, it was about 25 people. I grew the team to over 50 people in a year before I left the company.
+
+[00:04:09] I spent a lot of time growing the machine learning teams and data science infrastructure teams at Square. I think it’s actually a very helpful exercise. One lesson I learned is that my transition from manager to director taught me a lot.
+
+[00:04:34] I started to learn about the difference between line managers and directors and why they call it directors. Director is about directing instead of managing. It really opened my mind about the right way to manage managers instead of managing individual contributors. You need to use a completely different philosophy to do that.
+
+[00:05:00] It took me some time to adjust, but after this exercise, I think I’ve become a better manager at a different level.
+
+
+## 00:05:09 — Director skill gaps
+
+
+Ryan:
+
+[00:05:09] Yeah. I’m curious because your career grew so quickly that I wonder if there were any skill gaps. You went from a frontline manager to a director.
+
+[00:05:20] What were the biggest gaps that you saw?
+
+Rong:
+
+[00:05:23] Yep. There’s a lot of gaps, but the biggest gap I thought was about directing. When I first stepped into the director role, I didn’t understand the difference between director and manager. When I started to practice it, I realized that managing managers requires a different set of skills. Typically, line managers are the ones that know the details the best.
+
+[00:05:49] Unlike my Facebook experience, I grew from IC to manager, so I was the one in the team who knew most of the details. I could continue to use that as the anchor point to manage other people because most of the other people in my team joined after me. I was the senior person in the room.
+
+[00:06:10] But when you go to a new environment, you become the more junior person in the company, yet you are leading more senior people who know more details than you. The interesting part is figuring out how to provide value to those people as a director.
+
+[00:06:34] I don’t think I did well in the first half a year. If I don’t do well, they may start to feel like, okay, why do I need this layer at all? I’m not adding any value to their daily life. That was the time I started to reflect on becoming a middle layer between them and the higher-level executives. What value should I bring to the organization?
+
+[00:07:06] I think what you end up landing on is about high-level thinking regarding strategic directions, helping to collect resources across different departments, and solving the most difficult problems for the organization. It’s all about those kinds of directions, and that’s why it speaks to the difference between directing and managing.
+
+[00:07:36] It’s no longer simply about managing people; it’s about directing the organization towards better positions in the future. It takes time to understand it.
+
+Ryan:
+
+[00:07:54] So the thing that took you from underperforming initially to fitting into the director role was you stepped away from directly managing people and thought more strategically about the group you were leading.
+
+Rong:
+
+[00:08:10] Yep. That’s totally the case. I also put more thought into what your direct reports are looking for from you. There’s definitely a reason why the original leader chose not to promote any of the existing leaders into my role. Instead, they chose to hire another person into that role. There must be a reason behind that, indicating an area for improvement for them. As a leader, I needed to make it clear and understand what I could do to help them grow from their current levels to the next level.
+
+[00:08:50] What’s the missing pieces? What else can I help them with? When I started to understand that, it goes back to my analogy of comparing management to psychological doctors. You start to understand what they are looking for, and then you align your work towards that.
+
+[00:09:12] Once you start to do that, you begin to gain more respect from those people because they understand you are here to help them grow to the next level. That’s a turning point for my director career.
+
+Ryan:
+
+[00:09:25] I can imagine that there’s a psychological effect here. If someone gets hired a level above you, maybe these people were hoping for that. Did you deal with any incidents like that, and how do you handle that kind of situation?
+
+Rong:
+
+[00:09:41] So first, I definitely dealt with that. Because it’s human nature. Everyone wants to get promoted and everyone questions why they are not the one being promoted. The way to handle that is to help them understand that my coming in is actually a much better situation for them in terms of their career instead of a negative.
+
+[00:10:10] In that case, you need to find common ground between you and your direct report, so you are not a blocker for their career, but actually a promoter for their career. This is something I only realized half a year after I became the director, to be honest. After I did that, I think I’m doing much better in my following career.
+
+[00:10:32] Every single time I go to new places, the number one thing I do is build a trust layer. I recommend a book called The Five Dysfunctions of a Team. That book taught me a lot. One of the key narratives is that the most foundational layer for a successful team is trust; everything builds on top of trust. So the first thing I do is build trust relationships with those people. They need to trust me that I’m here to help them. Then I need to start executing a few things to make them understand that. You also need to help them unblock some of the things they can’t unblock themselves.
+
+[00:11:19] That shows the value of you being upper management to help your people. I think that becomes more and more important for building successful teams.
+
+Ryan:
+
+[00:11:30] You mentioned that you were hired as a director, which makes me think about ambitious managers considering how to grow. There’s the approach of staying somewhere to get promoted, and then there’s also job hopping.
+
+[00:11:48] Do you think that job hopping is the best way to jump up tiers as a manager?
+
+Rong:
+
+[00:11:57] I never thought about job hopping as the best way to jump up to management. In fact, even when I talk about Facebook, a lot of my OT members are already at a very high level. Some of my friends are already VPs of engineering at Facebook, so I don’t think job hopping is always the only way or the right way to do it.
+
+[00:12:20] I can speak to why I choose to do that. My philosophy is about a North Star. I always have a North Star goal in my mind: I want to become a CTO at some point for an AI company. Even after I got my PhD in machine learning, I imagined that AI could become a business by itself.
+
+[00:12:52] But when I graduated, the world was not like that. AI was just an amplifier, a component in a bigger company that could make the business better. That’s interesting, but that’s not the most interesting part. When I made up my mind that this is my North Star goal, I wanted to make a plan out of it.
+
+[00:13:16] My plan is that if I want to become a CTO, I have a lot of weak links, especially coming from my research career. I know there’s a gap between being a research scientist and being a CTO. I recognize my gaps: not understanding the industry, how it operates, not understanding infrastructure and backend, not understanding frontend, products, and many other things.
+
+[00:13:46] I need to choose my career to help me fill those gaps step by step. Before I joined Snapchat, I was always in data and machine learning. All my positions were related to data and machine learning. When I joined Snapchat, there were two options in front of me.
+
+[00:14:04] Either I could become the director of data or the director of camera, which is the first page of Snapchat. I intentionally chose to become the director of camera, and I needed to learn about iOS and Android programming from scratch. I literally spent two months learning about iOS programming.
+
+[00:14:23] I think this is a very unconventional choice because I believe most people would choose the director of data because that’s the most comfortable selection. But my North Star is to become a CTO. To do that, I need to understand product, work with product managers and product designers.
+
+[00:14:44] If you follow a traditional career progression within a company, it’s hard to jump from a backend team to a more product-facing team. I saw this as a great opportunity to challenge myself and learn something different.
+
+[00:15:02] I’m glad I made that choice. The first two years at Snapchat were probably one of the happiest periods of my career because I really enjoyed that time. I was learning new things and developing my knowledge base every single day. That’s the reason I chose different paths at different stages of my career.
+
+
+## 00:15:31 — Domain knowledge & management
+
+
+Ryan:
+
+[00:15:31] You worked in very different domains as an engineering leader, and I was curious how much the details of the teams you manage matter.
+
+Rong:
+
+[00:15:44] A very critical cultural philosophy I learned from Facebook is that everyone who works in engineering needs to be technical. I remember when Facebook had a six-week bootcamp process. I don’t know whether they still have it, but back then, everyone needed to go through this bootcamp before they could choose their teams.
+
+[00:16:04] I remember a VP-level hire sitting right next to me, doing the same things I was doing: finding bugs, fixing bugs, writing pull requests. She was doing that for six weeks. That shocked me because I came from IBM, where VPs never code anymore. They probably only write PPTs at the end.
+
+[00:16:23] This is something that was deeply ingrained in my heart: being technical and data-driven is critical for our success in the future. That’s also part of the reason I love to get into details these days.
+
+[00:16:45] I still write code and review code. I write at least two or three paragraphs every single week. I’m not really good at speaking up if I don’t know the details. I want to make sure I understand the details so that I know I’m not making things up and can make the best strategic decisions for the teams.
+
+Ryan:
+
+[00:17:08] How do you find that balance though? Even as an IC, there is some balance where you start to offload lower leverage tasks to scale yourself and only take on the very critical things. I can’t even imagine, as a CTO or director, what detailed work is worth picking up.
+
+Rong:
+
+[00:17:30] I think the best way to scale this is to always go back to your first principles. At the beginning of every week, I ask myself what the top three things I need to achieve are. I only focus on those top three things. Everything else is less important. Sometimes one of those top three things will be development, getting into the details.
+
+[00:17:53] That’s a very critical part. I’m not saying that every week you need to do the same things, but you need to have themes for your work and understand how each theme will bring the best bang for the buck for your North Star goal.
+
+[00:18:14] You keep recalibrating yourself towards it. This is the best way to scale because everyone only has eight hours of working time, or maybe 10 or 12 hours every day. You can’t have more. The best people are not just spending more time; they’re really good at allocating their time.
+
+[00:18:38] They understand the priority of each direction and spend the right time on each priority.
+
+
+## 00:18:45 — LA vs SF cultures
+
+
+Ryan:
+
+[00:18:45] I understand that Snapchat is in Los Angeles, which is very different from Silicon Valley. Did you notice a big difference in the cultures in LA versus Silicon Valley?
+
+Rong:
+
+[00:18:58] For Snapchat, the culture is actually very similar to Bay Area companies. When I joined Snapchat, I found it surprisingly similar to Facebook’s culture.
+
+[00:19:09] It’s all about moving fast, breaking things, and getting things done. Done is better than perfect. All those things apply to both Facebook and Snapchat, partly because a lot of the early people at Snapchat came from the Bay Area or Seattle. That’s why Snapchat has built a culture very similar to that.
+
+[00:19:28] Broadly speaking, LA is a much more diverse space than Silicon Valley. I lived in the Bay Area for five or six years. Whenever I went to events or dinners, most of the topics people talked about were tech stocks and startups. The topics were almost always the same.
+
+[00:19:51] That brings the Bay Area its fame, but it also means a lot of people are working on the same things. In Los Angeles, you get a very different vibe and access to a lot of different kinds of people. For example, in my neighborhood, one of my neighbors is a medical doctor, and another neighbor is a cryptographer for Michael Jackson.
+
+[00:20:12] I could never access those kinds of people when I was back in San Francisco. It helps you broaden your views outside Silicon Valley. You start to understand that a lot of your users are not just techies or AI people. Instead, there are many common people who can still benefit from your product, helping you understand how your product should be built in those cases.
+
+
+## 00:20:48 — Senior Director growth at Snapchat
+
+
+Ryan:
+
+[00:20:48] I saw your team grow to the size of 250 engineers at Snapchat. What drove that growth?
+
+Rong:
+
+[00:20:54] I think we grew that organically in the sense that Snapchat became a bigger company over time. I remember when I first joined Snapchat, the whole company only had 100 people. I’m probably the 100th employee, and Snapchat grew to about 3000 employees in two years. That’s why my team size also grew together with that overall company growth at the same time.
+
+[00:21:20] Of course, there’s a lot of effort put into recruiting. Shout out to the recruiting teams and to our interviewers for making it happen. Overall, I think for a company that was worth tens of billions of dollars, that’s a reasonable size of a company to build at that time.
+
+[00:21:39] We learned a lot from that process, and this is what I always call a painful period for fast growth. You quickly realize the culture you want for a 100-person company is very different from the culture for a 3000-person company. You will see different cultures start to clash with each other, and in a good way.
+
+[00:22:05] Every single time you double your team, it’s almost like you’re building a new company. This is the period when leadership has to be very resilient and adaptive to the new environment. You cannot always hold onto one thing and say, “I’m not going to change that.”
+
+[00:22:24] In fact, that’s different because we are building a very new company now. We are a very different company. We need to use new ways to think about the problems. That also really helped me grow, seeing how you can grow a much smaller team to a much bigger team and what kind of processes need to go through to make it happen.
+
+
+## 00:22:43 — Evan Spiegel stories
+
+
+Ryan:
+
+[00:22:43] As a senior director at Snapchat, I imagine you might have had some proximity to Evan Spiegel.
+
+[00:22:48] Do you have any stories working with him and what made him effective? We do have direct access to Evan.
+
+Rong:
+
+[00:22:53] In fact, I worked pretty closely with Evan on a few projects. I really like Evan as a leader. The two things that strike me when you work with Evan are that he has a really high bar for performance, even at the pixel level, which reminds me of Steve Jobs.
+
+[00:23:18] For example, in our product review, if we show him a demo, he’ll actually point out pixel-level issues and ask us to fix them. That’s why sometimes I would say, “If we’re building a demo, we need to build an EverReady demo, not a normal demo.” That really helped him be very successful in building a great product.
+
+[00:23:43] That’s what he’s really good at. The second thing is that he really cares about personal connections, especially with the engineers. He keeps his promises and appreciates the value of engineering. One thing I remember very clearly is that he told one of our leaders that no matter what happens, you should never fire the first 15 engineers in the company because they are the founding members.
+
+[00:24:10] Snapchat started in a place called Blue House, which is a very small house. Because the company is growing and expanding quickly, they are no longer working in that small place. But after four years, I think in 2017, Evan bought the house back and started hosting board meetings there.
+
+[00:24:34] You can see he really cares about these personal relationships. That probably explains why he was trying to build Snapchat, which inherently is a tool that helps people build more intimate connections and create conversations with each other.
+
+[00:24:56] So yeah, he is a really good person for that.
+
+
+## 00:24:59 — Recruitment at higher levels
+
+
+Ryan:
+
+[00:24:59] After you left Snapchat, I saw that you went to a series of startups, and now that you explained your overarching North Star, everything makes sense. At this point, it looks like you’re starting to take on larger leadership roles at smaller companies.
+
+[00:25:16] I’m kind of curious, how does the recruiting work at these levels?
+
+Rong:
+
+[00:25:19] I have to be honest on this one, maybe bragging a little bit, but I never look for a new job myself. I never look for new jobs proactively. It all comes inbound, from either personal connections or recruiter outreach. In most cases, I prefer to go to places where I have personal connections because this is my fundamental belief.
+
+[00:25:38] My fundamental belief is that no matter where I go, I’m going to go through up cycles and down cycles. There will be periods when the company does well and periods when it does not. This is true for almost all companies I’ve been to, like Facebook, Square, and Snapchat.
+
+[00:25:56] I want to grow with the company during the up cycle, but I also want to grow with the company during the down cycle. To go through a down cycle, I want to work with people I like and think alike with so we can work together as a team.
+
+[00:26:27] That’s why I feel personal connection is a big part of my decisions. The reality is that it’s a good time for engineers; I keep getting recruiting emails almost every single week for different positions, but I ignore the majority of those emails. If something comes through personal connections, I evaluate it much more. I find that to be the more interesting part that can help me excel in the long term.
+
+[00:27:15] Overall, I think this speaks to the fact that building professional network connections early is a very useful exercise. You never know when these opportunities will come, but you want to capture them when they arrive.
+
+Ryan:
+
+[00:27:23] How do you compare the roles that come your way? When you’re in a well-established ladder, you’re a director, and a director role comes, you kind of decide. But let’s say you’re the CTO of a certain company and you want to consider another leadership role at a smaller company.
+
+[00:27:41] Is it the number of people working there? Is it valuations? How do you make those calls?
+
+Rong:
+
+[00:27:49] To be honest, I never take those two things into account: the valuations or the number of people reporting to me. I actually want fewer people to report to me right now. It’s all anchored against my North Star goal.
+
+[00:28:01] I want to understand if the choice actually helps me move closer to what I want to do. I feel like this is getting more and more important in my career. The one thing I gradually realized is that levels and titles are things the company gives you; they are not yours.
+
+[00:28:27] For example, my role model ten years ago was senior people in a company, like executive VPs or senior VPs. But I also realized that when they left the company, you would immediately hear much less about them externally. I’m not saying they’re not doing meaningful work, but you’re hearing less from them, and people still call them “ex-VP of something.”
+
+[00:28:55] I realized the title is about the company; it’s not about you. People are not going to say, “You did these things.” Instead, they would say, “The company did these things.” The more I think about it, the more I feel like this is not what actually interests me. I want people to remember me as someone who built a product that can make their lives better. I feel like that’s way more fulfilling for me.
+
+[00:29:34] That’s why a lot of my decisions end up anchoring towards that direction. It’s less about the number of people I manage; I don’t care. It’s less about the valuation of the company; I don’t care. I care more about whether I’m doing something impactful right now. In fact, I joked with my friends yesterday that I’m waiting for the time when two people can make a $1 billion company, and it’s probably going to come pretty soon.
+
+[00:30:00] You may not have any direct reports at that time, and that’s totally okay because I’m making a lot of impact. When we try to hire good talent, the number one thing I want to do is to be very honest and transparent with them about why they should join Hagen and why they should not join Hagen.
+
+[00:30:23] For anyone who joins Hagen, I want them to believe we can grow into a much bigger company. I also want them to believe there is only a 1% chance we can do that, but they have to believe in that because this will be a tough cycle, and it will not always be smooth. There will be a lot of bumps to get there.
+
+[00:30:49] I want people to feel excited about being part of it and to go through this kind of up and down to get there. I think my style is only good for that kind of people.
+
+Ryan:
+
+[00:31:02] It’s interesting that you want them to know that there’s a very low chance of success. Why would you sell that to the candidate?
+
+Rong:
+
+[00:31:11] I believe that’s the winning strategy. I always believe in the power of being honest and transparent. It’s much better for them to know that upfront and to intentionally make their choices to join us. That way, they won’t leave the company when they start to see some slight difficulties.
+
+[00:31:41] I also believe that when you go to a battlefield with soldiers, you want all soldiers to understand the difficulties they’re going to face, but they’re pumped for it. They’re not going to be scared by that. This is the kind of preparation we want to achieve.
+
+[00:31:57] In the end, I’m not going to hire the entire world of engineers, but I want to sift out 5% or 1% of people who truly want to go with us on this journey, and hopefully we can get that. We’ll do that with all the transparency we can provide.
+
+
+## 00:32:05 — Career planning in hindsight
+
+
+Ryan:
+
+[00:32:05] Coming to the end of the conversation, I want to go over some career reflections. One of the first things that was interesting to me about your career is you defined a North Star. You wanted to be a CTO at an AI-first company, and that kind of guided all of your decisions.
+
+[00:32:25] Whereas I see a lot of other people, their career strategy is to become as high as they can go or to make as much money as they can. What’s the pro and con of designing your career like you did as opposed to the external factors that a lot of people design their careers around?
+
+Rong:
+
+[00:32:46] First, there’s no right or wrong for any of the criteria you just mentioned.
+
+[00:32:51] In fact, I consider my career decision a little bit non-conventional. For example, most of my friends back in IBM Research would never choose to go to Facebook. At that time, it was a smaller company. The most common choices they would make are to go to a school to be faculty or go to another industrial research lab to be another research scientist.
+
+[00:33:14] I think they could do really well at that time. So that’s why I don’t think there’s a right or wrong in this case, but it’s really about what you as a person want to do. One thing I believe is that everyone is different and everyone is influenced by different things, and that searching process is very important. My criteria will be, let’s say 15 years later, if I choose to retire at that time.
+
+[00:33:43] If I look back at my career and feel regret for anything, if I feel regret for not doing these things, I’d rather do it now. I know that I will feel regret if I never work at an AI company and make that happen. So that’s why I would rather do it now in this moment.
+
+
+## 00:34:08 — Biggest career regret
+
+
+Ryan:
+
+[00:34:08] When it comes to regrets, is there anything that you wish you changed along your career path that others could learn from?
+
+Rong:
+
+[00:34:17] This is a very good question. There’s a lot of things I can change. I would say that my career progression is not as smooth as it could be.
+
+[00:34:26] If you ask me whether I would choose a PhD or not, if I knew I was going into software engineering, I probably wouldn’t choose that. But it doesn’t mean that I did not learn anything from my PhD. It is not the smoothest path.
+
+[00:34:45] There’s no magic wand to predict what’s going to happen in the next 10 years. To be honest, I cannot even predict what AI is going to do in the next three months. The most important thing I realize is to never take anything for granted.
+
+[00:35:05] Always learn to adapt, always be able to learn new knowledge as quickly as possible and adapt yourself. If you have a short-term setback, for example, while I’m transitioning from the research world into an engineering role or transitioning from a line manager to a director, don’t be disappointed.
+
+[00:35:27] This is just a moment for adjustment. Learn how to adjust, and you’ll be a better self afterward.
+
+
+## 00:35:33 — How much of growth is luck?
+
+
+Ryan:
+
+[00:35:33] When I look at your career, a lot of your growth took off when you got the Square Director offer and then also when you went to Snapchat.
+
+[00:35:47] Snapchat grew a ton, and some of that growth is due to opportunity. It seems Snapchat could have also gone down, but you had the right situation and the right market for your career growth at that time. I’m curious how much of manager career growth you see as situational and how much of it is something you can control by making the right decisions?
+
+Rong:
+
+[00:36:19] The more I progress in my career, the more I realize I cannot control too many things, particularly for manager positions because those positions are heavily constrained by organizational structure and needs. These relate to overall company strategies, not just to yourself.
+
+[00:36:39] The only thing you can do is to do your best in the positions you have, and everything else will be lagging indicators. The happiest time in my career is when I started to realize that you shouldn’t aim for promotions. Don’t make promotions the objective of your work.
+
+[00:37:04] If you start to do that, you’re going to feel really painful. I sometimes see people I mentor looking at every single bullet point of the next level, checking if they meet the criteria, and then asking managers when they can get the next promotion.
+
+[00:37:26] That’s very wrong. When you get into that mindset, you start counting your happiness or career growth towards something you don’t have full control over. In fact, think about things reversely: control the things you can control, which is making an impact in your current position.
+
+[00:37:46] Drive your career towards a position that you love in the long term, and don’t make yourself feel regretful. That’s what you can control. Everything else will be lagging indicators. If you’re lucky, you get the promotions. If you’re not lucky, don’t worry about it.
+
+[00:38:04] Sometimes something will come afterward. You can even find your own company at some point and maybe even be richer at that time. Always focus on things you can control. That’s how you can become happier in your career.
+
+
+## 00:38:19 — Advice for younger self
+
+
+Ryan:
+
+[00:38:19] The last question I’d like to ask is, if you could give yourself some advice when you graduated from the PhD program, knowing everything you know in your career, what advice would you give yourself?
+
+Rong:
+
+[00:38:32] You don’t need to always follow conventional wisdom. Everyone is unique and can choose the path they want. As another anecdotal example, before I chose CMU as a school, I had a few other offers like Princeton and Cornell. My dad literally asked me why I wasn’t going to Princeton because it was a much more well-known school back in China.
+
+[00:38:56] I did not listen to his advice, and I think it was the right call because CMU is a much better place for computer science. But that’s conventional wisdom; you don’t need to always follow it.
+
+[00:39:22] There’s almost no one in the research community who would consider joining a small company like Facebook. Fair was created back in 2014, but five years earlier, it was very difficult for researchers to reset their careers and join a software engineering company like that.
+
+[00:39:50] I wanted to try something new, and once I knew my North Star, I applied the strategies behind that and moved towards it. I think this is a more difficult path, to be honest. It’s less comfortable, but I believe that only people who can think differently early can see new opportunities that no one else can see. That will increase your chances of winning the game in the end.
+
+Ryan:
+
+[00:40:07] Thank you so much, Rong, for your time.
+
+[00:40:10] I really appreciate you sharing your career story with everyone. Now, if you want, maybe you could talk about HeyGen and why it’s a good place to work. I think there are a lot of software engineers in the audience that might be interested.
+
+Rong:
+
+[00:40:24] Totally. HeyGen is an all-in-one video generation platform.
+
+[00:40:29] Our idea is very simple. We want everyone to be able to access video generation and visual storytelling. We have what I would consider a top-tier technical stack on human-centric video generation, and we can build the best hyper-realistic avatars for people. Compared with many other video generation platforms, we differentiate on quality, consistency, and controllability.
+
+[00:40:53] Most other platforms focus on creative professionals like filmmakers and Hollywood. We want to focus on content professionals like marketers, salespersons, and everyday corporate people. We want to enable not just Hollywood people to make videos; we want to enable everyone to make videos in any source, in any language, at all times.
+
+[00:41:15] My dream is simple: I want to make cameras obsolete. I want to make storytelling accessible to everyone without a camera. That’s what we are hoping for.
+
+Ryan:
+
+[00:41:37] Maybe one day I won’t need to be in front of the camera for the podcast. I can just give a script to one of your models.
+
+Rong:
+
+[00:41:45] I’m literally thinking about the same thing. Maybe in the future, we can have a conversation without talking to each other. We can finish our podcasting that way.

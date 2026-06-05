@@ -7,6 +7,7 @@ Usage:
     DATABASE_URL=... uv run python throwaway_script/absorb_regen_output.py \
         --input /tmp/regen_output_FULL.jsonl [--limit 5] [--dry-run]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -61,7 +62,9 @@ def main() -> None:
                 logger.warning(f"{aid}: no fields to update")
                 continue
             if args.dry_run:
-                logger.info(f"[dry-run] would update {aid} fields={list(kwargs)} summary_chars={len(kwargs.get('summary', ''))}")
+                logger.info(
+                    f"[dry-run] would update {aid} fields={list(kwargs)} summary_chars={len(kwargs.get('summary', ''))}"
+                )
             else:
                 batch.save_paper(aid, **kwargs)
                 n_updated += 1

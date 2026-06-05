@@ -1,0 +1,416 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/the-only-three-classes-that-mattered",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 108729166,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-03-17T13:01:47.041Z",
+  "updated_at": "2023-05-14T05:43:04.206Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "the-only-three-classes-that-mattered",
+  "social_title": null,
+  "subtitle": "",
+  "teaser_post_eligible": true,
+  "title": "The Only Three Classes That Mattered From My College Degree",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 0,
+  "reactions": {
+    "❤": 22
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "3-mistakes-i-made-as-an-engineer",
+  "next_post_slug": "why-engineers-need-to-write",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!Fj3V!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F75e59bcc-e602-4c5b-b18c-be6738318473_5915x3943.jpeg",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Only 3 of the 56 classes I took at UCLA matter in my daily software engineering work. Any engineer would agree that those three courses are worth their weight in gold.",
+  "body_html": "<p>Only 3 of the 56 classes I took at UCLA matter in my daily software engineering work. Any engineer would agree that those three courses are worth their weight in gold.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!Fj3V!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F75e59bcc-e602-4c5b-b18c-be6738318473_5915x3943.jpeg\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!Fj3V!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F75e59bcc-e602-4c5b-b18c-be6738318473_5915x3943.jpeg 424w, https://substackcdn.com/image/fetch/$s_!Fj3V!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F75e59bcc-e602-4c5b-b18c-be6738318473_5915x3943.jpeg 848w, https://substackcdn.com/image/fetch/$s_!Fj3V!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F75e59bcc-e602-4c5b-b18c-be6738318473_5915x3943.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!Fj3V!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F75e59bcc-e602-4c5b-b18c-be6738318473_5915x3943.jpeg 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!Fj3V!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F75e59bcc-e602-4c5b-b18c-be6738318473_5915x3943.jpeg\" width=\"1456\" height=\"971\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/75e59bcc-e602-4c5b-b18c-be6738318473_5915x3943.jpeg&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:971,&quot;width&quot;:1456,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:14887404,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/jpeg&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!Fj3V!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F75e59bcc-e602-4c5b-b18c-be6738318473_5915x3943.jpeg 424w, https://substackcdn.com/image/fetch/$s_!Fj3V!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F75e59bcc-e602-4c5b-b18c-be6738318473_5915x3943.jpeg 848w, https://substackcdn.com/image/fetch/$s_!Fj3V!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F75e59bcc-e602-4c5b-b18c-be6738318473_5915x3943.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!Fj3V!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F75e59bcc-e602-4c5b-b18c-be6738318473_5915x3943.jpeg 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><h3>All You Need To Pass Any FAANG Interview</h3><p>Without a doubt, the two most important UCLA CS courses are CS31 &amp; CS32. These classes are how engineering students learn to code. You can tell from looking at each syllabus how valuable these classes are:</p><ul><li><p><a href=\"https://web.cs.ucla.edu/classes/spring22/cs31/syllabus.html\">CS31 Syllabus</a> → The basics of how to code</p></li><li><p><a href=\"http://web.cs.ucla.edu/classes/winter23/cs32/\">CS32 Syllabus</a> → Object oriented programming and data structures</p></li></ul><p>My high school didn’t have any programming classes, so I didn’t even know what CS was until I took CS31. Although the initial programs don’t resemble industry work, CS31 lays the foundation. Building on that, CS32’s object oriented programming and data structures cover most of the programming I do.</p><p>Also, these classes teach you everything you need to pass FAANG interviews. While landing these jobs requires a lot of preparation (a topic for a future post), these courses provide the basics you need to tackle any interview question.</p><p>These classes taught us how to code but didn’t teach us how to be software engineers. We close that gap with one other class.</p><h3>Where Programmers Become Engineers</h3><p>UCLA has a notorious class called <a href=\"https://web.cs.ucla.edu/classes/fall22/cs35L/syllabus.html\">CS35L</a>, which is a weekly series of time-consuming labs. This class, although painful, is what creates software engineers.</p><p>In it, we learned how to use the command line (e.g. shell commands, scripting) and change management (e.g. Git), which is core to writing code in a collaborative professional environment. Lastly, we learned how to use basic software debugging tools. I’ve always loved using debuggers rather than putting print statements everywhere because of how convenient it is to interact with the runtime of a live program. Now, I use these skills so often at work that they’ve become second nature.</p><p>Even though the class was a ton of work, it had the best late policy. Assignments “N” days late would lose 2^(N-1) points. This had a nice effect of being forgiving for slight delays but brutal for anything more than a few days late.</p><div><hr></div><p>There are a few other classes that don’t matter nearly as much but are worth an honorable mention:</p><ul><li><p>Algorithms (CS180) - Taught me how to do Leetcode hard difficulty questions</p></li><li><p>Operating Systems (CS111) - Taught me how computers work</p></li><li><p>Databases (CS143) - Was a nice crash course on SQL</p></li></ul><p>If there’s one thing I’d change about my engineering education, it’s that <strong>I would’ve done more practical work (open source &amp; projects) rather than spend all my time on my theoretical coursework</strong>. Over to you: What classes do you feel mattered from your college education and why?</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 2500+ software engineers who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p>Thanks for reading,<br><em>Ryan Peterman</em></p><p></p>",
+  "truncated_body_text": "Only 3 of the 56 classes I took at UCLA matter in my daily software engineering work. Any engineer would agree that those three courses are worth their weight in gold.",
+  "wordcount": 470,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "ec92ce68-e684-456e-aea6-c65e7264b3bb",
+      "publication_id": 1340878,
+      "name": "College",
+      "slug": "college",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        52,
+        134,
+        208
+      ],
+      "population": 503
+    },
+    "DarkVibrant": {
+      "rgb": [
+        116,
+        100,
+        15
+      ],
+      "population": 65
+    },
+    "LightVibrant": {
+      "rgb": [
+        237,
+        181,
+        139
+      ],
+      "population": 26
+    },
+    "Muted": {
+      "rgb": [
+        155,
+        166,
+        86
+      ],
+      "population": 12
+    },
+    "DarkMuted": {
+      "rgb": [
+        45,
+        69,
+        82
+      ],
+      "population": 15
+    },
+    "LightMuted": {
+      "rgb": [
+        218,
+        196,
+        174
+      ],
+      "population": 337
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 22,
+  "comment_count": 13,
+  "child_comment_count": 7,
+  "audio_items": [
+    {
+      "post_id": 108729166,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/108729166/tts/4ae96f66-e239-4433-8c97-7cabb512c297/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 22280600,
+      "body": "No class I took at any level of education has had more of a direct effect on my success than middle-school typing. Being able to touch type quickly and accurately is a force multiplier across multiple dimensions.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "No class I took at any level of education has had more of a direct effect on my success than middle-school typing. Being able to touch type quickly and accurately is a force multiplier across multiple dimensions."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 108729166,
+      "user_id": 44052024,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-08-13T00:10:38.952Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 1,
+      "name": "Jud",
+      "photo_url": null,
+      "handle": null,
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "44052024-jud",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    },
+    {
+      "id": 13784265,
+      "body": "I disagree that only three classes mattered. It simply may be the others matter in ways in which you are unaware. This article touches on some of those details: https://www.pearlleff.com/the-value-of-an-undergraduate-degree",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I disagree that only three classes mattered. It simply may be the others matter in ways in which you are unaware. This article touches on some of those details: https://www.pearlleff.com/the-value-of-an-undergraduate-degree"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 108729166,
+      "user_id": 16149421,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-03-20T15:57:58.488Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Daniel",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/8af5dcfe-ceca-4723-aea3-ad9b11f7b391_144x144.png",
+      "handle": "daniel573335",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "daniel573335",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "2 replies by Ryan Peterman and others"
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+Meta hired me as a new grad even though I had already worked at Amazon for 8 months. This made me hungry to grow since I felt behind.
+
+When I learned about Meta’s rating system, I became even hungrier. The top rating (“Redefines Expectations”) felt like something worth chasing after. This made me want to focus all my energy on getting high ratings.
+
+One day, my manager explained something unintuitive to me that changed the way I structured my career. He told me that high ratings wouldn’t necessarily help me grow.
+
+
+## Ratings vs Promotions
+
+
+Ratings tell you how much impact you had compared to what is expected for your level. If you get lucky or work a ton of hours, even a junior engineer can have more impact than a senior engineer. That alone won’t help you grow.
+
+For promotion, you need to learn the “behaviors” of the next level. Without them, there’s a risk that you’d get promoted too early and have trouble meeting expectations.
+
+Here’s an example where high ratings wouldn’t get you promoted. Imagine you’re a junior engineer who works an obscene amount. You land three times as many features as others. You’re going to get a great rating, but you might not have learned any new skills.
+
+What you’ve shown is that you’re a strong junior engineer, but it’s not clear that you could sustain what is expected at the next level. If you didn’t work as much, then your raw output wouldn’t make up for gaps in your ability to lead others for instance.
+
+
+## Behaviors > Ratings
+
+
+Getting great ratings always feels good, but focusing on the behaviors of the next level is much more worthwhile. There are a few reasons for this:
+
+  - You can take behaviors with you - If you learn the behaviors of a Senior Engineer, those will help you wherever you go
+
+You can take behaviors with you - If you learn the behaviors of a Senior Engineer, those will help you wherever you go
+
+  - Behaviors are sustainable, ratings are a grind - The highest ratings require outsized impact which is often a ton of work. Behaviors on the other hand help you have more impact with the same amount of time
+
+Behaviors are sustainable, ratings are a grind - The highest ratings require outsized impact which is often a ton of work. Behaviors on the other hand help you have more impact with the same amount of time
+
+  - Promotions pay much more than ratings do - Example Meta pay from levels.fyi:IC4 → IC5 Promotion = ~$133k per year pay increaseRedefines (3x bonus) @ IC4 = ~$75k one-time bonus Your refreshers (yearly stock grant) will be a little bigger too in (b), but promo pay should still be more
+
+Promotions pay much more than ratings do - Example Meta pay from levels.fyi:
+
+  - IC4 → IC5 Promotion = ~$133k per year pay increase
+
+IC4 → IC5 Promotion = ~$133k per year pay increase
+
+  - Redefines (3x bonus) @ IC4 = ~$75k one-time bonus
+
+Redefines (3x bonus) @ IC4 = ~$75k one-time bonus
+
+  - Your refreshers (yearly stock grant) will be a little bigger too in (b), but promo pay should still be more
+
+Your refreshers (yearly stock grant) will be a little bigger too in (b), but promo pay should still be more
+
+  - [Personal opinion] Larger scope is more satisfying - Grinding out tons of work within your level gets repetitive
+
+[Personal opinion] Larger scope is more satisfying - Grinding out tons of work within your level gets repetitive
+
+Focus your career conversations with your manager on learning next-level behaviors. Don’t worry about ratings so long as you’re on track for meeting expectations at your level. In practice, next-level behaviors often lead to solid ratings anyway.
+
+Thanks for reading,
+Ryan Peterman

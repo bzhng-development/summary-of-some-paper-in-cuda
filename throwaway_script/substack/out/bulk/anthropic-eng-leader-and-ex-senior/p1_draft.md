@@ -1,0 +1,61 @@
+Here are the takeaways from this Fiona Fung interview (Anthropic Eng Leader supporting Claude Code, ex-Senior Director at Meta, originally spent 11.5 years at Microsoft shipping TypeScript 1.0):
+
+**Joining Facebook Marketplace (2015) — mission over comfort**
+
+After nearly twelve years at Microsoft, Fiona left for Facebook in 2015, but only once she'd fulfilled her commitment to ship TypeScript 1.0. Her first manager at Facebook, a former Visual Studio colleague, reached out in late 2014 about an idea: people were already buying and selling in Facebook Groups, and they wanted to build a product around it. Three convictions pulled her in. First, **C2C commerce as economic access**: "We're very fortunate in tech; we can afford most things new… Most of the world doesn't like that. A difference of $5 or $10 can be the difference of can I afford it or can I not?" Second, an environmentalist impulse—giving goods a second, third, or fourth life. Third, supporting small businesses: a platform where someone could "kickstart a business without first having to get a brick-and-mortar store." The other draw was humility: after 11.5 years in the Microsoft stack, "if you take me outside of that bubble, there were so many things I didn't know." She wanted to learn to be an effective engineer outside the "safe cocoon."
+
+**Microsoft vs. Facebook culture — speed and the "nothing is somebody else's problem" poster**
+
+The contrast was stark. At Facebook, sprints lasted a week; at Visual Studio, four weeks had already felt fast. "There used to be this poster on the wall that said **nothing at Facebook is somebody else's problem**, and I really loved that culture. No matter your role, if there was a problem, everybody leaned in to help." Facebook also felt much smaller then. Shifting from the deliberate, milestone-driven cadence of boxed software to weekly web updates was a gear change, and the collective ownership ethos became a through-line in how she thought about teams afterward.
+
+**The Marketplace war room — when impact hits team health**
+
+Facebook Marketplace went through lockdowns—what Meta sometimes called war rooms—where the team focused on a single aggressive growth goal and "we weren't going to exit until we hit a certain growth number." What started as something they thought would take a couple of fixes lasted "at least two months," with a room in Menlo Park and a room in Seattle running 75 experiments at once. Her lesson: "looking back, that's probably one thing I wish I'd done better at." The retrospective fix is to **have deliberate trade-off discussions** with the team and leadership *before* the sprint begins—be realistic about how long it will take, discuss morale and team health upfront, and don't let the war drag on without periodic re-evaluation. "No one knew going into it how long it was going to take. That was definitely a lesson learned."
+
+**Managing managers for the first time — partnership and the "this is fine" dog**
+
+Her first experience as a manager of managers came supporting two different leaders, including the manager of the TypeScript team. She frames the shift as an explicit **partnership conversation**: "What are the things you're really strong at? What are the things I'm good at, and how do we divide and conquer?" Managers have skill sets beyond IC work, so the job is figuring out how the two of you complement each other. The other muscle is **trust but verify**—finding the balance between delegating and staying close enough to the project that you catch signals early. She asks for fast, transparent feedback in both directions. "That meme of the dog holding the coffee cup in a room on fire, 'This is fine,' is my nightmare. I remember once… I asked, 'How are things going?' They said, 'Oh, it's fine.' I thought, 'Oh my gosh, I'm not doing fine.'" If you can discuss what needs help, you can solve it; the "this is fine" default hides the problems.
+
+**Mentoring vs. coaching — let the mentee set the goal**
+
+Fiona draws a sharp distinction: **mentoring** is listening and providing helpful advice; **coaching** is acting as a mirror so the other person discovers answers within themselves. Her advice is to start every mentoring relationship with an explicit conversation: after three months, after six months, what does success look like to *them*? "The most effective mentoring relationships come from the goal being set by the mentee." For mentees looking for a relationship, set explicit goals for what you want to receive. The mentor brings life experience and resources, but the direction comes from the person being mentored.
+
+**One-on-ones — kill the status report**
+
+Fiona's rule: "Save status reporting for some asynchronous form"—at Anthropic, a Slack message or a living one-on-one document shared between both people. Reserve the actual face-to-face time for conversations you genuinely want to have: curiosity about something new, a chance to dig deeper into your work with your manager. "Save the one-on-one time for those live conversations." Ryan notes that many people still default to status-reporting, which she acknowledges is common but inefficient. The principle is to **keep synchronous time for things that benefit from live exchange** and push everything else async.
+
+**Why dogfooding matters — maker time for leaders**
+
+Dogfooding started in her first job: using Visual Studio to build Visual Studio. "I feel it really gave not only empathy for what our users are going through, but it really gives you a good pulse of the product." She carried it through Marketplace (hoarding items at home to list rather than donating them, to her husband's annoyance), VR Quest devices, Ray-Ban Stories during COVID, and now Claude Code. Leaders who don't code every day can "experience what it is that your team is working on. I like to think of it as my **maker time**." Reproducing a hard-to-reproduce floor-height bug on Horizon OS was her little way to contribute to quality. Ryan observes another effect: when an engineering leader reports a bug, it adds urgency—something everyone knew about suddenly gets treated as a severity issue. Fiona agrees: "Anytime I join a new team… I would get outreach from engineering saying, 'It's awesome that you're using our product and you care about what we do.'" It's also a rapport-builder.
+
+**How to dogfood without it becoming a chore**
+
+Her advice is to find a way to integrate it into your life that brings you joy. On VR, she used headsets for workouts (Supernatural) and for watching movies while knitting. "You always want to try to keep it fun and engaging." Another effective technique for leaders is **scheduled dogfooding sessions** with the team—on her last VR team, every Friday she, her PM partner Carmen, and design partner Andres would put on headsets and give fast feedback on features about to ship. It builds feedback velocity and makes dogfooding a shared team practice rather than a solo obligation.
+
+**Working well with product — divide and conquer, riff on the product**
+
+PMs repeatedly praised her as a partner. Her framework starts with alignment: as a leadership group, "what are we really setting out to do? And where do we each bring the strengths? There's always gonna be more work than people." Then an explicit "I got this, you got that" division of labor. The second ingredient loops back to dogfooding: PMs appreciated that she used the product heavily, so one-on-ones often became product riff sessions. Being able to have grounded, experiential product conversations—not just engineering conversations—resonated deeply with her PM partners.
+
+**Kindness as an engineering value**
+
+Fiona's badge post closed with "in a world where you can be anything, be kind." It crystallized during COVID, while she was working on Quest 2 and incubating Ray-Ban Stories. Her grandmother was in an assisted-living facility in Canada; FaceTime slots were scarce and unpredictable. One day a slot opened an hour before a one-on-one she was supposed to lead. She asked to cancel last-minute, apologetic, and the person on the other end immediately said yes. "For him, he probably didn't even think of that as an act of kindness. But for me, it had such amazing impact." The principle: "everybody's probably going through a lot in their lives. We never know what somebody is going through. And work, we're all trying to do our best and trying to do epic things, which are not gonna be easy." Kindness is not soft; it's a recognition that everyone is carrying something invisible, and a team that can acknowledge that runs better.
+
+**Joining Anthropic — mission density**
+
+She wasn't job hunting. She was happy on Horizon OS, passionate about VR, and the only thing that could pull her away was Anthropic. Using DevMate (reportedly powered by a Sonnet model) internally at Meta showed her firsthand how transformative AI already was: "It's not like a future thing, AI is already here." But the decisive pull was mission alignment. "Being in an environment where everybody is so mission-aligned and really all in to make sure we can build AI that benefits humanity with safety first, I was just really impressed with that mission-orientedness." It reminded her of why she joined Marketplace in 2015—the rare energy of a team where everyone is all-in on the same purpose. At Facebook, she'd watched culture change as the company grew; she used to tell bootcampers, "Culture's not just a poster on a wall. It's through your actions." At Anthropic, starting from day one, the safety-first mission was "on top of mind for everyone… Okay, yeah, this is a core part of the culture and DNA and not just a slogan."
+
+**The Claude Code speed loop**
+
+Two months into Anthropic, what stands out is the iteration velocity. She thought Marketplace moved fast; Claude Code feels even faster. The **rapid iteration loop**—idea, build, launch internally, get feedback from end users, launch publicly, repeat—is something she's explicitly thinking about preserving as the team grows. It's a structure she wants to protect rather than let scale erode.
+
+**Feedback that changed her career — read-only mode**
+
+The most pivotal feedback she ever received was feedback *about receiving feedback*. Early at Meta, when someone gave her constructive criticism, she'd instinctively go into debugging mode: ask questions, replay the situation, dissect it. Someone told her: when someone cares enough to come to you with feedback, it's already uncomfortable. In that first session, stay in **read-only mode**—just listen and learn. "You may have questions, but save them for another day because it's already uncomfortable for that person. You don't want anyone to ever feel like they have to justify the feedback." Give yourself time to sit with it and reflect. That reframing changed how she both receives and gives feedback.
+
+**Advice to her younger self — these are the good old days**
+
+She borrows a line from Michael Abrash: "These are the good old days." Her advice to her younger self is "enjoy the ride." You'll look back and realize everything happened so fast, and sometimes you don't pause to appreciate the moment while you're in it.
+
+**Mission vs. impact — have the honest conversation with yourself**
+
+At Facebook around 2017, bootcampers would ask which team would give them the most impact. She'd push back: "Hey, but what are you passionate about? You joined to do something 'cause there's something you're passionate about or some mission you believe in." Her counsel for navigating the passion-vs-impact trade-off is to first **have an honest conversation with yourself** about what's motivating and why. She uses a tool with every new report: "What's important to you? What's motivating to you and why?" There are no right or wrong answers—one person might want impact, another learning, another great people—but sharing that with your manager prevents both sides from guessing. If you can find a team with both, it's a no-brainer; if you have to choose, know your own priorities and make the decision consciously.

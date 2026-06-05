@@ -1,0 +1,42 @@
+👋 Hi, this is Ryan with another edition of my weekly newsletter. Each week, I write about software engineering, big tech/startups and career growth. Thank you for your continued readership, we crossed 5,000 readers this week 🙏 🎉
+
+The recent viral Threads launch got me thinking about how tech companies prepare for major events. For instance, how do you think Amazon prepares for a 50% traffic spike on Prime Day? There’s a lot of work that goes on behind the scenes to make sure these services can handle these traffic spikes. If everything goes well, users shouldn’t notice anything. Here’s what this hidden operational excellence looks like.
+
+
+## Conservative Projections
+
+
+First, we need to figure out how much traffic we’re expecting. Accurate predictions are tough; the goal here is to get a rough estimate. In general, we should overestimate how much traffic we expect to be better prepared.
+
+There are many ways to get these projections. One of the most common ways is to use past data along with your product’s current growth rate. In most cases, we’d have folks on the data science side come up with a sensible estimate.
+
+
+## Shadow Traffic Testing
+
+
+Now that we have an estimate, we can test how our system handles the load we’d expect. My favorite way to test this is to duplicate existing production traffic in a sandboxed environment. These “shadow” requests will exercise the system but will not write to any production databases. That way, we can monitor system health metrics like throughput, latency, and utilization under increased load. There are two reasons load testing like this works well:
+
+  - Easy Setup - We piggyback off existing scale and code paths. This makes it simple to set up, despite the complexity involved in confirming these “shadow requests” execute in a sandboxed environment.
+
+Easy Setup - We piggyback off existing scale and code paths. This makes it simple to set up, despite the complexity involved in confirming these “shadow requests” execute in a sandboxed environment.
+
+  - Simulates Production Inputs - Since we copy existing production traffic, we exercise a wide variety of inputs in proportions that match real traffic.
+
+Simulates Production Inputs - Since we copy existing production traffic, we exercise a wide variety of inputs in proportions that match real traffic.
+
+This “shadow traffic” testing is also called “replay traffic” testing by Netflix. See the section where they mention “load testing”; it’s a great read.
+
+When your system is at peak load, that’s the best opportunity to test any graceful degradation mechanisms. If your system has any knobs that can shed optional load, turn them on and monitor how much they help. You don’t want to wait until launch day to confirm these mitigation tactics work.
+
+
+## People Preparation
+
+
+The most underrated part of preparing for an important launch is making sure your team is ready. This means we should update runbooks and arrange oncall shifts in advance. Oncalls get fatigued if your system is under load into the night. Having shifts helps distribute the burden among the team.
+
+Lastly, you’ll want to set up some preemptive communication channels in case things go wrong. This is critical if your infrastructure spans many relevant oncalls. If something happens you don’t want people to waste time finding the right place to escalate in.
+
+Digital products can have viral growth moments (e.g. Threads). It’s important to capture that growth. Infrastructure preparation ensures that users get a reliable experience during business-critical launches. Otherwise, your product could end up like BeReal, which lost users due to lagging and crashes at its peak.
+
+Thanks for reading,
+Ryan Peterman

@@ -1,0 +1,277 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/faang-career-ladder-staff-l6-vs-senior",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 136620484,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-09-01T13:00:50.073Z",
+  "updated_at": "2023-09-01T13:02:00.901Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "faang-career-ladder-staff-l6-vs-senior",
+  "social_title": null,
+  "subtitle": "",
+  "teaser_post_eligible": true,
+  "title": "FAANG Career Ladder: Staff (L6) vs Senior Staff (L7)",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 2,
+  "reactions": {
+    "❤": 43
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "speedrunning-guide-senior-l5-staff",
+  "next_post_slug": "be-visible",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!PAQi!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe0c4bb53-b2dc-45d0-8e07-0ab60876eb4d_3026x805.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Some people say that Senior Staff Engineer (L7) promotions are easier to achieve than Staff Engineer (L6) promotions. It’s not easier but there is some truth to this. The behaviors needed for the L6 and L7+ levels are similar. In this article, I’ll explain the key differences and how L7+ engineers have so much more impact.",
+  "body_html": "<p>👋<em> Hi, this is&nbsp;<a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a>&nbsp;with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 14,000 readers this week </em>🙏<em> </em>🎉</p><p><em>This is the final article of the “FAANG Career Ladder” series, comparing IC levels from Junior (L3) to Principal (L8) at FAANG-like companies. L8 won’t get its own post since there is a lot of overlap with this one.</em></p><p><em>If you enjoy the content, drop a like. It helps me focus on the content you prefer. Here’s the L6 vs L7 article; enjoy!</em></p><div><hr></div><p>Some people say that Senior Staff Engineer (L7) promotions are easier to achieve than Staff Engineer (L6) promotions. It’s not easier but there is some truth in the rationale. The behaviors needed for the L6 and L7+ levels are similar. In this article, I’ll explain the key differences and how L7+ engineers have so much more impact.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!PAQi!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe0c4bb53-b2dc-45d0-8e07-0ab60876eb4d_3026x805.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!PAQi!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe0c4bb53-b2dc-45d0-8e07-0ab60876eb4d_3026x805.png 424w, https://substackcdn.com/image/fetch/$s_!PAQi!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe0c4bb53-b2dc-45d0-8e07-0ab60876eb4d_3026x805.png 848w, https://substackcdn.com/image/fetch/$s_!PAQi!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe0c4bb53-b2dc-45d0-8e07-0ab60876eb4d_3026x805.png 1272w, https://substackcdn.com/image/fetch/$s_!PAQi!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe0c4bb53-b2dc-45d0-8e07-0ab60876eb4d_3026x805.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!PAQi!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe0c4bb53-b2dc-45d0-8e07-0ab60876eb4d_3026x805.png\" width=\"1456\" height=\"387\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/e0c4bb53-b2dc-45d0-8e07-0ab60876eb4d_3026x805.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:387,&quot;width&quot;:1456,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:411666,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!PAQi!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe0c4bb53-b2dc-45d0-8e07-0ab60876eb4d_3026x805.png 424w, https://substackcdn.com/image/fetch/$s_!PAQi!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe0c4bb53-b2dc-45d0-8e07-0ab60876eb4d_3026x805.png 848w, https://substackcdn.com/image/fetch/$s_!PAQi!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe0c4bb53-b2dc-45d0-8e07-0ab60876eb4d_3026x805.png 1272w, https://substackcdn.com/image/fetch/$s_!PAQi!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe0c4bb53-b2dc-45d0-8e07-0ab60876eb4d_3026x805.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><h3>Similar Behaviors, Larger Scope</h3><p>Since the behaviors are similar, it’s worth taking a look at the <a href=\"https://www.developing.dev/p/faang-career-ladder-senior-l5-vs\">IC6 expectations here</a> to understand both levels. The main difference comes from the scope of their influence. To illustrate, here’s a few comparisons:</p><p><strong>Project Scope &amp; Engineering Quality - </strong>Both levels are expected to lead projects and shape engineering culture beyond their immediate team. The difference is that an L6 influences across teams (8+ eng), while an L7 does across broader engineering organizations (50+ eng).</p><p><strong>Complexity</strong> - Both levels are expected to solve problems that others engineers can’t. The difference is that L7 engineers should be even stronger engineers. L7 engineers solve problems that L6s have trouble with.</p><p><strong>Uplifting Others </strong>- Both levels are expected to grow other engineers. The difference is in how impactful the mentees are. L7 engineers grow L6 engineers which is high leverage since L6s already get a lot done.</p><p>This broader influence is the key to the significant difference in impact L7 engineers have. Both levels get work done in a similar way. L7s just have much more leverage.</p><h3>Engineering Archetypes</h3><p>When I first joined Facebook as an L3, stories about L7+ “engineering archetypes” inspired me. They made engineers at these levels sound like superheroes.</p><p>Archetypes are high-level descriptions of how engineers at this level have impact. They are tools for managers to discuss the ambiguous expectations of IC7+ engineers. An engineer can fit one or more of these archetypes and may switch between them depending on their projects. Knowing these archetypes helps to understand expectations at these levels.</p><p>There are several engineering archetype classifications in the industry. <a href=\"https://staffeng.com/guides/staff-archetypes/\">There’s a general set of archetypes here</a> that try to capture what is common among companies. I don’t like this classification as much since I notice clear gaps (e.g. “code machine” and “specialist” archetypes missing). I much prefer Meta’s which <span class=\"mention-wrap\" data-attrs=\"{&quot;name&quot;:&quot;Gergely Orosz&quot;,&quot;id&quot;:30107029,&quot;type&quot;:&quot;user&quot;,&quot;url&quot;:null,&quot;photo_url&quot;:&quot;https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fbucketeer-e05bbc84-baa3-437e-9518-adb32be77984.s3.amazonaws.com%2Fpublic%2Fimages%2F802a32bb-2048-428b-bdb5-d6acd1e2b2d5_48x48.png&quot;,&quot;uuid&quot;:&quot;11f71a1d-3f81-4680-8461-264c43d33f1e&quot;}\" data-component-name=\"MentionToDOM\"></span>  did a great job writing about <a href=\"https://newsletter.pragmaticengineer.com/p/facebook-2\">here</a>.</p><div><hr></div><p>IC7 engineers have the same behaviors that IC6 engineers do but with larger scope. You can apply this same thinking to understand what IC8+ engineer expectations are.</p><p>Big tech is one of the few places that allows for significant career growth without switching to management. Smaller companies don’t have as much business need for IC7+ engineers.</p><p>Management is a major option to consider in your career. Even if you aren’t close to making that decision you can plan ahead. I’ll write about that transition in a future post. Stay tuned!</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 14000+ software engineers from companies like Google, Meta, and Amazon who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 14,000 readers this week 🙏 🎉",
+  "wordcount": 584,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "b2c9552d-d53d-49a3-a154-bfba60c74c24",
+      "publication_id": 1340878,
+      "name": "FAANG Levels & Expectations",
+      "slug": "faang-career-ladder",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        21.7021276595745,
+        233.2978723404255,
+        108.51063829787246
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        11.285106382978734,
+        121.31489361702127,
+        56.425531914893675
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        212,
+        251,
+        228
+      ],
+      "population": 175
+    },
+    "Muted": {
+      "rgb": [
+        138,
+        144,
+        141
+      ],
+      "population": 145
+    },
+    "DarkMuted": {
+      "rgb": [
+        78,
+        84,
+        80
+      ],
+      "population": 173
+    },
+    "LightMuted": {
+      "rgb": [
+        171,
+        201,
+        182
+      ],
+      "population": 43
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 43,
+  "comment_count": 0,
+  "child_comment_count": 0,
+  "audio_items": [
+    {
+      "post_id": 136620484,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/136620484/tts/63181efc-ec7d-4489-8019-ac6e1437b8aa/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": []
+}

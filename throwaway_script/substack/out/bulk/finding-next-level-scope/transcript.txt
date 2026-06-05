@@ -1,0 +1,64 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 17,000 readers this week 🙏 🎉
+
+This week’s article is about how to find projects at the next level with concrete examples. If you find the content useful, drop a like. It helps me focus on the content you prefer.
+
+Delivering larger and larger scope projects is the key to growing as an engineer. Every promotion hinges on finding scope that fits the next level’s expectations. There are two ways of finding these opportunities:
+
+  - Someone hands you the opportunity - People tend to think only junior levels rely on getting projects this way, but not always. Imagine the problems your engineering director or CTO has on their plate. They often require massive projects to solve.
+
+Someone hands you the opportunity - People tend to think only junior levels rely on getting projects this way, but not always. Imagine the problems your engineering director or CTO has on their plate. They often require massive projects to solve.
+
+  - You create the opportunity for yourself - Your team’s systems are far from perfect. Finding improvements that fit expectations at the next level will get you promoted fast.
+
+You create the opportunity for yourself - Your team’s systems are far from perfect. Finding improvements that fit expectations at the next level will get you promoted fast.
+
+
+## How To Receive Scope
+
+
+The most straightforward way to find projects is to ask your management chain or tech lead. Engineering managers know the top problems their teams face. Also, your tech lead likely has problems that they don’t have time for which could be great opportunities for you.
+
+The less obvious way to receive projects is to increase the chance that someone comes to you. You can do this by building a track record and being known in a certain technical area. This played a large role in my promotions to Staff. Here are some concrete examples from my promotions:
+
+  - Promotion to Mid-Level (L4) → After finishing several features faster than expected, my tech lead asked me if I wanted to take on a larger project. That project was the main reason for my promotion.
+
+Promotion to Mid-Level (L4) → After finishing several features faster than expected, my tech lead asked me if I wanted to take on a larger project. That project was the main reason for my promotion.
+
+  - Promotion to Senior (L5) → After showing strong ownership over my team’s backend, my manager positioned me as the lead on a new initiative. This workstream gave me invaluable leadership experience and helped me build an L5 track record.
+
+Promotion to Senior (L5) → After showing strong ownership over my team’s backend, my manager positioned me as the lead on a new initiative. This workstream gave me invaluable leadership experience and helped me build an L5 track record.
+
+  - Promotion to Staff (L6) → I was known in my org for getting things done to the point where my Director knew my work. He handed me two major initiatives to lead. Although these weren’t the main reason I was promoted, they helped strengthen my packet.
+
+Promotion to Staff (L6) → I was known in my org for getting things done to the point where my Director knew my work. He handed me two major initiatives to lead. Although these weren’t the main reason I was promoted, they helped strengthen my packet.
+
+
+## How To Create Scope
+
+
+For growth to more senior levels, you’ll need to learn to create scope. Aside from being a baseline expectation, finding projects this way has a major benefit. No one needs to trust you with projects; you create them yourself. This drives much faster growth trajectories since building trust takes time. Here are two high-level approaches for creating scope:
+
+Leveraging domain expertise - Ideas for improvement flow naturally if you have a strong end-to-end understanding of the system. For instance, my experience in video processing taught me how these pipelines should be built. When I started digging into the ads video pipeline, I realized there were a ton of opportunities to improve it. This understanding turned into a large collaboration with the ads team. This is what got me promoted to Senior (L5).
+
+Discovering significant problems - Often in less mature areas, you will find major problems just by digging around. For me, the main project that got me promoted to Staff came this way. Video compute efficiency was a less mature space with lots of opportunities. When I dug around, I realized that we were running out of compute. Chasing down this problem turned out to be a massive initiative that led to huge savings for the company that even Zuck wrote about. This is why I was promoted quickly to Staff (L6).
+
+If you do this right, you’ll always have a few projects to choose from. Ask your manager or mentors for their take on where you should spend your time. Strategizing with my mentors helped me a lot in my growth to Staff. As another resource, you can take a look at the expectations for the level you’re looking to grow to here:
+
+  - Mid-level (L4) Expectations
+
+Mid-level (L4) Expectations
+
+  - Senior (L5) Expectations
+
+Senior (L5) Expectations
+
+  - Staff (L6) Expectations
+
+Staff (L6) Expectations
+
+  - Senior Staff (L7) Expectations
+
+Senior Staff (L7) Expectations
+
+Thanks for reading,
+Ryan Peterman

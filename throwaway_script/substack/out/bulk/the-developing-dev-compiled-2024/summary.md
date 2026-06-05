@@ -1,0 +1,27 @@
+<sup>Source: <https://www.developing.dev/p/the-developing-dev-compiled-2024></sup>
+
+Here are the takeaways from this Ryan Peterman compilation (a year-end retrospective and comprehensive content index for The Developing Dev, covering the journey to nearly 100,000 subscribers and 97 weekly posts):
+
+**The discipline of the weekly promise**
+
+Ryan Peterman frames the single accomplishment he is most proud of in 2024 not as a subscriber milestone, but as the unbroken chain of 51 weekly posts (97 total since inception). He describes staying up late most Thursday nights to finish, writing even while on vacation—this piece itself was drafted around 3 a.m. from Cancun. The core motivation is not financial ("I haven't made a dime off of writing this newsletter") but intrinsic: "I write it because I get to learn from others, explore interesting topics, and solidify what I've learned." The reason he never misses, however, is simpler and more structural: "I promised I’d write weekly when I started." That public commitment, more than any burst of inspiration, is what sustains the output. He does tease a possible change in cadence and explicitly asks for reader input, signaling that even disciplined systems get reevaluated.
+
+**Year-over-year growth and platform expansion**
+
+The numbers tell a steep growth curve. Subscribers more than doubled from 41,000 to 94,000 (closing in on 100,000), and annual page views roughly tripled from about one million to three million. Alongside the written newsletter, 2024 was the year Ryan launched a podcast, distributing it across YouTube, Spotify, and Apple Podcasts—a move he calls "better than I expected" and which he plans to double down on. The podcast impulse traces back to a formative experience at Meta, where he discovered internal career-path narratives written by the company's top engineers. He describes loving those stories and wants to surface something analogous for his audience: "You have no idea how good top engineer career stories can be." The written archive itself now contains 97 posts, meticulously organized into a reader-facing taxonomy.
+
+**How the content organizes itself: a self-serve index**
+
+Rather than a chronological archive, Ryan presents a curated index organized by the reader's goal, bucketed into ten numbered categories (0 through 9). Each category carries a stated intent—"I want to become better at writing," "I want to learn how promotions work," "I want to grow into a staff engineer"—and underneath sits a list of relevant articles, with a trophy emoji marking his personal recommendations. The categories ladder upward through career phases: writing and soft skills as foundations, then junior, mid-level, senior, staff, and staff-plus growth tracks, with separate branches for interviewing, learning from other engineers' experiences, and honing core engineering skills. Individual posts flagged with a medal icon include "Why Engineers Need To Write," "How To Onboard," "How Promotions and Ratings Work," "Speedrunning Guide: Junior to Mid-Level," "The Tech Lead's Playbook," "Optimizing for Opportunity," "Cracking the Coding Interview," and career-deep-dive guest features on Evan King and Raviraj Achar. A single post—on his WFH desk setup—sits outside the index as the sole outlier, as Ryan notes wryly that "all my writing fits into the above index except this post."
+
+**Forward bets on podcasting, video, product, and brand**
+
+Looking into 2025, Ryan outlines four initiatives. The podcast expansion is the most emphatic, positioned as an extension of his appetite for engineer career narratives sourced from Meta's internal archives. He also signals dabbling in video: "I’d like to make some videos since it'd be fun to learn and try to make something quality," and he draws a distinction between his predominantly educational content and "considering making some entertaining videos too." A passion project—a product he has been building quietly—is slated for a 2025 launch; he acknowledges the tension of having been "drowning in work and content" such that he hasn't shared much about ongoing product development, though he insists "we're making a lot of progress here even though I haven't shared much yet." Finally, a "branding refresh" is on the roadmap, motivated by a self-diagnosis that the current look—"just picked a font and color I liked without much thought"—is "hacky" and needs consistency.
+
+**A request for reader-shaped questions**
+
+The piece closes with a deliberate feedback loop. Ryan drops a link for readers to submit questions they want addressed in 2025 and frames it as a mechanism to ensure his output aligns with the problems his audience actually cares about most: "I will use these to make sure I answer the questions you care about most." The gesture echoes the discipline that built the newsletter: structure, listening, and a long horizon of consistent delivery.
+
+---
+
+The **weekly promise** that anchors his output is the same structural commitment that powers the index itself—a taxonomy designed not for browsing but for answering a specific, reader-supplied intent. That stance carries through to the 2025 bets: the podcast exists to surface career narratives on the model of Meta's internal posts; the reader-feedback loop ensures future content is "the questions you care about most." Across all of it runs Ryan's quiet insistence that consistency and structure beat inspiration—whether staying up until 3 a.m. in Cancun or planning a "branding refresh" to replace a look he now diagnoses as "hacky."

@@ -1,0 +1,19 @@
+Here are the takeaways from this Ryan Peterman interview (went from an 8% to 88% interview-to-offer success rate in one year):
+
+**Committing fully to Python**
+
+In college, Ryan became passionate about Python for its readability and intuitive syntax, using it for all his personal projects. But UCLA taught C++, so he lacked the confidence to use Python in high-stakes interviews. Post-college, he made the deliberate choice to commit to Python for every interview. The speed improvement was immediate—solutions got out faster and were easier for interviewers to follow. He illustrates this with ChatGPT-generated C++ and Python solutions to "Two Sum": the Python version is eight lines and "almost reads like English," while the C++ equivalent is nearly twice as long with extra syntax that "gets in the way." In a time-constrained interview, that syntactic overhead matters more than it seems—every line of boilerplate is stolen time.
+
+**Practice like it's game day**
+
+In grad school he did over 100 Leetcode questions but still struggled. The problem, he later realized, was a mismatch between how he practiced and how he was tested. His habit was to hit "submit" repeatedly and look up the solution after just a few minutes if stuck—a workflow that bears no resemblance to a real interview. The second time around, he introduced a strict **30-minute timer** for every question and graded himself on the percentage of problems he could solve correctly on the *first submission*. He only let himself submit code when genuinely confident it was right, and only looked at solutions after the timer expired. This forced him to rehearse the exact pressure and pacing of a live interview rather than treating Leetcode as an open-ended study session. The metric shift—from "did I eventually solve it" to "did I solve it cold, under time, first-try"—was the hinge.
+
+**Play the game like it's practice**
+
+A small logistical change had an outsized effect on his confidence: he split his job applications into **two waves**. The first wave targeted companies he'd be content with but weren't his top choice. Because the stakes felt lower, he wasn't afraid to fail, which paradoxically made him more confident. Combined with generally easier interview loops, he passed those first, and each pass further reinforced his confidence. After about a month of this, he moved on to the companies he was most excited about—Facebook, Google, Blend, Affirm, Riot Games, and several startups. By then he was "high on confidence and used to the motions of interviewing." Even though he really wanted those jobs, the anxiety was gone because he'd become desensitized to the process. This sequencing turns the interview gauntlet into deliberate exposure therapy: low-stakes reps first, dream jobs second.
+
+He closes with a pragmatic stance on Leetcode: "although people criticize Leetcode for not testing the skills we use on the job, it's here to stay." Rather than fight the system, he argues, focus your energy on getting good at it—doing so dramatically increases your odds. He recommends curated problem lists as a starting point and asks readers what has worked for them.
+
+---
+
+His entire turnaround hinges on a single insight: **alignment between practice and test conditions**. The **30-minute timer** enforced that alignment on a per-question level, and the **two-wave application strategy** extended it to the full interview season—treating early interviews as low-stakes scrimmages that built the muscle memory and confidence to perform when it counted. Both tactics reflect the same core playbook: close every gap between how you rehearse and how you'll be evaluated, and the anxiety takes care of itself.

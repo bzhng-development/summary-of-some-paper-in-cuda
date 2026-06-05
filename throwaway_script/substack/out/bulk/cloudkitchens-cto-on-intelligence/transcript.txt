@@ -1,0 +1,705 @@
+Brian Attwell grew to Senior Staff at Uber by age 25. After that he left Uber to join CloudKitchens (Travis Kalanick’s current startup) and quickly became the CTO after his team doubled in size every 6 months. I asked him about how he did it. He also had a bunch of interesting takes about big tech and stories about Travis Kalanick and Steve Jobs.
+
+Check out the episode wherever you get your podcasts: YouTube, Spotify, Apple Podcasts.
+
+
+## Timestamps
+
+
+00:01:26 - Growth to Senior Staff at Uber
+
+00:10:05 - Was it luck?
+
+00:11:45 - Interviewing for IQ
+
+00:18:02 - Intelligence and prioritization
+
+00:22:19 - How his team doubled every 6 months
+
+00:28:30 - Manager promos tied to scope
+
+00:39:13 - Amazon and Google brutal honesty
+
+00:43:39 - CloudKitchens behind the scenes
+
+00:50:24 - Biggest career regret
+
+00:54:17 - Travis Kalanick experiences
+
+00:56:01 - Most impactful advice received
+
+00:56:56 - Most impactful book for career
+
+00:57:53 - Advice for his younger self
+
+
+## Transcript
+
+
+
+## 00:01:26 — Growth to Senior Staff at Uber
+
+
+Ryan:
+
+[00:01:26] Your career grew really quickly to Senior Staff at Uber. I mean, you got there in less than four years after graduating college. And I kind of wanna go over the story of that. So what would you say are some of the top things and the highlights that led to your growth?
+
+Brian:
+
+[00:01:42] If I think about it, probably the things that really helped a lot is that fairly shortly after graduation, I went to Uber and early Uber was just a fantastic engineering firm. There are good people to learn from, they’re very meritocratic and they’re growing. So there’s lots of problems. You don’t have to be growing to have problems, but it is one way to have a lot of good problems to solve.
+
+[00:02:07] The other thing is that I just naturally care a lot about my team. You can’t succeed if you’re selfish in the long run. It doesn’t work out. It’s a team sport. Those kinds of things are just natural and I got for free, but the things that I intentionally did is that I cultivated this tolerance of extreme pain and pain tolerance early in your career.
+
+[00:02:35] A lot of this is just work ethic and if you plot an engineer’s career growth against how much work they do, it’s like a linear relationship. At least linear. It’s actually super linear for a lot of it because of the compounding effect of how much you work. This is especially true because managers will only give the really valuable work, the really strategic, the technical, the kind of things that help you with your career once you’ve already proven you’re good at it, and sometimes you just gotta go and make time to learn that yourself. So I do think that pushing really hard early on does have outsized returns. I actually don’t totally buy that that means you should stop after, ‘cause there’s always more levels you can grow. There are also levels that haven’t been invented yet, so you could do that. But certainly this is something that I thought about early on. When I joined Uber, I was very aware that I had more time than I’d ever have in my future and that if I was gonna invest in growing, this would be the easiest time to do it.
+
+Ryan:
+
+[00:03:41] It sounds like you grinded an obscene amount to get to where you are today or to kind of grow as much as you did. And I’m curious, looking back, was it worth it?
+
+Brian:
+
+[00:03:51] One time I was on my deathbed and the doctor told me that I was gonna die tomorrow, and I was sitting there thinking, damn, I’m gonna die. That sucks. I haven’t accomplished anything yet. There’s so much stuff professionally I wanna do. That expression of like, you’re never gonna think about wanting to spend more time in the office, your deathbed’s not true. I went back when they found out they messed up my medication. I worked harder than I ever, and yeah, I totally overdid it sometimes, but the times that I pushed really hard were fun. They were like being in a soccer game where you’re tied until the last minute and then you score or somebody else scores, your team wins. It was painful, but you look back on your head and you’re like, that was great.
+
+Ryan:
+
+[00:04:37] So when you were on your deathbed, you weren’t saying, oh, I have regrets that I didn’t travel more. Your regret was, I wish I worked harder.
+
+Brian:
+
+[00:04:51] Yeah, it actually was. Yeah. I was like, shit, I’m gonna die. I was really looking forward to building some cool stuff. I was really looking forward to that.
+
+[00:05:01] Then I got out and I was on an internship and I went back to work the next week and I just worked harder.
+
+Ryan:
+
+[00:05:08] So everyone has a breaking point. Obviously you can’t work 168 hours a week. Where is that breaking point for you and how do you know when you’re working too much?
+
+Brian:
+
+[00:05:19] I have an hours number in my head, but that’s less useful. The way that I know is if I start to get a little grumpy. If I work a few weeks without taking any day off, I’ll start to get a little bit grumpy, I’ll be less patient with people, and I’m in management, so I really have to be patient. When that starts to happen, usually my partner will tell me. I’ll be like, oh yeah, of course I haven’t taken a day off in weeks. This is me catching it earlier than when I was younger. One time at Uber, I was walking home and I collapsed on the side of the street. My chest was aching and I couldn’t move any part of my body for 15 minutes. I just watched people walk by me. In that moment I knew I should have cut back by 5%. I knew it, but ideally I would’ve known that a little sooner.
+
+Ryan:
+
+[00:06:17] Did you go to the doctor after that?
+
+Brian:
+
+[00:06:18] Yeah, I did and there was nothing. They were like, I dunno, you’re just too anxious, you’re working too much if you don’t take time off. Just like every moment of your waking day is trying to do really high-quality work. Your anxiety levels go up over time. It’s the same reason that professional athletes are really intense. They’re training all the time, but they are conscious about taking time off to let their body and mind regenerate.
+
+Ryan:
+
+[00:06:46] Are there any concrete stories you can tell me that illustrate how you grew as an engineer?
+
+Brian:
+
+[00:06:51] There was this guy called Yi Wang. We both joined the same team at Uber. It had been there for a few years before we joined. The reason for this team was to fix some of the maintainability issues that were happening in Mobile as the company hyper-scaled.
+
+[00:07:07] So we’re the most junior guys. Every day we overhear some kind of big debate on the team. Like we’d hear, “Hey, should we use RxJava streams admitted from this library? Would that make a lot of these issues go away, or should we use some other more conventional type of multi-thread work distribution system?
+
+[00:07:25] Should we do something else?” I overhear people use their experience to prune out the worst options. That was fairly easy. Picking the best option was a bit more subjective. They debated it, went back and forth. Eventually, they would disagree, commit, and move on with their lives.
+
+[00:07:44] Everybody on this team, other than you and I, leaves the office at 7PM. Yi and I work from 9AM to midnight. After I’m done doing a good day’s work, my usual kind of stuff, this day I went and built the prototype of the RxJava approach. I found eight representative examples that I’d seen in past issues and that I just read in postmortems.
+
+[00:08:08] I built compiling examples for them. I did the same thing for option B and option C. While I’m doing this, you did it on iOS, I did it on Android. We reviewed each other’s stuff, and then the next day everybody comes in. We show them what we’ve done, and they say, “Well, yeah, we thought option B was better, but you guys have done the work clearly. Option A is better. We can see that. Thank you.”
+
+[00:08:28] We do something like this every day, and at first our hit rate is not good. Uber would not have paid us to spend this time because we’re hunting around, trying to find some kind of unexpected, hidden, valuable truth, and most of the time we’re just hitting a knowledge ceiling we can’t get past.
+
+[00:08:54] Our intuition for where to hunt is bad, but after a few months, we’re getting better at it. A few months later, we’re now the guys who commit the most code on the team, and instead of overhearing things and then doing it after hours, people are now going, “Yeah, what should we do? I don’t know. Let’s involve Ian Al.”
+
+[00:09:10] A few months in, we have joined this team. We’re now the de facto tech leads, and we just keep outworking everybody around us. A few quarters go by, and now we’re the top three committers across the mobile organization at Uber. We’re also the guys that get pulled in for a lot of the gnarliest things across all of mobile.
+
+[00:09:34] At this point, promotions are inevitable, so they happen. I know that people listening to this may think this is extreme. I also worked the weekends, so this is like 90, a hundred hours a week, and it hurt. Physically, my body hurt and my brain hurt. I had a lot of headaches at first until I got used to it. But if you want to be senior staff at one of the world’s best tech companies by the time you’re 25, this is the only way to do it.
+
+
+## 00:10:05 — Was it luck?
+
+
+Ryan:
+
+[00:10:05] To someone who says your career growth was luck, and you were lucky to be where you were. What do you say to that?
+
+Brian:
+
+[00:10:12] Luck matters a lot and the things that happen infrequently, right? If you do actions every day, a hundred times a day, and you do those very well, it’s not really luck that those go well for you. But if you make a decision and you only make it every three years, then luck matters a lot there, like selecting which company you’re at.
+
+[00:10:32] So, yeah, I picked Uber for a reason, right? I was choosy in the company I picked, but I could have gone wrong. Once I was there, you know, there’s a lot of things that I’m doing myself, but I’m not trying to suggest that everything is solely based off of your own merit and that there’s always deterministic mapping between effort and outcomes.
+
+Ryan:
+
+[00:10:58] So you’re saying you increased your chances of luck by shooting so many shots?
+
+Brian:
+
+[00:11:02] Yeah. Well, I guess I’m saying that once you’re in the company, I think I was gonna do well, right? I mean, if you outwork everyone around you and you’re fairly smart and you’ve got a lot of the right mindsets, and it’s a culture of merit, then you’ll probably do well.
+
+[00:11:21] But what if I had joined a company that wasn’t like a merit-based company? That would’ve set me back. It would’ve taken me a while to figure that out. People don’t tend to job hop that well, and it doesn’t look that good when you do. So joining Uber, yeah, there’s a bit of luck there.
+
+Ryan:
+
+[00:11:37] You mentioned you were choosy in picking Uber. What did you see at the time that made you pick Uber and what signals are you looking for?
+
+
+## 00:11:45 — Interviewing for IQ
+
+
+Brian:
+
+[00:11:45] I think that I would spend, foremost it’s my first company, spend time sussing out the quality of the engineers at different companies and trying to figure out what is the process that they used to hire engineers.
+
+[00:11:59] ‘Cause that’s very indicative of the quality of the engineers that come in. Processes that hire strong engineers are processes that explicitly test your brain’s ability to reason about on-the-spot trade-offs. Of course, perform job relevant skills, like there should be difficult coding aspects.
+
+[00:12:17] Your ability to quickly assimilate and discuss information. There might be a, hey, here’s a five-page postmortem. Read this thing and then we’re gonna debate whether or not this entire team should be restructured based on the postmortem. You absolutely should not be able to pass them unless you have high mental acuity, right?
+
+[00:12:37] An interview that tests your ability to recall things, your experience, or just your mindsets does not build a strong engineering team. An interview that anyone can pass regardless of IQ if they can practice enough does not build a strong engineering team. There’s a comically large corpus of studies around how to interview effectively.
+
+[00:12:58] The reason that companies don’t do it is it just takes a ton of work to build a good process. In a tech org, you have dozens of different roles and each one needs different interviews. So the leadership team needs to be really dedicated to it. I would say that our interview process is fairly well designed.
+
+[00:13:16] I welcome people to try it out, but we still are doing 20 experiments at any given time to try and improve it.
+
+Ryan:
+
+[00:13:24] So then what is it that you would ask that would actually test for IQ or something like that?
+
+Brian:
+
+[00:13:29] Yeah, it’s funny. Some places will literally do an IQ test upfront, and that’s not terrible.
+
+[00:13:35] Our accounting team does that. If you can come with something that requires you to hold a lot of concepts in your head and is also job relevant, like an applied programming task that involves understanding a lot of different requirements at a time, and the requirements are a little bit in conflict and hard to reason about, that kind of thing is really great.
+
+[00:13:57] That postmortem example, right? Like read a five-page postmortem in five minutes and then discuss the structural problems with the team, where one part of the postmortem says something and another part maybe conflicts. So that three pages down is the kind of thing that most people and also ChatGPT cannot get anywhere close to doing.
+
+Ryan:
+
+[00:14:21] Interesting. So it sounds like you’re saying that if someone’s IQ is higher, their job performance will be higher?
+
+Brian:
+
+[00:14:28] Yeah. I mean, this is one of the most well-researched results in applied psychology. The reason you don’t notice it as much when you’re at great tech companies is that everybody that gets in is usually fairly smart already.
+
+[00:14:41] There’s not a lot of differentiation between the performance of people on your team based just on IQ, ‘cause all of them are already one or two standard deviations above the norm. But like Matt is sure as hell filtering out people who are below the median before they get in.
+
+Ryan:
+
+[00:14:57] So then how do you filter among the people that are already one to two standard deviations above?
+
+Brian:
+
+[00:15:02] There’s a bit of how do you design problems that are not just mentally straining, but a combination of mentally straining and experience and relevant skills, which shows if they are sharp, have they mastered it, and can they apply it? Some people will be stronger when they join.
+
+[00:15:19] There is no interview process that has an R value of 1.0. Nothing, no interview process in the world is a hundred percent predictive of job performance. Not yet. Maybe we’ll figure it out, Ryan, but I can tell you that I and no company yet in the world has it.
+
+Ryan:
+
+[00:15:35] Well, it’s interesting that you say IQ correlates with on-the-job performance.
+
+Brian:
+
+[00:15:40] I’m actually very seriously considering slapping an IQ test in front of some of my interviews because it’s actually a very honest part of why LeetCode is a thing. LeetCode is not that related to the kind of work that you do, but it’s tricky. So it just gets at how good people are.
+
+[00:15:58] It’s tricky abstract reasoning. The problem is it’s so gameable that you can just practice LeetCode. An IQ test, you can’t practice. I don’t know, maybe just slap it in front. I’m gonna try it. I’ll probably try it for PMs first ‘cause they’re harder to interview generally. My pass rate for my interview bar that I’ve defined for PMs is super low.
+
+[00:16:18] I’m just annoyed that I have to keep interviewing them, so maybe I’m gonna slap an IQ test in there and save some time.
+
+Ryan:
+
+[00:16:23] Why is interviewing PMs harder than interviewing software engineers?
+
+Brian:
+
+[00:16:27] Some aspects of it are very hard skill oriented. Those are very testable, a lot of the issues.
+
+[00:16:34] Yes, there’s soft skills, but this role is generally less well defined than the engineering role. It’s incredibly well faceted. There also is not such a thing as school for PMs. PMs are different across different disciplines like software versus non-software PMs. The discipline’s younger, so there just hasn’t been as much thought put into how to interview them very well.
+
+[00:16:58] We ended up having to do a whole rethink of what is a world-class PM. We interviewed CEOs from a variety of companies to get their take on it, and we wrote it down and then designed an interview process. It’s completely different than how other companies do it, and I think it’s good, but it just showed how little I could borrow from.
+
+[00:17:16] Other companies have interviews like Meta’s PM interview. It’s pretty good. I think it could be way better with an IQ test. Absolutely. It probably wouldn’t hurt. If you put an IQ test in front of the PM in your process, it wouldn’t help differentiate between the excellent and super excellent, but it would help weed out people very early, and then you could spend more time differentiating between the good versus excellent in the rest of your process.
+
+[00:17:40] When I talk to places that do IQ tests, it’s not that uncommon. Places that have very high standards do this in the screening stage. It’s always just to filter people out to save them time and us time.
+
+Ryan:
+
+[00:17:52] I see. You’re saying some other companies do run IQ tests?
+
+Brian:
+
+[00:17:56] Yeah, they do. I don’t think there are that many though.
+
+
+## 00:18:02 — Intelligence and prioritization
+
+
+Ryan:
+
+[00:18:00] The common take I hear is it really doesn’t matter how smart you are past a certain point. It matters more how hard you work or your ability to choose impactful work and work in a team, et cetera.
+
+[00:18:19] What would you say to that?
+
+Brian:
+
+[00:18:20] IQ influences how much you can do all the other things, but you definitely need to consciously get good at other skills and knowing how to fiercely prioritize your time is super important. Every time that I do that, I’m thinking about what to work on.
+
+[00:18:38] I think about three things. A: how important is this work? What’s the expected value of this initiative over a fixed time window? B: what’s the probability of its success with and without me? C: how much time does it take me? I multiply A times B, divide by C, and that’s my expected value creation. I’m always trying to maximize this kind of thing.
+
+[00:19:05] What’s interesting about this mindset is that you often get into situations where working on the most important thing is not actually the most valuable thing you can do with your time. Especially early in your career, you may find that by the time you hear about the company’s top priority, a lot of stuff is figured out and it’s already super well staffed.
+
+[00:19:30] Joining will be fun, but you may be joining as a cog in a really well-oiled machine. If you go to priority number three, you might find something valuable in a tougher spot go in and be a hero.
+
+Ryan:
+
+[00:19:43] It’s interesting that you say that because when I think about prioritization, obviously it’s cost-benefit analysis, benefit divided by cost.
+
+[00:19:55] The thing that I think is interesting is that second term where you were saying that, what’s the probability of it succeeding with and without you? Can you explain that a little more?
+
+Brian:
+
+[00:20:07] Yeah. I mean, this is harder. I think getting good at estimating expected value is already a very difficult thing.
+
+[00:20:14] And then figuring out how to kind of create uplift is even harder. At early stages, it will often be like, let’s say you stretch it out, college at that point, it’s fairly, it’s often fairly easy. It’s just what is not gonna be staffed. That’s important. And then as you get a little bit further, it’s what are the things that you’re uniquely good at?
+
+[00:20:40] And where’s that match with something that’s valuable? And you can kind of do some fuzzy math, but it’s never gonna be three significant figures of precision.
+
+Ryan:
+
+[00:20:49] I’m kind of curious about that expected value calculation as well, like how. How do you recommend developing that? What’s important to figure out in determining the benefit?
+
+Brian:
+
+[00:20:59] Yeah. Okay. So there’s absolutely things that everyone can do to get better at this. Engineers fresh out of college, no business background. It’s not a natural thing for most of us. So what I recommend is every time that you have a director or a PM and they talk about we really wanna move this metric by this amount for some quarterly goal, like.
+
+[00:21:22] Maybe it’s, we wanna improve recall on this model by 10%. You wanna know why they care? Maybe it’s because they want to reduce churn. They think that’ll happen if they improve recall, and then churn. They’re mapping that in their heads to additional dollars and cents. If your manager punts on a project, you wanna know what those principles behind that.
+
+[00:21:44] And you can ask these guys, you probably should use regular time on your one-on-one to ask why these decisions are being made. But the best possible case is that you find your company already has a spreadsheet somewhere with all the top initiatives or all of the projects of the quarter, and there’s a column that says, here’s the expected value.
+
+[00:22:03] Or it says like, here’s why we care as a company if that column exists. It is gold and you should read it. Right. You should just, every now and then, go read that column. This is all of the work that other people have done to calculate expected value or give some sense of it, and you’ll pick up intuition from it.
+
+
+## 00:22:19 — How his team doubled every 6 months
+
+
+Ryan:
+
+[00:22:19] Yeah. Talking about management, I’m curious, what’s the story behind you eventually getting into management?
+
+Brian:
+
+[00:22:25] Dude. Yeah, I procrastinated. I put it off forever. People at my manager at Google told me I should do it. My manager at Uber told me I should do it. When I joined CK, I was told I should do it.
+
+[00:22:41] Had really great engineers. Travis, our CEO, he built Uber, right? He was the CEO of Uber. So we pulled a lot of Uber’s strongest engineers. They had friends, they pulled them. It was just this really strong, tight crew. I also had eight engineers that sat around me and they effectively treated me like their boss.
+
+[00:23:05] They asked me what they should work on, and I came up with stuff. So I had all of the fun of being an IC and having a team, and none of the responsibilities of being a manager. It was amazing. Then one day my boss said that I’m either gonna hire a people manager or you’ve gotta do it.
+
+[00:23:28] He was saying that ‘cause they did need a manager. They didn’t really have one. I thought that when my boss said this, he was right. They deserved somebody, but I didn’t like the idea of somebody coming off the streets, like a random people manager managing them. I also really didn’t like the idea of somebody coming in and messing up my vision for the team, which I thought was pretty good.
+
+[00:23:53] So I was like, all right, I’ll do it. I guess, and I did a terrible job. I mean, you hear about how people, home managers will procrastinate a bit by coding and it’s good for managers to code, but I procrastinated so much. I did so much coding that there was somebody that joined my team and after three months he said to me, wait, Brian, are you my boss?
+
+[00:24:25] I thought you were just a really helpful engineer. It was really like how negligent must I have been in my management responsibilities for someone to have said that? It’s a real wake-up call. After that, I stopped procrastinating so much on these things. I got better at picking up the management fundamentals, and then at that point, the portion of the company that reported to me doubled roughly every six months.
+
+Ryan:
+
+[00:24:53] Yeah, that’s kind of insane for the part of the company that reports to you to double every six months. Why did your team grow so insanely?
+
+Brian:
+
+[00:25:02] Every time an organization has moved under me from somebody who’s admittedly already pretty smart, I’d still assume that there’s at least an order of magnitude improvement that we could make in how this organization performs.
+
+[00:25:15] And I’ll just start truth-seeking with that team. I assume that everybody, including myself, is wrong all the time. I get really excited when somebody says something like, “Brian, we’ve been doing this thing for years and it’s like a religious thing. We believe it so strongly, but I think it might be wrong.”
+
+[00:25:36] Oh, that gets me really excited. I’ll give you a small example. A few years ago, there was an integrations team that moved under me. They built 1,200 different integrations with other companies, which sounds like a lot because it is, and their goal was to have all the information about the entire restaurant industry in one place.
+
+[00:26:01] Clearly valuable, and each one of the integrations was originally a very smart bet. Analysis was done to decide whether or not it was needed, and it was built. Now there’s a lot of inertia around maintaining it. The team works super hard to maintain them and keep the data quality good. Kenji, who manages the team, says, “Brian, how important could each of these 1,200 integrations be?”
+
+[00:26:29] That’s a great point, Kenji. That is a lot of integrations that can’t all be equally valuable. So we spent some time digging into that. We spent a couple of days trying to come up with different formulas to quantify the value of each of them. Once we came up with the distribution, it was really hard for anyone to say, “No, you gotta keep them all open.” It’s just obvious that some are much less valuable. So we stopped supporting a bunch of them. The amount of pages that the team received went down significantly. The amount of time that the team got back was very large. What ended up happening is that the quality of our product in aggregate got better.
+
+[00:27:07] Because now the integrations that matter are well supported, and we’ve got time to build new things. It’s just a win-win-win.
+
+Ryan:
+
+[00:27:15] So it sounds like when these teams get moved under you, you start questioning some of the base principles. You try to find the truth in these long-held practices on the team to uncover these huge wins. Is that right?
+
+Brian:
+
+[00:27:31] That’s right. a hundred percent. And often, folks, there’s a lot of hints. You kind of want to start with what are the things that people just have suspicions around. That can be good. That’ll get you a few quick wins, and then you’ll have to dig a bit deeper.
+
+Ryan:
+
+[00:27:49] You mentioned a lot of teams got moved under you. How do those conversations usually go?
+
+Brian:
+
+[00:27:55] Yeah, I mean the conversation is always really different, but it’s gotta be done with empathy. It’s a fact of life that if you have a culture that’s based on merit, in order for some people to rise to the top, other people’s scopes may need to be reduced.
+
+[00:28:10] Or some people who are overall quite capable may still need to be managed out. You can absolutely have that conversation in an honest way that says, “Hey, what we really need here is this,” and you haven’t been doing that lately, while still showing them a lot of appreciation for what they are still doing well or for what they used to be doing well.
+
+
+## 00:28:30 — Manager promos tied to scope
+
+
+Ryan:
+
+[00:28:30] One thing that can happen at some companies is a manager’s career growth is tied to their scope, and so they hold onto it with everything they’ve got, whether or not it’s good for the company or it’s a better setup to do so. I’m curious, in those cases, why do people give up their scope or is there not an incentive structure like that at that company?
+
+Brian:
+
+[00:28:54] Yeah. There shouldn’t be an incentive structure like that. That’s not a good way to set up an incentive structure, in my opinion. One of the things that the head of Picnic and I did a few years back is rethink how we can avoid this. Actually, Travis reserved some credit because we originally had a leveling system and an incentive structure very similar to Uber’s, and we knew there were some problems with it.
+
+[00:29:26] So Charles and I spent time improving it. We presented it to Travis, and he read over it. He was dropping comments everywhere in Google Docs on how each clause could be better. He looked up at the end and said, “Guys, the core problem here is that this is lazy. You are over-indexing on scope. It’s uninsightful, and you could do so much better. It’s worth your time to do better at this point.” I’m convinced that it could be a lot better, and I’m also convinced that a lot of companies do a bad job.
+
+[00:30:07] We ended up spending a ton of time figuring out where other companies were failing. I think I spent basically every evening and Saturday for months on this. I can get into what we learned, but one of the big things is that if you tie promotions to scope, you’re really over-indexing on just one type of complexity, and you’re also encouraging a lot of empire building.
+
+Ryan:
+
+[00:30:28] When you were redesigning the incentive structure, what were the biggest changes you made compared to what Uber had for this new company?
+
+Brian:
+
+[00:30:38] If you look at what Uber, Meta, and Amazon have, they have a lot of competencies that read something like, “I design processes for the company as a whole. I partner with directors on strategy. I influence other teams on undefined goals.” These are really position-oriented things, and this is basically saying you get promoted by being loud and being well positioned, which can negatively impact younger people. It’s really about being loud, being good at politics, and being good at maneuvering.
+
+Some of that is valuable, but if everybody does it, people don’t actually learn to be good at the core part of their job, and it’s bad for the company. So what we did instead is we started with these 1,000 different examples of where people differentiate themselves on ability. We converted that into 250 human attributes, and then I performed a principal component analysis to collapse it down into 12 different dimensions where each dimension is basically like a skill gradient.
+
+[00:31:49] As you climb those skill gradients, your compensation goes up. If you’ve got more impact and you’re more skillful on the things that we believe matter, then your compensation goes up.
+
+Ryan:
+
+[00:32:01] Where did you source the initial thousand examples of high performance from?
+
+Brian:
+
+[00:32:07] Yeah, so this is talking to a ton of engineers.
+
+[00:32:10] There are like 12 books that I read. I also looked through years of our calibration notes. Every time we do quarterly calibration, we’ll talk about why this engineer did well. So I just scraped all of that out and then wrote them all down. This is about a thousand. I made certain that they’re all things that I knew personally had actually happened.
+
+[00:32:33] They weren’t bullshit. Otherwise, you could get into a situation where the skill gradient is bullshit at the high levels, right? It’s just an unachievable dream.
+
+Ryan:
+
+[00:32:45] What are the biggest attributes that differ from well-known ladders? Because everyone who works at these big tech companies kind of knows the existing, so what are the things that you introduced that are different because of this analysis?
+
+Brian:
+
+[00:32:59] Yeah, I think the probably main difference is this emphasis on truth-seeking and how you perform very well instead of what you perform very well. If you look at Meta’s leveling guide, it’ll say you have to be able to influence other teams at E6 with good ideas.
+
+[00:33:22] In our ladder, we’ll say something like, you have to be right most of the time when questioning a foundational engineering and product decision or industry norm. It’s not so much about convincing people; it’s how good are you at actually getting good ideas? There’s a separate competency on how good you are at communicating ideas, which we define what good looks like instead of just saying it’s about this social proof thing.
+
+Ryan:
+
+[00:33:48] I see. But then how do you determine if it’s good communication or not?
+
+Brian:
+
+[00:33:53] You give a lot of examples in your document where you define these things. You say, okay, here’s the verbal description of what it means, and here’s a few examples.
+
+[00:34:03] When engineers are scoring themselves, they can look at the examples and go, well, if I’m being honest, was I that good? If I look at this artifact, does it stand up to that?
+
+Ryan:
+
+[00:34:15] I’m not sure how it fixes the politics, such social problem of calibrating engineers because.
+
+[00:34:23] You could have a manager that lists out those examples but says them in a biased way. So how do you get rid of that incentivizing politics?
+
+Brian:
+
+[00:34:33] Okay. Yeah. So this is still a thing that managers could try to do. The kinds of things that they would posture around would be different though, right?
+
+[00:34:44] Engineers aren’t going to spend as much time trying to figure out how to design company-wide processes or explicitly influence other teams. So you might have people posturing around being good at communication and exaggerating that, but at least they’re trying to get good at communication or truth-seeking, which is almost always beneficial as opposed to something that’s not always beneficial.
+
+[00:35:13] There are still things you can do to protect against this, and the answer is it’s a lot of work. You have to spot check managers, and if you find them exaggerating, you have to fire them.
+
+Ryan:
+
+[00:35:31] Easier said than done.
+
+Brian:
+
+[00:35:31] Is it? Who wants a liar on their team.
+
+Ryan:
+
+[00:35:35] There was someone else that I had on before, and he said that’s a big problem in management: it’s someone who is bad for some reason but is well-liked. They’re one of the biggest problems because it’s difficult to fire them. What would you say to that?
+
+Brian:
+
+[00:35:52] Yeah, it’s funny ‘cause I do hear this, but I don’t think that it’s really true, right?
+
+[00:35:58] It feels very difficult to fire them if you’re a frontline manager because you like them and you see the social bonds. But often there is a bit of simmering resentment about that person. The people on the team who are working hard are like, yeah, man, Joe’s so great, but why did he just go home at 2PM?
+
+[00:36:15] Why am I working at 6PM? I feel like a chump. If you remove this person immediately, it may feel bad, but a month later the whole team will be happier.
+
+Ryan:
+
+[00:36:25] You’ve mentioned truth-seeking a lot in this new ladder, and I’m kind of curious how do you prove truth-seeking? How do you give examples of someone that did that well?
+
+Brian:
+
+[00:36:36] Yeah, a lot of it is have you uncovered something that is highly unconventional? There are a bunch of different dimensions that could result in that. Like, oh, it was actually in plain sight for a while and nobody found it, even though it’s highly valuable. Is it different than what every other company does?
+
+[00:37:03] Because our constraints are different, it’s beneficial to go against the grain. There are a bunch of different dimensions that make truth-seeking difficult that you can latch onto, and then there is a bit of subjectivity. You have to kind of write it down and then calibrate managers on how to score these things.
+
+[00:37:30] It’s not as easy as counting PR stats, but we all know that that’s not a great way to judge engineers.
+
+Ryan:
+
+[00:37:36] Yeah. A lot of companies have some sort of measure of directional contribution. How did you change the direction of everyone based on your contributions?
+
+[00:37:48] That sounds very similar to truth-seeking here.
+
+Brian:
+
+[00:37:51] Yeah, it’s not like the way that tech companies have designed their leveling frameworks and incentive structures are completely broken. In many ways, they’re just way better than what exists in the Dilbert era of the 1980s.
+
+[00:38:08] There are some ways, and they’ve been nicely designed to reward you once you get into a specific position. They’re very good at rewarding you once outcomes are achieved. They’re a little bit less about the leading indicators, but you’re not gonna get wildly different results.
+
+[00:38:28] You’ll just make it a little harder for some people and a little easier for some other people.
+
+Ryan:
+
+[00:38:31] Yeah. One thing I’m curious about, ‘cause a lot of tech companies incentivize the result, not necessarily what happens before the result. Is there a case where an engineer does a phenomenal job on something that gets deprioritized and they would still get rewarded?
+
+Brian:
+
+[00:38:49] Oh yeah, of course. Maybe if you’re at the highest level, you should have the business savvy to know that it’s not going to be, but if you do phenomenal work towards a project and for no reason related to you, this thing gets canceled, you’ve still done phenomenal work. We can still measure that you’ve been doing phenomenal work and reward you for that.
+
+[00:39:09] It’s kind of on our fault, at least our fault as leaders that it got canceled so late.
+
+
+## 00:39:13 — Amazon and Google brutal honesty
+
+
+Ryan:
+
+[00:39:13] One thing I’m curious about is, and I think companies like Amazon are famous for not really rewarding the high performers that much, and I was curious to ask you, because you’ve worked on company design for a while now, why do these companies not reward their highest performers?
+
+Brian:
+
+[00:39:32] I held off saying this, but a lot of it is just ‘cause they can get away with it, right? They think, oh, the equity went up by a lot. Maybe it’s a little bit unjust to pay you less because your equity went up. I think it’s unjust. That’s basically your investment. You have a good investment result.
+
+[00:39:49] It shouldn’t factor into future decisions, but they can get away with doing it because people are mostly happy. They got a lot of appreciation. We actually made a point of not doing that earlier on, and I just think if you design your company processes around being just, it’s gonna be better for you in the long run, but you kind of just gotta believe that.
+
+Ryan:
+
+[00:40:06] We’ve been talking a lot about big tech and I know you started off at Google.
+
+[00:40:11] I’m kind of curious, what was that like or what did you get from starting at Google?
+
+Brian:
+
+[00:40:18] I think the main thing that I got from working at Google is a real deep-seated skepticism for how well tech companies are run. I joined Google and in my first week I see there’s a guy on my team who doesn’t do any work.
+
+[00:40:33] Let’s call him Frank. I talked to my manager about it. I’m like, what’s the deal with Frank? My boss says, yeah, I know, but he’s such a nice guy. Just lay off. I talked to my engineering director shortly after this, and I say the same thing. He is a little bit embarrassed. He knows that there’s something off about having people that don’t do work. But he repeats the same thing, which is that Brian, this guy’s a really great guy and everybody likes him. I actually complained a lot about it and I can’t prove anything, but he was eventually moved off my team onto a team where no one would complain because no one on the team did any work.
+
+[00:41:19] The team was just like, they’re building demos for the gift shopper or something like that.
+
+Ryan:
+
+[00:41:24] So what you got from that is that that’s a Google problem and that he should have been fired.
+
+Brian:
+
+[00:41:31] Yeah, absolutely. He should have been fired or there should have been a serious conversation.
+
+[00:41:37] I mean, you’ve been here for a while, you’ve done good work, we’re still paying you, could you do work again? You can’t expect us to keep paying you if you don’t.
+
+Ryan:
+
+[00:41:48] Why do you think that hard conversation wasn’t had at Google?
+
+Brian:
+
+[00:41:56] There is something Google-specific that exists there, which I can get back to. Generally at large companies, the performance of the company is fairly decoupled from the performance of individual teams. So it does become easier for this kind of thing to happen, for managers to do things that are convenient for themselves, even if it hurts the company.
+
+[00:42:17] But there’s also this natural thing that happens at companies of any size where it takes a lot of energy to raise a standard and very little energy to lower it. Few people will complain if you suddenly ask everyone to do less work, which means if you have entropy in a system, standards will naturally fall over time until the company dies.
+
+[00:42:38] It’ll just keep going down until the company dies or until some kind of trauma kicks it back into place. Right? Like if you’re a goal right now, the DeepMind team, they’re working hard, right? Google is like, Alphabet’s like, oh, there’s an existential threat to our existence. The DeepMind team better work hard now.
+
+[00:42:56] I will always lower the bar. There was this thing at Google, which I cannot prove existed, but several managers at Google told me it. I haven’t seen it in writing, but a VP and some managers told me it existed that around a decade ago Google had this policy where they wanted to keep as many smart people on staff as possible, even if they weren’t working anymore.
+
+[00:43:19] ‘Cause maybe they’d work hard again in the future and they didn’t want their competitors to have them. That’s just a super unique Google thing. That’s kind of crazy. I don’t know of any other company that’s done that.
+
+Ryan:
+
+[00:43:29] I see. And do you think there’s any merit in that kind of hiring strategy?
+
+Brian:
+
+[00:43:33] No, because there’s a lot of smart people in the world. I think it’s fairly difficult to have a monopoly on intelligence.
+
+
+## 00:43:39 — CloudKitchens behind the scenes
+
+
+Ryan:
+
+[00:43:39] And now at this point I’m kind of curious what are you working on these days?
+
+Brian:
+
+[00:43:45] So it’s fairly secret and we don’t usually talk about it with reporters ‘cause we’re installed.
+
+[00:43:52] I talked to Travis about it and he said I could give you a bit more than we’ve given anybody for. So I’ll give you some stuff. I’ll give you the whole thesis of the company. The core insight is that no one should cook their own food in a few decades. We know that people don’t want to, because when you look at places with lower cost of labor, middle and upper class people don’t cook anymore.
+
+[00:44:21] Of course they don’t; they choose to save 10 hours of their time a week. If you look at the US, there’s Uber Eats, there’s DoorDash. These things are fairly convenient, but they’re super expensive, so nobody can use them every day.
+
+[00:44:43] If these things were way cheaper, that would work. Here’s the second core insight: there’s a ton of avoidable waste in the food supply chain. We are just scratching the surface on this, but we’ve built robots that reduce labor costs in real restaurants by 50%.
+
+[00:45:05] We’ve built a lunch logistics network that reduces the cost of a meal overall by 30 to 40%. We have this real estate thing where the cost per meal is half of what normal cost per meals are, and we also have this software product called Otter that processes 18% of the world’s orders.
+
+[00:45:26] That makes them a bit more efficient. We’ve got all these things going. Some of them are early, some of them have a lot of customers, but it shows just how much inefficiency can be squeezed out. If you are willing to spend the R&D money, you can make real moves on lowering the cost of food made just for you, like fresh, without any labor on your part.
+
+[00:45:50] If the size of the pie is big enough, we can make this happen. Americans spend $2.5 trillion a year on food. If you think about the most conservative cost modeling possible, you can imagine redesigning this whole supply chain. You have super thin margins. This is $5 trillion sitting on a table right now, just waiting for the companies that go and solve this problem.
+
+[00:46:18] That will happen eventually. Robots are going to do the whole thing, but we think we can do a lot of work now to enable this, and then hopefully we capture a few trillion dollars of value and our partners capture a few trillion as well.
+
+Ryan:
+
+[00:46:32] One of the things that I’m most curious about, ‘cause I remember at some point I was living in SF and I got an invite to a recruiting event for CloudKitchens.
+
+[00:46:41] I’d never heard about it. It said, we’re a large stealth startup. Hey, we’re gonna treat you to dinner. Just come and listen about it. It was something I’d never heard about, but it had Travis’s name, one of the most unusual hiring strategies I’ve seen for a company of that scale. So I’m curious, why is this company so strict on privacy?
+
+Brian:
+
+[00:47:04] Yeah. Right. So, we are super strict. We don’t have a corporate website. We ask employees not to post that they work here on LinkedIn, which we have fairly good compliance around. We don’t have any PR people. Here’s why we wouldn’t have done it, and I’ll tell you why we did it.
+
+[00:47:22] When you’re founding a company, if you’re very public in the media, it’s easier to raise money, easier to hire. It also makes the founders’ ego swell. Our CEO Bill Uber, he’s a billionaire. He’s got a good network, he’s got funding, and his ego is doing just fine.
+
+[00:47:42] So these upsides didn’t really mean a lot to us, but the downsides of being public did. If you look at 2018 and you look at headlines sentiment, you can actually go and check this. It took a nosedive towards negativity after Cambridge Analytica happened. The US populist just loved reading bad news about tech companies.
+
+[00:48:05] So if you’re working for a tech company at that time, you’re constantly reading bad things about yourself, and it’s very distracting to employees and especially distracting to leadership. It takes your mind off of innovation and puts you more into a damaged place. We really wanted to minimize the amount of competitors we had.
+
+[00:48:25] If you’ve got a good idea and your founding team has a strong track record and you’re visible, other people will see that and think, maybe I’ll just do that. When we launched in Korea, we were very public about it. We talked to reporters. There wasn’t just one competitor or two. There were three. There was a whole ecosystem of people that decided to compete with us just because we had a famous starting team. The same thing happened in the US where this company received $150 million. They got a Vision Fund investment even though they had very little going on for them. They were never going to make it, but it was still annoying. It was still distracting. For us, the answer is just to shut up and be quiet, build great stuff, and don’t talk about it. Then win silently and calmly.
+
+Ryan:
+
+[00:49:16] To me, this is like the very opposite. I see a lot of other companies, they get started and they start with distribution. They have these rage bait products that go out and explode on Twitter, and then people start using it from that. There are obvious benefits to that, like you get users, you get people talking about it, and all the other benefits that come with that. So how are you handling distribution then, if you’re so quiet?
+
+Brian:
+
+[00:49:48] A lot of the stuff that we do is B2B, and you can still do marketing around individual products. We have products that we talk about quite a bit. We have Picnic, there’s Otter, hundreds of thousands of restaurants use it, and there’s ads around those things. We just don’t talk about our core company as much.
+
+[00:50:06] The main thing that had a bit of difficulty around is hiring. People like me have to go on famous podcasts to see if they can mitigate that a bit, but I think it’s not as hard for sales as you’d expect.
+
+
+## 00:50:24 — Biggest career regret
+
+
+Ryan:
+
+[00:50:24] Coming to the end of the conversation, I just want to go over some career reflections. One thing that I am always curious about is when you think back over your career, what’s your biggest career regret?
+
+Brian:
+
+[00:50:37] So I’ve messed up a lot of things, especially early stage, and there are things I might regret and then I don’t. I was a first-year undergrad entering at Apple, building a tweak to the OS. It was a fork that made the phone easier to use in sunlight, which was a problem at the time.
+
+[00:50:57] I remember I was showing it to my mentor at lunch. It just so happened that Steve was sitting right next to the table beside me. My mentor Ken, an amazing guy, starts really spouting off on how good this prototype is. He’s super loud, saying this is a game changer for the company.
+
+[00:51:16] It’s gonna differentiate us so much. It’s gonna make us so much money. He is super loud, and Steve hears. He walks over, sits right in front of me, and Ken’s still going. I’m like, Ken, wait, come on. It’s not that big a deal. It’s like 50, a hundred lines of code.
+
+[00:51:34] It wasn’t even that hard. Steve sighs; you could see his, why did I sit down? He rolls his eyes, and Ken’s trying to win him back, but Steve just walks away. He doesn’t say anything. At this point, Ken explains to me just how badly I messed up. Not only did I lose my chance to impress this industry icon, which would be a story for my life, but it’s very likely that this thing I’ve been working on will now never see the light of day.
+
+[00:52:06] My team does not have funding for it. This is just a thing you’re trying out, Brian, so by doing that, you’ve killed it.
+
+[00:52:13] The thing here is that I didn’t know anything about product, how to pitch it. I was a really awkward 18, 19-year-old kid, so there was very little chance that that was ever gonna go right.
+
+[00:52:27] Even that night when I got home, I didn’t feel too bad. I was just like, oh, I now know I’m an awkward kid and I should learn how to pitch better, I guess. I don’t regret that because I couldn’t have done better. What I do regret is the places where I knew what I should do.
+
+[00:52:49] Maybe I was just too uncomfortable communicating about it or I was worried I’d do a bad job, so I didn’t bother. Those are the kind of things I’m embarrassed about. Do you have a concrete example? I don’t know if I have a concrete example that I can say without making people feel bad, but imagine you’re making a decision and you’re halfway through it, you realize it’s the wrong thing, and you just kind of go with it.
+
+[00:53:14] Maybe you’re just two years into your career. That’s a really easy thing to do. But you should be really honest. Like, actually, guys, wait, I was way off, and now our project’s off track. We can keep going forward, but everyone on this team deserves to know that I made a mistake in case we want to go and correct it.
+
+[00:53:35] Even not knowing whether or not we would’ve corrected, I still look back on that. I’m like, that wasn’t great. I should have been more honest.
+
+Ryan:
+
+[00:53:42] So the regret is not seeking towards the truth. If you knew there was a problem in the middle of an initiative, you should cut it or at least share that we might want to reconsider.
+
+Brian:
+
+[00:53:54] Yeah, that’s right. You owe them a bit of the benefit of the doubt. They’re gonna be receptive, they’re gonna hear you out. You kind of have to try. If they ignore you, it’s fine. If you’re wrong, it’s also very fine.
+
+[00:54:12] But you should try and you should get better at being able to communicate that kind of thing.
+
+
+## 00:54:17 — Travis Kalanick experiences
+
+
+Ryan:
+
+[00:54:17] You mentioned Travis earlier. I’m curious, do you have any interesting stories working directly with Travis?
+
+Brian:
+
+[00:54:22] I’ve got a lot, so here’s what everybody knows about Travis Kanick.
+
+[00:54:27] Intense polymath. What people don’t know is he has intense dad energy. We had this offsite with the senior engineering leaders and Travis over the weekend with work sessions. Between them, Travis is just having a blast teaching people how to play backgammon.
+
+[00:54:46] He’s also almost a world-class water skier. He is coaching people how to water ski and he’s super patient with us, even those of us that are pretty unathletic. Let’s be honest, we’re engineers, so it’s most of us. He’s pretty patient with all of us.
+
+Ryan:
+
+[00:55:07] It sounds like you went to CloudKitchens from Uber in large part because Travis Kanick was founding it, and I’m curious about picking companies based on the founder. In your case, when you reflect on that, was that a good decision? Would you recommend that for others?
+
+Brian:
+
+[00:55:26] Yeah, I think it can make a lot of sense for founder-led early-stage companies.
+
+[00:55:30] These companies, a lot of what matters is their current positioning and their culture, and what are their standards? A lot of those points are being set from the top at a company where you have somebody with that much control. If you’ve got a really good person, it can be just a huge multiplier for the effectiveness of the company.
+
+[00:55:55] It can also go very much the other way if you don’t have the right person in charge.
+
+
+## 00:56:01 — Most impactful advice received
+
+
+Ryan:
+
+[00:56:01] You mentioned receiving advice from other people, and I’m curious, is there a single piece of advice that impacted your career most?
+
+Brian:
+
+[00:56:09] Okay, this is gold. I had this computer science teacher in high school, and I would ask them a lot of questions. Every time I asked a question, their answer would be, “Brian, figure it out for yourself.”
+
+[00:56:24] I never learned whether or not it was because this was a good pedagogy or if they just didn’t know the answer. It’s possible they knew nothing about computer science, but it didn’t really matter. It’s very good advice because 95% of everything that you learn professionally is gonna be self-directed learning.
+
+[00:56:43] You just gotta get comfortable with that and accept that you always have to be learning and pushing yourself to go beyond your immediate area of comfort.
+
+
+## 00:56:56 — Most impactful book for career
+
+
+Ryan:
+
+[00:56:56] Was there a top book that impacted your career?
+
+Brian:
+
+[00:56:59] No. So instead, I’ll give you kind of a cheesy answer for books that I’d recommend.
+
+[00:57:07] If you are a front-end engineer, I’d recommend you read How to Pass the System Design Interview. And if you’re a back-end engineer, read something like How to Pass the PM Interview. What these books do is they’re designed to help you cheese your way through an interview process, which is fine, but what’s cool about them is that they are designed to give you a very broad and superficial understanding of a domain that you’re not already very familiar with.
+
+[00:57:35] If you go and do the exercises, you’ll actually remember it, so it’ll stick in your head, and then you’ll have a good ability to have productive conversations with people in other roles. That’s very valuable. It’ll also give you some foundation to learn from that domain.
+
+
+## 00:57:53 — Advice for his younger self
+
+
+Ryan:
+
+[00:57:53] If you could go back to yourself when you just entered the industry and give advice to yourself, what would you say?
+
+Brian:
+
+[00:58:00] I’d probably say younger self, be more courageous and less embarrassed. You’re gonna fail a lot and it’s fine.
+
+Ryan:
+
+[00:58:06] That’s easier said than done. I feel like embarrassment is something you just feel.
+
+Brian:
+
+[00:58:16] Yeah, I know. I mean, this would be the opening two sentences before a larger conversation about how to search your own feelings and understand them. Maybe it would actually be, Brian, you should go to therapy. That might also be good advice. I think it’s generally helpful to be more in touch with your own emotions for your own sake, and it helps you relate to other people better.
+
+Ryan:
+
+[00:58:42] Cool. All right. Well yeah. Thank you so much for your time today. I really appreciate it, Brian.
+
+Brian:
+
+[00:58:42] Yeah, it was fun Ryan.

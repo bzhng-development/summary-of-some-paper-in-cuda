@@ -1,0 +1,310 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/setting-up-cross-team-workstreams",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 137684430,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-10-06T13:01:40.804Z",
+  "updated_at": "2024-03-15T08:12:39.062Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "setting-up-cross-team-workstreams",
+  "social_title": null,
+  "subtitle": "A Critical Skill for Both Senior and Staff Engineers",
+  "teaser_post_eligible": true,
+  "title": "Setting Up Cross-Team Workstreams",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 2,
+  "reactions": {
+    "❤": 54
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "protect-your-time",
+  "next_post_slug": "how-some-engineers-always-lead",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!ddch!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb67a30ce-c21f-4af5-9955-81e933d8282f_811x582.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 137684430,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "A Critical Skill for Both Senior and Staff Engineers",
+  "body_html": "<p>👋<em> Hi, this is&nbsp;<a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a>&nbsp;with another post for my newsletter. I write about software engineering, big tech/startups and career growth. If you find the post helpful, please share it with your friends and coworkers. Enjoy!</em></p><div><hr></div><blockquote><p><em>Q: How did you set up cross-team workstreams as an L4/L5? What steps did you take? Who did you engage first? How did you secure financing? How did you maintain leadership/ownership?</em></p></blockquote><p>Influencing across teams is a <a href=\"https://www.developing.dev/p/faang-career-ladder-senior-l5-vs\">baseline expectation for Staff Engineers</a> (L6). To set up a cross-team workstream, first you need to <a href=\"https://www.developing.dev/p/finding-staff-level-scope\">find a problem</a> that is large enough to need others. Then, you’ll have to convince them that it’s worth solving and what direction to go in. In this post, I’ll go over how to build this alignment using concrete examples from my Staff promotion.</p><h3>Getting Buy-In</h3><p>The first step is convincing others that the problem is worth tackling. If it’s clear why the work is important, then people will prioritize it. <strong>The general strategy to build alignment is to start with a smaller group and then expand outward to relevant parties</strong>. For example, in the <a href=\"https://engineering.fb.com/2022/11/04/video-engineering/instagram-video-processing-encoding-reduction/\">workstream that was part of my L6 promotion</a>, here are the steps I took after I found a major problem:</p><ol><li><p><strong>Team Alignment</strong> - Discussed the opportunity with a specialist and a tech lead on my team. This discussion got them on board and their feedback refined our direction.</p></li><li><p><strong>Org Alignment</strong> - Wrote publicly about the problem and why we needed to solve it. This got managers in my org on board, which made staffing discussions easier.</p></li><li><p><strong>Partner Alignment</strong> - Booked discussions with relevant tech leads in our partner org. This helped us get their buy-in to collaborate.</p></li></ol><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!ddch!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb67a30ce-c21f-4af5-9955-81e933d8282f_811x582.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!ddch!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb67a30ce-c21f-4af5-9955-81e933d8282f_811x582.png 424w, https://substackcdn.com/image/fetch/$s_!ddch!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb67a30ce-c21f-4af5-9955-81e933d8282f_811x582.png 848w, https://substackcdn.com/image/fetch/$s_!ddch!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb67a30ce-c21f-4af5-9955-81e933d8282f_811x582.png 1272w, https://substackcdn.com/image/fetch/$s_!ddch!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb67a30ce-c21f-4af5-9955-81e933d8282f_811x582.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!ddch!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb67a30ce-c21f-4af5-9955-81e933d8282f_811x582.png\" width=\"507\" height=\"363.8397040690506\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/b67a30ce-c21f-4af5-9955-81e933d8282f_811x582.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:582,&quot;width&quot;:811,&quot;resizeWidth&quot;:507,&quot;bytes&quot;:54408,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!ddch!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb67a30ce-c21f-4af5-9955-81e933d8282f_811x582.png 424w, https://substackcdn.com/image/fetch/$s_!ddch!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb67a30ce-c21f-4af5-9955-81e933d8282f_811x582.png 848w, https://substackcdn.com/image/fetch/$s_!ddch!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb67a30ce-c21f-4af5-9955-81e933d8282f_811x582.png 1272w, https://substackcdn.com/image/fetch/$s_!ddch!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb67a30ce-c21f-4af5-9955-81e933d8282f_811x582.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">The figure shows an <a href=\"https://en.wikipedia.org/wiki/Organizational_chart\">org chart</a>. Coloring indicates the order I built alignment in</figcaption></figure></div><p>Your strategy might differ depending on the specifics of your workstream, but this approach works for most cases. You can also consult with your manager about who to align with since your manager should know the org structure well.</p><p>Some of you have mentioned that you have trouble getting people to prioritize impactful work you found. If you’re failing here, either the work isn’t that impactful or you’re not explaining its impact well. Here are two tips that can help if the problem is communication:</p><ol><li><p><strong>Speak in terms of impact your audience knows</strong> - If your workstream moves a metric that people already care about it’s much easier to be convincing.</p></li><li><p><strong>Be concise</strong> - People are busy. Maximize how much of your message you can get across with limited time.</p></li></ol><h3>Roadmapping</h3><p>After people agree the problem is worth solving, you need to come up with a concrete plan. Thanks to your previous work, it should be easy to get time with relevant engineers to do this. Use your domain knowledge and drive discussions to put together the roadmap. Continuing with my earlier example, here’s how I did it:</p><ol><li><p><strong>Leveraged domain expertise</strong> - I already had several high-level ideas. I started to hash out the designs to figure out what we needed to get done.</p></li><li><p><strong>Aligned on project plans</strong> - Led a few meetings to agree on the solutions, who would take on what part, and set rough timelines.</p></li><li><p><strong>Communicated alignment</strong> - For each cross-team project, I shared an update about what we planned to do, why we were doing it, who was working on what, and rough timelines.</p></li></ol><div><hr></div><p>You can see how <strong>the better you are at communicating, the easier it is to get alignment</strong>. That’s why a lot of strong engineers stress the importance of communication. </p><p>If you’re looking to improve your communication skills, here are two ways to get started:</p><ul><li><p><strong>Visit your local <a href=\"https://www.toastmasters.org/\">Toastmasters</a> to improve your speaking skills</strong>. It’s an international public speaking club that provides a supportive environment to practice in. I’ve been doing it since college and it’s helped me better articulate myself during meetings.</p></li><li><p><strong>Write more and solicit feedback to become a better writer</strong>. That’s one of the top reasons I write this Substack. I can already tell my writing has improved a lot compared to my <a href=\"https://www.developing.dev/p/move-fast-break-less\">first few articles</a>.</p></li></ul><p>The last part of the original question “how did you maintain ownership/leadership?” comes up a lot. This topic is worth it’s own post since there are a lot of misconceptions. If you feel like more senior engineers often take opportunities from you, you’ll find my next article relevant.</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 54000+ software engineers from companies like Google, Meta, and Amazon who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p><p></p>",
+  "truncated_body_text": "👋 Hi, this is Ryan with another post for my newsletter. I write about software engineering, big tech/startups and career growth. If you find the post helpful, please share it with your friends and coworkers. Enjoy!",
+  "wordcount": 738,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "5a4683e9-1121-4159-b2d7-6ca77779173f",
+      "publication_id": 1340878,
+      "name": "Career",
+      "slug": "career",
+      "hidden": false
+    },
+    {
+      "id": "7944911a-7d9b-49e5-a951-df44d652b086",
+      "publication_id": 1340878,
+      "name": "Soft Skills",
+      "slug": "soft-skills",
+      "hidden": false
+    },
+    {
+      "id": "afc2c6a9-1c64-47eb-a0d0-537aece0aeec",
+      "publication_id": 1340878,
+      "name": "Tech Lead",
+      "slug": "tech-lead",
+      "hidden": false
+    },
+    {
+      "id": "f4df2d6e-046e-448c-b0bf-6dd4ae5a5a6a",
+      "publication_id": 1340878,
+      "name": "To Staff",
+      "slug": "to-staff",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        92,
+        180,
+        108
+      ],
+      "population": 1
+    },
+    "DarkVibrant": {
+      "rgb": [
+        41.78571428571429,
+        90.81428571428572,
+        50.7
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        145,
+        188,
+        228
+      ],
+      "population": 6
+    },
+    "Muted": {
+      "rgb": [
+        48.214285714285715,
+        104.78571428571428,
+        58.49999999999999
+      ],
+      "population": 0
+    },
+    "DarkMuted": {
+      "rgb": [
+        48.214285714285715,
+        104.78571428571428,
+        58.49999999999999
+      ],
+      "population": 0
+    },
+    "LightMuted": {
+      "rgb": [
+        214,
+        180,
+        164
+      ],
+      "population": 3
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 54,
+  "comment_count": 0,
+  "child_comment_count": 0,
+  "audio_items": [
+    {
+      "post_id": 137684430,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/137684430/tts/43ffd36d-2b19-487d-a7ab-780613868c19/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": []
+}

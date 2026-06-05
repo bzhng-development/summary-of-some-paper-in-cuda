@@ -1,0 +1,50 @@
+Only 3 of the 56 classes I took at UCLA matter in my daily software engineering work. Any engineer would agree that those three courses are worth their weight in gold.
+
+
+## All You Need To Pass Any FAANG Interview
+
+
+Without a doubt, the two most important UCLA CS courses are CS31 & CS32. These classes are how engineering students learn to code. You can tell from looking at each syllabus how valuable these classes are:
+
+  - CS31 Syllabus → The basics of how to code
+
+CS31 Syllabus → The basics of how to code
+
+  - CS32 Syllabus → Object oriented programming and data structures
+
+CS32 Syllabus → Object oriented programming and data structures
+
+My high school didn’t have any programming classes, so I didn’t even know what CS was until I took CS31. Although the initial programs don’t resemble industry work, CS31 lays the foundation. Building on that, CS32’s object oriented programming and data structures cover most of the programming I do.
+
+Also, these classes teach you everything you need to pass FAANG interviews. While landing these jobs requires a lot of preparation (a topic for a future post), these courses provide the basics you need to tackle any interview question.
+
+These classes taught us how to code but didn’t teach us how to be software engineers. We close that gap with one other class.
+
+
+## Where Programmers Become Engineers
+
+
+UCLA has a notorious class called CS35L, which is a weekly series of time-consuming labs. This class, although painful, is what creates software engineers.
+
+In it, we learned how to use the command line (e.g. shell commands, scripting) and change management (e.g. Git), which is core to writing code in a collaborative professional environment. Lastly, we learned how to use basic software debugging tools. I’ve always loved using debuggers rather than putting print statements everywhere because of how convenient it is to interact with the runtime of a live program. Now, I use these skills so often at work that they’ve become second nature.
+
+Even though the class was a ton of work, it had the best late policy. Assignments “N” days late would lose 2^(N-1) points. This had a nice effect of being forgiving for slight delays but brutal for anything more than a few days late.
+
+There are a few other classes that don’t matter nearly as much but are worth an honorable mention:
+
+  - Algorithms (CS180) - Taught me how to do Leetcode hard difficulty questions
+
+Algorithms (CS180) - Taught me how to do Leetcode hard difficulty questions
+
+  - Operating Systems (CS111) - Taught me how computers work
+
+Operating Systems (CS111) - Taught me how computers work
+
+  - Databases (CS143) - Was a nice crash course on SQL
+
+Databases (CS143) - Was a nice crash course on SQL
+
+If there’s one thing I’d change about my engineering education, it’s that I would’ve done more practical work (open source & projects) rather than spend all my time on my theoretical coursework. Over to you: What classes do you feel mattered from your college education and why?
+
+Thanks for reading,
+Ryan Peterman

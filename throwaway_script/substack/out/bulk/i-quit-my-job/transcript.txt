@@ -1,0 +1,50 @@
+I spent a few months working at Amazon before joining Meta over 7 years ago. At Amazon, I worked in a small satellite office on a team that wasn’t using source control and a lot of what I worked on didn’t see the light of day.
+
+Within weeks working at Meta, I was learning a ton and trusted to land code that hit production in the same day. Also, the people I got to work with were incredible. I always loved when a fix for a site-wide outage seemed impossible, then someone (usually Haixia) dropped a diff that saved the day. When you work with people who do excellent work, it’s inspiring.
+
+There are many things that I’m grateful to Meta for, but the number one thing is the excitement I got out of the work. Working on something you’re intrinsically motivated by is one of life’s greatest pleasures.
+
+
+## Why Leave Then?
+
+
+About a year ago, I started a podcast to practice speaking and share the software engineering career stories that inspired me. Everything felt new, and I was learning a lot. After work, I kept thinking about ways to make the podcast better.
+
+At first, my goal was just to post once a month and see how it went. After a few episodes, I saw that people liked the content and I enjoyed working on it even more.
+
+Every now and then, I’d wonder what it’d be like to work on my passion project full time, but it seemed far off since I’ve only lost money on the podcast. So far, YouTube has paid $14,994.63, and I’ve spent $17,600 on video editing. For some episodes like the Boris one, I also paid for travel, hotels, and production crews which adds probably about $8k more in costs across in-person episodes.
+
+I don’t say that for sympathy. At that time, my unvested Meta stock had went up a lot so I used that to pay for my passion project. This did tie me to Meta financially though.
+
+
+## Why I Pulled the Trigger Early
+
+
+A few months ago, there was a big reorg at Zuck’s level that moved me and a lot of engineers in my org. At first, I was excited. The reorg made sense, and the new org I was now a part of was building ML infrastructure that I thought would be an interesting technical challenge.
+
+However, the more I thought about building up a new team the more I felt off. I kept thinking about my passion project and the dream of doing it full time. It felt selfish to build a team (I was a manager in the new org) and then leave if my podcast kept growing.
+
+So before we moved people around, I decided to go for my dream early. I will miss the unvested stock that I left behind, I’m sure, but hopefully it’s not something I will think about at the end of my life.
+
+
+## What’s Next
+
+
+I have two passion projects I’m working on:
+
+  - The Peterman Pod - I plan to keep it focused on people’s career stories. I love hearing how people navigated their careers and the podcast has been such a great excuse to get to talk to heroes of mine. One day, it would be amazing to have people like Jeff Dean or John Carmack on!
+
+The Peterman Pod - I plan to keep it focused on people’s career stories. I love hearing how people navigated their careers and the podcast has been such a great excuse to get to talk to heroes of mine. One day, it would be amazing to have people like Jeff Dean or John Carmack on!
+
+  - Compose - I’ve used ergonomic keyboards for ~5 years now because of my wrist pain. After a bunch of research I could never find exactly what I was looking for. So what I’m building is the ergonomic keyboard that I wish existed. Here are a few pictures (not renders) of a prototype we made:
+
+Compose - I’ve used ergonomic keyboards for ~5 years now because of my wrist pain. After a bunch of research I could never find exactly what I was looking for. So what I’m building is the ergonomic keyboard that I wish existed. Here are a few pictures (not renders) of a prototype we made:
+
+I have earmarked about 6 months of money at my current burn rate to fund this new career direction. If I want to keep working on these projects for longer than that, I’ll need to figure out how to make some money.
+
+My immediate idea is to get a sponsor for the podcast. If I do, I’ll make sure it is genuine and helpful. I won’t promote anything I don’t use myself.
+
+Anyway, thank you for your support. Working on my passion projects is something I’m only lucky enough to consider because of you all.
+
+Thank you for reading,
+Ryan Peterman

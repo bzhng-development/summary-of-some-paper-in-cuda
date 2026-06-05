@@ -1,0 +1,439 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/should-you-become-an-engineering",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 148294761,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-08-30T13:02:18.262Z",
+  "updated_at": "2024-08-31T20:50:49.755Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "should-you-become-an-engineering",
+  "social_title": null,
+  "subtitle": "What you should consider",
+  "teaser_post_eligible": true,
+  "title": "Should You Become an Engineering Manager?",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 11,
+  "reactions": {
+    "❤": 166
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "big-tech-vs-startups-for-new-grads",
+  "next_post_slug": "backchannel-alignment",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!lpzS!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F63b98b35-671d-413c-999a-3816c32ec230_1511x401.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 148294761,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "What you should consider",
+  "body_html": "<p>At some point, you’ll need to decide whether to become a people manager or stay as an individual contributor (IC). Neither path is objectively better than the other.</p><p>When I became a Staff Engineer (IC6) at Meta it was an immediate question. I gathered a lot of notes from several senior managers and ICs before making the transition. </p><p>In this article, I’ll share everything I compiled to give you the most important information you need to make an informed decision.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!lpzS!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F63b98b35-671d-413c-999a-3816c32ec230_1511x401.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!lpzS!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F63b98b35-671d-413c-999a-3816c32ec230_1511x401.png 424w, https://substackcdn.com/image/fetch/$s_!lpzS!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F63b98b35-671d-413c-999a-3816c32ec230_1511x401.png 848w, https://substackcdn.com/image/fetch/$s_!lpzS!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F63b98b35-671d-413c-999a-3816c32ec230_1511x401.png 1272w, https://substackcdn.com/image/fetch/$s_!lpzS!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F63b98b35-671d-413c-999a-3816c32ec230_1511x401.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!lpzS!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F63b98b35-671d-413c-999a-3816c32ec230_1511x401.png\" width=\"1456\" height=\"386\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/63b98b35-671d-413c-999a-3816c32ec230_1511x401.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:386,&quot;width&quot;:1456,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:111735,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!lpzS!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F63b98b35-671d-413c-999a-3816c32ec230_1511x401.png 424w, https://substackcdn.com/image/fetch/$s_!lpzS!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F63b98b35-671d-413c-999a-3816c32ec230_1511x401.png 848w, https://substackcdn.com/image/fetch/$s_!lpzS!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F63b98b35-671d-413c-999a-3816c32ec230_1511x401.png 1272w, https://substackcdn.com/image/fetch/$s_!lpzS!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F63b98b35-671d-413c-999a-3816c32ec230_1511x401.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">The manager track becomes an option around Staff at most companies.</figcaption></figure></div><h3><strong>Career Growth</strong></h3><p>Manager career growth scales with the size of your team. There are exceptions but in most cases, promotion comes from the sustained impact of your larger team. The problem is that your team only grows if your business area needs it to. Without any reason for your team to grow, your career will stagnate regardless of how good you do your job. <strong>Managers have much less control over their career growth than ICs do.</strong></p><p>This can lead to outlier career growth if you get lucky though. I’ve seen many folks who were early at Facebook get promoted to Director within just a year or two because the company was growing like crazy (“a rising tide lifts all boats”). That same growth would take much longer as an IC.</p><p>Also, managers have less career mobility than ICs do. This is because there are fewer management roles. Meanwhile, a good senior IC can go almost anywhere because they create scope and don’t rely on having a team for impact.</p><h3><strong>Working Style</strong></h3><p>Managers work almost entirely through delegation and influence. This means you’re dealing with people and meetings most of the day which has its cons:</p><ul><li><p>Almost no time for deep work since your schedule is fragmented</p></li><li><p>Less control of your schedule. Meetings dictate when you work</p></li><li><p>Politics and drama inevitably come up</p></li></ul><p>Although this sounds like hell for many engineers, there are benefits to this working style:</p><ul><li><p>Work usually stops after business hours</p></li><li><p>Your people skills grow since they are your primary tool for getting things done. These skills help you in your personal life too</p></li></ul><p><strong>The high-level tradeoff is that you work fewer hours but you have less control of your time.</strong> All managers I surveyed said something similar. This makes sense given managers don’t trade their time for impact. You scale your judgment through delegation and influence.</p><h3><strong>Why become an EM?</strong></h3><p>At this point, some engineers might wonder why anyone would want to become a manager. Management may be a good fit for some because of:</p><ol><li><p><strong>Your strengths and interests</strong> - I’ve met managers who knew back when they were ICs that one day they would switch because it fit their skillset. They were ok at engineering but where they shined was in growing others and using their people skills.</p></li><li><p><strong>Long-term career aspirations</strong> - If you want to be an executive or create your own company one day, becoming a manager will give you more relevant experience. </p></li><li><p><strong>Desired skill growth</strong> - Some engineers have been an IC for long enough that they are bored and want to learn something new. Becoming a manager can help you learn new skills.</p></li></ol><p><strong>You shouldn’t become an EM just because you think it’s the fastest way to grow your career. As always, it depends</strong>. Some people used to argue that management was better for career growth since there were more managers than ICs at the highest levels (IC7+). That’s not true anymore after the <a href=\"https://nypost.com/2023/02/08/zuckerbergs-meta-to-flatten-middle-managers-in-cost-cutting-push-report/\">2023 manager layoffs throughout the industry</a>. Even if it was true, your career growth in either role depends on your specific situation. </p><p>When I was considering switching to management, my manager warned me that I would have less control of my career growth. And he was right. I learned a lot from switching to management and enjoyed it but I didn’t get any closer to the next level. I had a much more clear path to the next level as an IC in my org.</p><div><hr></div><p>If you want to become an EM, here’s what I’d do:</p><ol><li><p><strong>Get promoted to Staff (IC6)</strong> - Most companies don’t allow transition before then (there are some exceptions).</p></li><li><p><strong>Try it out and show you’re ready</strong> - Try managing an intern. It’s one of the best ways to try management out without taking on a full team. You can also try taking on more of a tech lead role. It is similar to being an EM just without having to do performance reviews.</p></li><li><p><strong>Express interest to your manager - </strong>EM roles are limited. When an opportunity comes you’ll want to be on your manager’s mind as someone who has the skillset and is interested in the role.</p></li></ol><p>Opportunities to transition to management are situational. Growing areas that are hiring a lot will have the most opportunities for management based on need.</p><p>If you have a friend thinking about management, consider sharing this with them. As always, you can find more of my stuff here:</p><ul><li><p><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">LinkedIn</a></p></li><li><p><a href=\"https://twitter.com/ryanlpeterman\">Twitter</a></p></li><li><p><a href=\"https://www.threads.net/@ryanlpeterman\">Threads</a></p></li></ul><p>Thanks for reading,<br>Ryan Peterman</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 74,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p></p>",
+  "truncated_body_text": "At some point, you’ll need to decide whether to become a people manager or stay as an individual contributor (IC). Neither path is objectively better than the other.",
+  "wordcount": 848,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "f4df2d6e-046e-448c-b0bf-6dd4ae5a5a6a",
+      "publication_id": 1340878,
+      "name": "To Staff",
+      "slug": "to-staff",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        229.50000000000003,
+        229.50000000000009,
+        25.499999999999908
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        119.34000000000003,
+        119.34000000000005,
+        13.259999999999955
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        252,
+        252,
+        228
+      ],
+      "population": 267
+    },
+    "Muted": {
+      "rgb": [
+        126,
+        124,
+        108
+      ],
+      "population": 3
+    },
+    "DarkMuted": {
+      "rgb": [
+        75,
+        75,
+        72
+      ],
+      "population": 102
+    },
+    "LightMuted": {
+      "rgb": [
+        190,
+        190,
+        188
+      ],
+      "population": 304
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 166,
+  "comment_count": 17,
+  "child_comment_count": 9,
+  "audio_items": [
+    {
+      "post_id": 148294761,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/148294761/tts/3d99804f-4093-4634-ade5-89206cf0e5df/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 67659392,
+      "body": "Some good advice here. EM is definitely more a side step than a step up. Patience, humility and empathy are required skills. Your observation about lack of advancement rings true as well, especially when the org or team is not growing. It can be frustrating to deliver great results but not have a sense of going anywhere. ",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Some good advice here. EM is definitely more a side step than a step up. Patience, humility and empathy are required skills. Your observation about lack of advancement rings true as well, especially when the org or team is not growing. It can be frustrating to deliver great results but not have a sense of going anywhere."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 148294761,
+      "user_id": 60585124,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-09-03T13:49:47.386Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Jim Amos",
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9d675ec0-ee79-4a8a-ad07-22c228b05ff1_278x278.jpeg",
+      "handle": "jimamos1",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "jimamos1",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Humanware",
+          "id": 2952307,
+          "base_url": "https://humanware.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 7,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 67246100,
+      "body": "Nice article! I’d add that you will never be a good manager if you are not technically proficient. So whatever your decision, it is your responsibility to keep learning the technical side of things. \n\nYou are not expected to be an expert, but you must understand it well enough to know how your management decisions will affect the technical work.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Nice article! I’d add that you will never be a good manager if you are not technically proficient. So whatever your decision, it is your responsibility to keep learning the technical side of things."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "You are not expected to be an expert, but you must understand it well enough to know how your management decisions will affect the technical work."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 148294761,
+      "user_id": 10488388,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-08-30T13:41:26.853Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Dr. Jasmin Smajic",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/8524f659-53bd-4bd1-90d0-778f34b68546_944x944.jpeg",
+      "handle": "jasminsmajic",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 5
+      },
+      "reaction_count": 5,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "jasminsmajic",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 3,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "3 replies by Ryan Peterman and others"
+    }
+  ]
+}

@@ -1,0 +1,423 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/faang-career-ladder-junior-l3-vs",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 135250872,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-07-21T13:01:33.822Z",
+  "updated_at": "2024-01-08T06:14:12.125Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "faang-career-ladder-junior-l3-vs",
+  "social_title": null,
+  "subtitle": "",
+  "teaser_post_eligible": true,
+  "title": "FAANG Career Ladder: Junior (L3) vs Mid-level (L4)",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 3,
+  "reactions": {
+    "❤": 136
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "5-books-every-software-engineer-should",
+  "next_post_slug": "faang-career-ladder-mid-level-l4",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!fMn9!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ee22fb9-33da-4c85-ac43-77129897f5ca_1513x402.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "L3 and L4 engineers are the most similar on the IC ladder. The differences come from the stronger technical skills L4s are expected to have. This allows them to handle more scope with less guidance. Here’s how FAANG-like companies judge L3 vs L4 engineers.",
+  "body_html": "<p><em>👋 Hi, this is <a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a> with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your continued readership, we crossed 7,000 readers this week 🙏 🎉</em></p><p><em>I’m starting a “FAANG Career Ladder” series where I’ll compare IC levels from Junior (L3) all the way to Principal (L8) at FAANG-like companies. The highest levels are pretty interesting! </em></p><p><em>I’m hoping this will be a useful reference for folks to understand the differences between each level. Here’s the L3 vs L4 article; enjoy!</em></p><div><hr></div><p>L3 and L4 engineers are the most similar on the IC ladder. The differences come from the stronger technical skills L4s are expected to have. This allows them to handle more scope with less guidance. Here’s how FAANG-like companies judge L3 vs L4 engineers.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!fMn9!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ee22fb9-33da-4c85-ac43-77129897f5ca_1513x402.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!fMn9!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ee22fb9-33da-4c85-ac43-77129897f5ca_1513x402.png 424w, https://substackcdn.com/image/fetch/$s_!fMn9!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ee22fb9-33da-4c85-ac43-77129897f5ca_1513x402.png 848w, https://substackcdn.com/image/fetch/$s_!fMn9!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ee22fb9-33da-4c85-ac43-77129897f5ca_1513x402.png 1272w, https://substackcdn.com/image/fetch/$s_!fMn9!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ee22fb9-33da-4c85-ac43-77129897f5ca_1513x402.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!fMn9!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ee22fb9-33da-4c85-ac43-77129897f5ca_1513x402.png\" width=\"1456\" height=\"387\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/2ee22fb9-33da-4c85-ac43-77129897f5ca_1513x402.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:387,&quot;width&quot;:1456,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:166136,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!fMn9!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ee22fb9-33da-4c85-ac43-77129897f5ca_1513x402.png 424w, https://substackcdn.com/image/fetch/$s_!fMn9!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ee22fb9-33da-4c85-ac43-77129897f5ca_1513x402.png 848w, https://substackcdn.com/image/fetch/$s_!fMn9!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ee22fb9-33da-4c85-ac43-77129897f5ca_1513x402.png 1272w, https://substackcdn.com/image/fetch/$s_!fMn9!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ee22fb9-33da-4c85-ac43-77129897f5ca_1513x402.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><h3>Scope &amp; Impact</h3><p>The main difference between these levels is in the size of the scope that they can handle independently. Here’s a rule of thumb:</p><ul><li><p>L3 - <strong>Can handle individual tasks (&lt;2 weeks of work)</strong> with minimal guidance</p></li><li><p>L4 - <strong>Can handle medium-to-large features (&lt;2 months of work)</strong> with minimal guidance</p></li></ul><p>Both levels are not expected to come up with these projects. Senior engineers (L5) often set the initial direction and delegate to L3/L4 engineers. </p><p>Because L4 engineers drive full features, they are expected to do project management for them. This means they should break the project down into tasks, set reasonable timelines, and keep stakeholders updated.</p><p>“With minimal guidance” here doesn’t mean that L3/L4 engineers can’t ask others for help. It just means that <strong>they unblock themselves and make consistent progress</strong>. Asking great questions is one of the most effective ways to unblock yourself.</p><h3>Engineering Craft</h3><p>Both L3 and L4 engineers are expected to ship solid, well-tested code. The biggest difference here is that <strong>L4s are expected to take initiative</strong> in improving the codebase, contributing to production excellence, and owning the health of what they build. Here are a few examples of what L4s are expected to do:</p><ul><li><p>Improving the codebase -  They leave code in a better state than when they found it. They initiate refactoring and code cleanups. They give thoughtful code reviews.</p></li><li><p>Contributing to production excellence - They participate in the team’s oncall and help debug production breakages.</p></li><li><p>Own the health of what they build - They add test coverage. They add logging and build dashboards that help them monitor correctness.</p></li></ul><p>L3 engineers do some of these when directed to but <strong>L4 engineers should be proposing and doing these things without guidance.</strong></p><div><hr></div><p>If you’re an L3 engineer looking to grow to L4, <strong>take on some medium-to-large sized features, then deliver it with the expected level of engineering craft</strong>. If you do that you’ll get promoted quickly (~6-12 months).</p><p>I am thinking about writing a “speedrunner’s guide” on getting the L3 → L4 promotion as fast as possible. Since I went from L3 → L6 in 3 years, I’ll be able to share some unique perspective here. <strong>If you’re interested in that let me know by liking the post or dropping a comment</strong>. Your feedback will help me decide what to write next.</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 7000+ software engineers from companies like Google, Meta, and Amazon who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your continued readership, we crossed 7,000 readers this week 🙏 🎉",
+  "wordcount": 542,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "a0c5c2f9-bc81-4a70-991e-b807fa48fa1a",
+      "publication_id": 1340878,
+      "name": "To Mid-level",
+      "slug": "to-mid-level",
+      "hidden": false
+    },
+    {
+      "id": "b2c9552d-d53d-49a3-a154-bfba60c74c24",
+      "publication_id": 1340878,
+      "name": "FAANG Levels & Expectations",
+      "slug": "faang-career-ladder",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        21.982758620689644,
+        233.01724137931035,
+        118.70689655172421
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        11.431034482758616,
+        121.16896551724139,
+        61.72758620689663
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        202,
+        250,
+        224
+      ],
+      "population": 142
+    },
+    "Muted": {
+      "rgb": [
+        123,
+        125,
+        124
+      ],
+      "population": 145
+    },
+    "DarkMuted": {
+      "rgb": [
+        64,
+        64,
+        64
+      ],
+      "population": 88
+    },
+    "LightMuted": {
+      "rgb": [
+        180,
+        213,
+        195
+      ],
+      "population": 8
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 136,
+  "comment_count": 22,
+  "child_comment_count": 9,
+  "audio_items": [
+    {
+      "post_id": 135250872,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/135250872/tts/e62876a8-e372-49ce-9055-c1961e4bc2f5/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 21141256,
+      "body": "Besides knowing DSA what would you EO text a new grad engineer to already know?",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Besides knowing DSA what would you EO text a new grad engineer to already know?"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 135250872,
+      "user_id": 156442102,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-07-21T20:52:34.809Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Pete",
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fc85b3737-6919-4c2c-8904-7e5302b16ff1_144x144.png",
+      "handle": "pete430448",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 3
+      },
+      "reaction_count": 3,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "pete430448",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 8,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "5 replies by Ryan Peterman and others"
+    },
+    {
+      "id": 21120558,
+      "body": "Would love a guide to move from L4 to L5 quickly as the level seems much wider",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Would love a guide to move from L4 to L5 quickly as the level seems much wider"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 135250872,
+      "user_id": 7432660,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-07-21T14:22:00.097Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Aditya Deshpande",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/ce330d64-14a9-4b93-a8d1-edae64c99c0b_144x144.png",
+      "handle": "adityadeshpande524088",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 3
+      },
+      "reaction_count": 3,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "adityadeshpande524088",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 8,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

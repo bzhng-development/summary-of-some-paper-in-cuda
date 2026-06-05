@@ -1,0 +1,17 @@
+Here are the takeaways from this Ryan Peterman interview (host of The Peterman Post, reflecting on a career-direction mistake he made as a newly promoted mid-level engineer):
+
+**The Mistake: Prioritizing Migrations Over Impact**
+
+Shortly after being promoted to mid-level engineer, Ryan noticed a few large, incomplete migrations in the codebase that had left it in a fragmented state, forcing the team to maintain two code paths instead of one. No one had ever cleaned these up—technically everything still worked, and completing the migration wasn't exciting work. He took the initiative to finish these migrations himself, driven by a sense that it was "unacceptable for the codebase to be in that state" and a genuine enjoyment of clearing away old code to make the codebase something to be proud of. The work was "risky and time-consuming but a lot of fun."
+
+**The "Exceeds" Rating That Masked a Problem**
+
+That half, he received an "exceeds expectations" rating because of the sheer volume of his contributions, but he wasn't any closer to promotion. What had worked to get him from junior to mid-level would not work for getting him to senior. The core insight is that career growth demands developing the behaviors of the *next* level. For Ryan, the jump from junior to mid-level had been about focusing on **strong execution skills**. The jump from mid-level to senior, however, required something entirely different: **"developing your team-level influence, direction, and scope."** In his first half as a mid-level engineer, he had simply done a ton of mid-level engineer work that wasn't that impactful to the business. He hadn't thought about what work would matter most to the company the way a senior engineer would. The migrations he spent his time on were more "nice to have" than "need to have," and "your career growth scales with your impact."
+
+**The Solution: Aligning Interest with Impact**
+
+The way to avoid this trap is to always think about the "why" behind your work and make sure it aligns with what matters most to your team and company. "It is easy to get sidetracked by interesting work that isn't impactful." The fastest career growth, Ryan argues, comes from finding work that sits at the intersection of your interests and what matters most to the company. The best engineers can quickly tell what work is most impactful, and the fastest way to develop this skill is by discussing project prioritization with your manager and tech lead—making understanding impact itself a critical skill for software engineers.
+
+---
+
+His story turns on a single mismatch: he applied a **strong execution** playbook to a phase that demanded **team-level influence, direction, and scope**, trading praise for progress without closing the gap to senior. The "exceeds" rating became a false positive because volume of mid-level output could not substitute for the qualitative shift in thinking that the next level requires. His proposed fix—hunting for the intersection of personal interest and company need, and pressure-testing that alignment with your manager and tech lead—is essentially a lightweight prioritization framework for your own career: treat "what matters most" as a discoverable skill, not an afterthought, and don't let clean code seduce you away from real leverage.

@@ -1,0 +1,142 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 32,000 subscribers this week! If you’re not a free subscriber, here’s what you missed:
+
+  - 6 Software Engineering Templates I Wish I Had Sooner
+
+6 Software Engineering Templates I Wish I Had Sooner
+
+  - From Microsoft Intern to Meta Staff Engineer: Raviraj Achar
+
+From Microsoft Intern to Meta Staff Engineer: Raviraj Achar
+
+  - 5 Skills the Best Engineers I Know Have in Common
+
+5 Skills the Best Engineers I Know Have in Common
+
+Subscribe now
+
+This week, I reviewed hundreds of company engineering blog posts to bring you the best ones for your growth. If you find this helpful, please share it with your friends and coworkers. Enjoy!
+
+There’s an overwhelming amount of information online in engineering blog posts. Even posts from the top engineering brands (e.g. Meta, Netflix, Stripe, Figma) vary a lot in quality and how relevant they are to help you grow.
+
+I spent this week digging through hundreds of engineering blogs to find the top posts that will teach you something useful.
+
+
+## Curation Methodology
+
+
+I sorted every top company’s engineering blog posts by most read using either Medium’s engagement data or an advanced Google search.
+
+Then I read the top posts to find the ones that I thought were the most helpful for learning software engineering. Here’s the list grouped by topic:
+
+
+## Tech Stack Upgrades
+
+
+These blog posts go over the design decisions for major tech stack upgrades. Understanding these can help you learn to assess the pros and cons of major technical decisions and how to carry them out:
+
+  - Airbnb: React Native at Airbnb
+
+Airbnb: React Native at Airbnb
+
+  - Pinterest: The Case Against Kotlin
+
+Pinterest: The Case Against Kotlin
+
+  - Stripe: Migrating millions of lines of code to TypeScript
+
+Stripe: Migrating millions of lines of code to TypeScript
+
+  - Airbnb: Rearchitecting Airbnb’s Frontend
+
+Airbnb: Rearchitecting Airbnb’s Frontend
+
+  - Meta: Rebuilding our tech stack for the new Facebook.com
+
+Meta: Rebuilding our tech stack for the new Facebook.com
+
+
+## Scaling Backend Services
+
+
+Every growing tech company needs to scale its backend as it receives more traffic. Reading these blog posts can teach you how to identify and rearchitect system bottlenecks:
+
+  - OpenAI: Scaling Kubernetes to 7,500 nodes
+
+OpenAI: Scaling Kubernetes to 7,500 nodes
+
+  - Pinterest: Sharding Pinterest: How we scaled our MySQL fleet
+
+Pinterest: Sharding Pinterest: How we scaled our MySQL fleet
+
+  - Instagram: Sharding & IDs at Instagram
+
+Instagram: Sharding & IDs at Instagram
+
+  - Figma: The growing pains of database architecture
+
+Figma: The growing pains of database architecture
+
+  - Dropbox: Finding Kafka’s throughput limit in Dropbox infrastructure
+
+Dropbox: Finding Kafka’s throughput limit in Dropbox infrastructure
+
+  - Instagram: Open-sourcing a 10x reduction in Apache Cassandra tail latency
+
+Instagram: Open-sourcing a 10x reduction in Apache Cassandra tail latency
+
+
+## Online Migrations
+
+
+Downtime isn’t acceptable for major tech companies. Therefore, it’s important to understand how to switch over to a new code path without disrupting the user experience. These blog posts will teach you the common patterns:
+
+  - Stripe: Online migrations at scale
+
+Stripe: Online migrations at scale
+
+  - Netflix: Migrating Critical Traffic At Scale with No Downtime
+
+Netflix: Migrating Critical Traffic At Scale with No Downtime
+
+
+## Debugging Stories
+
+
+Debugging is a critical skill in software engineering. These blog posts will teach you how these companies chased down complicated bugs, which will level up your debugging skills:
+
+  - Netflix: Life of a Netflix Partner Engineer — The case of the extra 40 ms
+
+Netflix: Life of a Netflix Partner Engineer — The case of the extra 40 ms
+
+  - Github: Debugging network stalls on Kubernetes
+
+Github: Debugging network stalls on Kubernetes
+
+  - Reddit: You Broke Reddit: The Pi-Day Outage
+
+Reddit: You Broke Reddit: The Pi-Day Outage
+
+  - Netflix: Linux Performance Analysis in 60,000 Milliseconds
+
+Netflix: Linux Performance Analysis in 60,000 Milliseconds
+
+
+## Build Systems
+
+
+Build processes are common in software engineering. It’s useful to have some context even if you don’t work on them directly. These blog posts will give you a better understanding of modern build processes and optimizations:
+
+  - Stripe: Fast builds, secure builds. Choose two.
+
+Stripe: Fast builds, secure builds. Choose two.
+
+  - Pinterest: How a one line change decreased our clone times by 99%
+
+Pinterest: How a one line change decreased our clone times by 99%
+
+My list isn’t exhaustive. If you know other high-quality engineering blog posts that teach useful lessons, please share them in the comments. I will keep this list up to date with the best posts so it’s worth bookmarking.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already. Also, if you have feedback about how I can make the content better, please share it here 🙏
+
+Thanks for reading,
+Ryan Peterman

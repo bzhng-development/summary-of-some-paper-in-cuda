@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import concurrent.futures
 import json
+import os
 import re
 import sys
 import time
@@ -23,7 +24,7 @@ INLINE_PAPER_RE = re.compile(r"^\*\*(.+?)\*\*")
 DEFAULT_INPUT = "missing-classic-papers-2012-2024.md"
 DEFAULT_OUTPUT = "missing-classic-papers-2012-2024.exa.jsonl"
 DEFAULT_API_BASE = "https://api.exa.ai"
-DEFAULT_API_KEY = "a4b79ae3-c968-43b8-b657-3283ce1c9950"
+DEFAULT_API_KEY = os.environ.get("EXA_API_KEY", "")
 
 
 def parse_args() -> argparse.Namespace:
@@ -210,9 +211,7 @@ def process_entry(
             prompt=prompt,
         )
         record["response"] = response_json.get("answer")
-        record["arxiv_id"] = (
-            response_json.get("answer", {}) or {}
-        ).get("arxiv_id")
+        record["arxiv_id"] = (response_json.get("answer", {}) or {}).get("arxiv_id")
         record["citations"] = response_json.get("citations")
         record["raw_response"] = response_json
     except urllib.error.HTTPError as exc:

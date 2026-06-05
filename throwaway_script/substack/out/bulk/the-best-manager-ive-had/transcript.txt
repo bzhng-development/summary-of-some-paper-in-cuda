@@ -1,0 +1,68 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth.
+
+This week I’m sharing some stories from my experience about the best manager I’ve had. Hope it is helpful; enjoy!
+
+When I was picking a team to join for the first time, many people told me my manager was the most important person to vet. It makes sense, but I remember not knowing what to look for in a manager back then.
+
+Now after having eight different managers, I’ve been lucky to have one that was exceptional. To give you some ideas of what makes a great manager, I’ll share my personal experience about what made my best manager stand out.
+
+
+## Transparent Communication
+
+
+The trait I find most important is that he was transparent with me. This has a lot of benefits but is especially important for career growth conversations. If your manager doesn’t talk about your progress to the next level, it makes it difficult for you to plan out your path.
+
+I had a friend who never had a clear picture of what he needed to do to get to Senior (IC5) at Meta. He was strung along for years without clear guidance until he called it quits. I’ve never had that experience since my manager made it clear where I stood.
+
+Transparency is also critical for learning. Your manager should share feedback with you to help you grow. Also, if your manager shares feedback early and often, it is much less uncomfortable.
+
+
+## Technical Competency
+
+
+Another important trait that stands out from my best manager is his technical competency; he knows what is going on. This has a lot of downstream benefits:
+
+  - Better judgment - This comes up in many conversations about the team’s direction or ongoing work. What he says is on point in discussions with engineers.
+
+Better judgment - This comes up in many conversations about the team’s direction or ongoing work. What he says is on point in discussions with engineers.
+
+  - Better representation - Understanding engineering helps him speak about the work during performance reviews. Engineers doing challenging work in less understood domains still get the ratings they deserve.
+
+Better representation - Understanding engineering helps him speak about the work during performance reviews. Engineers doing challenging work in less understood domains still get the ratings they deserve.
+
+There are also some team health benefits because the engineers respect him more than if he didn’t know what was going on.
+
+
+## Holding a High Bar
+
+
+I remember one of my first halves with the team, I was frustrated because I got a lower rating than I expected. I compared my work to some peers on a different team who got higher ratings than I did.
+
+Now I realize that my manager was right. My work deserved the rating I got. I’ve seen time and time again that my manager doesn’t give people more credit than they deserve.
+
+This increases the team’s talent density over time. This is because everyone focuses on doing work that has more impact because that is what is rewarded. The bar is high but fair, which keeps high performers motivated and helps them grow.
+
+
+## Doesn’t Oversell
+
+
+My best manager never oversells anything. This makes him more credible, which increases his influence.
+
+If your manager has credibility like this, then they will succeed more often when they advocate for you. At another company I worked at, I had the opposite happen which made engineers resentful because promotions kept failing to land.
+
+
+## Focuses on What Matters
+
+
+My best manager always focuses on what matters. I can think of many cases where politics or processes were slowing engineers on the team down. At large companies, it’s easy for this to happen silently if you don’t fight it.
+
+My manager always recommended that we focus on making the technology better and improving the user experience. If process or politics got in the way he’d often shield us from these things to help us focus on engineering.
+
+Great managers can make a world of difference. I am lucky to have had a great manager and will always appreciate the opportunities he gave me.
+
+If you’re looking at a new team, try to ask people on the team you’re joining about your potential manager. Engineers are usually transparent about their experience which is helpful signal.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already.
+
+Thanks for reading,
+Ryan Peterman

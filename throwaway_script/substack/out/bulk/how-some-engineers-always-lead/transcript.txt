@@ -1,0 +1,56 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 23,000 readers this week 🙏 🎉
+
+This week I’m tackling a question about how to maintain workstream leadership as an up-and-coming engineer. Hope it is helpful; enjoy!
+
+> Q: As an L4/L5, how did you maintain leadership of a cross-team workstream?
+
+Q: As an L4/L5, how did you maintain leadership of a cross-team workstream?
+
+Junior engineers worry about senior engineers taking over on projects they want to lead. Some even think of hiding their work until it’s near launch. However, this is the opposite of what you should do since collaboration increases your impact. Here are two ways that some engineers always lead.
+
+
+## Being Proactive
+
+
+Senior engineers only step in where there are leadership gaps. If you leave none, then there’s no need for others to provide guidance.
+
+The best way to make sure there are no gaps is to think as if you own the entire workstream. This mindset will incentivize you to:
+
+  - Drive Direction Setting - Get the right people together, lead meetings to discuss plans, get alignment, and communicate the plan.
+
+Drive Direction Setting - Get the right people together, lead meetings to discuss plans, get alignment, and communicate the plan.
+
+  - Drive Execution - Do what it takes to achieve the plans. In some cases you don’t even write code. It doesn’t matter who does the work, what matters is that the workstream moves forward.
+
+Drive Execution - Do what it takes to achieve the plans. In some cases you don’t even write code. It doesn’t matter who does the work, what matters is that the workstream moves forward.
+
+There can be multiple leaders, so you don’t need to compete with others. Be proactive and own the workstream’s success.
+
+
+## Example: Mid-Level (L4) → Senior (L5)
+
+
+When I was a Mid-Level (L4) engineer growing to Senior (L5), a tech lead on my team found a problem that needed partnership with another team. He didn’t have the bandwidth to do the execution so I volunteered to help.
+
+From day one, I was proactive. I drove all the meetings, led planning and put together the design with minimal guidance from my tech lead. I didn’t have all the answers since I didn’t know the other team’s codebase. What mattered was the leadership role I played in putting everything together.
+
+After a few months, my tech lead told me he no longer needed to attend meetings since I had everything under control. I continued to lead in this area for the next few halves, which was a major contributor to my promotion.
+
+
+## Being Visible
+
+
+I already talked about being visible to market your work. The same idea applies here but for a different reason. If you communicate about your workstream, you will become the go-to person for it.
+
+Write down and share the plans, progress, and results. In practice, there are plenty of opportunities to do this because most engineers dread this work. Their dread is your opportunity. If you fill that gap, you’ll become a natural leader for the workstream.
+
+In a recent interview, Marc Andreessen (a16z’s founder) perfectly summarizes this approach: “One of the ways you find the up-and-comers at a tech company is by seeing who wrote down the plan.
+
+That doesn't mean they came up with everything and it doesn't mean they had all the ideas, but it means they're actually able to organize their thoughts — and have the energy, motivation, and skill to communicate it in a written form.”
+
+These senior behaviors made it so I’ve never had to battle over owning a workstream. If you have strong initiative and don’t leave any leadership gaps, there isn’t any need for others to come in. Not to mention that you’ll become the go-to person for the workstream if you write about it often.
+
+Hope this was helpful and if you have feedback about how I can make the content better, please share it here 🙏
+
+Thanks for reading,
+Ryan Peterman

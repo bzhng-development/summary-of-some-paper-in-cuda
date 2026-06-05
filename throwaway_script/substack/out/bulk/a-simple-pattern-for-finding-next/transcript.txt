@@ -1,0 +1,46 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 54,000 readers this week 🙏 🎉
+
+This week I’m sharing a tip that helped me find projects that got me promoted. Hope it is helpful; enjoy!
+
+There are two high-level steps to getting promoted:
+
+  - Find next-level scope - You need to find problems that require you to demonstrate the behaviors of the next level.
+
+Find next-level scope - You need to find problems that require you to demonstrate the behaviors of the next level.
+
+  - Solve problems, land impact - Once you find problems that are big enough, you need to deliver with high quality.
+
+Solve problems, land impact - Once you find problems that are big enough, you need to deliver with high quality.
+
+Finding next-level scope is often harder than solving problems themselves. This is  especially true if you’re looking for a Staff-level or higher promotion. After seeing many people get promoted to Staff+ levels, I’ve noticed a pattern that helps in finding scope.
+
+The idea is that you brainstorm project ideas with engineers who are one or two levels higher than you are.
+
+
+## Why It Works So Well
+
+
+Since higher-level engineers are so picky with their time, the projects they don’t have time for are often still big enough to get you promoted.
+
+If you take on their projects, these more senior engineers will naturally mentor you during project execution; They are the most relevant people to review your designs and code. This will help you become a better engineer and deliver the project.
+
+Lastly, if the collaboration goes well, you will have a champion who may give consequential peer feedback for your future promotion packet.
+
+
+## Concrete Example
+
+
+For instance, one of the projects that contributed to my Senior (L5) promotion was just something in my tech lead’s backlog. The initial idea was to address some shortcomings in the video ads pipeline. I thought it was impactful so I volunteered to take it on.
+
+He helped connect me to the ads team to start the collaboration. He also reviewed my design and code until it was clear I had a full grasp of the work. The collaboration grew into a larger project, which I took full ownership of, but you can see how it all started by taking on a stronger engineer’s backlog project.
+
+I don’t know what was in my Senior promotion packet but I imagine it included some positive feedback from him since we worked together closely.
+
+Looking back, I realize I was lucky to be working on a team with much stronger engineers so I didn’t need to plan to do this explicitly. Project opportunities were free-flowing.
+
+If you’re stuck trying to find next-level scope, try brainstorming ideas with more senior engineers. Chances are, their expertise will help you come up with good opportunities. Not to mention that their support will make it much easier for you to finish the job too.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already.
+
+Thanks for reading,
+Ryan Peterman

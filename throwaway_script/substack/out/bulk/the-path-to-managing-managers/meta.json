@@ -1,0 +1,477 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/the-path-to-managing-managers",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 156467500,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2025-02-07T14:02:42.891Z",
+  "updated_at": "2025-02-07T14:05:21.714Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "the-path-to-managing-managers",
+  "social_title": null,
+  "subtitle": "",
+  "teaser_post_eligible": true,
+  "title": "The Path to Managing Managers",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 4,
+  "reactions": {
+    "❤": 42
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "100000",
+  "next_post_slug": "amazon-principal-engineer-on-layoffs",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/755707c7-73f9-4344-a2c7-16ba4bbe229e_1668x1062.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 156467500,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Today’s post is from James Stanier who is an engineering director at Shopify",
+  "body_html": "<p><em>👋 Hi, this is Ryan with another edition of my newsletter about software engineering and career growth. ​​Thanks to your support, we hit 101k readers this week!</em></p><p><em>Today’s post is from James Stanier who is an engineering director at Shopify. He’s written two books on engineering management (<a href=\"https://www.amazon.com/Become-Effective-Software-Engineering-Manager/dp/1680507249/\">book1</a>, <a href=\"https://www.amazon.com/Become-Great-Engineering-Leader-Effective/dp/B0D8LF72PY?source=ps-sl-shoppingads-lpcontext&amp;ref_=fplfs&amp;psc=1&amp;smid=A3P5ROKL5A1OLE\">book2</a>), and I’ve found a lot of his writing online helpful for understanding manager career growth.</em></p><p><em>Today, he’s sharing about the path to managing managers, which is interesting since career growth and strategy for managers is very different from early IC career growth:</em></p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!hPt0!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4d6d345a-38b8-46e8-9b21-9cb3632c768d_1513x402.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!hPt0!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4d6d345a-38b8-46e8-9b21-9cb3632c768d_1513x402.png 424w, https://substackcdn.com/image/fetch/$s_!hPt0!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4d6d345a-38b8-46e8-9b21-9cb3632c768d_1513x402.png 848w, https://substackcdn.com/image/fetch/$s_!hPt0!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4d6d345a-38b8-46e8-9b21-9cb3632c768d_1513x402.png 1272w, https://substackcdn.com/image/fetch/$s_!hPt0!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4d6d345a-38b8-46e8-9b21-9cb3632c768d_1513x402.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!hPt0!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4d6d345a-38b8-46e8-9b21-9cb3632c768d_1513x402.png\" width=\"1456\" height=\"387\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/4d6d345a-38b8-46e8-9b21-9cb3632c768d_1513x402.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:387,&quot;width&quot;:1456,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:123121,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!hPt0!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4d6d345a-38b8-46e8-9b21-9cb3632c768d_1513x402.png 424w, https://substackcdn.com/image/fetch/$s_!hPt0!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4d6d345a-38b8-46e8-9b21-9cb3632c768d_1513x402.png 848w, https://substackcdn.com/image/fetch/$s_!hPt0!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4d6d345a-38b8-46e8-9b21-9cb3632c768d_1513x402.png 1272w, https://substackcdn.com/image/fetch/$s_!hPt0!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4d6d345a-38b8-46e8-9b21-9cb3632c768d_1513x402.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><p><em>For more from James, I recommend you <a href=\"https://www.linkedin.com/in/jstanier/\">follow him on LinkedIn</a> or <a href=\"https://theengineeringmanager.substack.com/\">subscribe to his newsletter</a>. He writes high-quality posts on engineering management.</em></p><p><em>Here’s James:</em></p><div><hr></div><p>How do you end up being one of those people that manages managers?</p><p>No doubt you’ve seen <em>Director of…</em>, <em>Head of…</em>, and <em>VP</em> roles advertised externally, especially at large software companies. However, often there’s a Catch-22 situation that you’ll face: they’re typically looking for people who have had experience doing it before. Or even if they say that they aren’t, what chance will you have in the recruitment process if you’re up against others who’ve been there and done that? Now, of course, you might get lucky. But maybe there are ways of preparing to make yourself even more lucky.</p><p>Let’s think about preparing yourself for the leap to managing managers. I believe that you stand the most chance of being able to make the next progression step if you find yourself at the union of a majority of the following characteristics and situations:</p><ul><li><p><strong>You’ve been an Engineering Manager for a decent amount of time</strong> (say, 2-5 years) and have a provable track record of shipping and people management, with references that can back you up. After all, if you’re running multiple teams, you’ll need to know how to run one team inside out.</p></li><li><p><strong>You’re already working for a company with a strong management culture</strong> with clear career progression tracks for managers and individual contributors. This means that if the role opens up where you already work, it’s clear how to put yourself forward for it. It’ll also mean you’re learning and practicing the right skills.</p></li><li><p><strong>You’re at a company that is changing fast</strong> and tends to be unable to keep up with the chaos. This often occurs during periods of rapid growth, or even via shake-up – through downsizing, mergers and acquisitions – any event that begins to question the current shape of the org chart being correct for the foreseeable future.</p></li><li><p><strong>You have a good presence online</strong> via the usual social channels: LinkedIn, Twitter, Github, and so on. This way if people are trying to find people like you elsewhere, they can.</p></li></ul><p>Now, of course, it is entirely plausible that you may apply cold for a Director of Engineering role as an external applicant while currently being an Engineering Manager. That’s what I meant by getting lucky above. Quite often more senior engineering management positions are either headhunted or promoted from within.</p><p>But why is this?</p><ul><li><p><strong>The more senior the managerial position, the more risky a bad hire is</strong>. That’s why excellent internal candidates always have the upper hand: they are a known entity that likely already has domain knowledge. They’re also far more likely to have the company take a chance on the new gig working out. Even better: smart companies will do a 30-60-90 plan that allows the promoted member of staff to revert to their old role amicably if it’s not working out.</p></li><li><p><strong>Good companies will look out for their staff first</strong> and seize opportunities to offer career progression to retain existing talent. I don’t have any statistics on how many manager-of-manager roles get filled and are never advertised externally, but I’d reckon it’s maybe in the 70%+ region. If you hire good people consistently, you’ll always have someone great progressing up the ranks. Why look elsewhere, unless you need to bring in someone specific, such as a candidate with key domain knowledge that is lacking at the company?</p></li><li><p><strong>The need to find a manager of managers (in my experience) is rarely something that undergoes extensive planning</strong>. During periods of rapid growth, the number of staff in the department may start stacking up to the point that existing teams need to be split into smaller ones, thus creating opportunities for a node in the org chart above those teams. Sometimes an existing manager of managers will quit and filling that void internally, on a tight timeline, is much easier than reaching outside the company. Or perhaps two organizations merging create a bunch of empty nodes in the org chart needing urgently to be filled. Often you look within.</p></li></ul><p>These are all opportunities you can more likely seize if you make sure you’re already working for an ambitious, high growth company and are doing a stellar job of running a team. This is no small feat in itself, mind you.</p><p>Start-ups, or smaller high growth companies in general, are great for giving yourself this opportunity, especially ones that have just received a new venture capital investment. An injection of money means an injection of people, which creates more opportunities for leading them as the org chart adapts. <a href=\"https://www.theengineeringmanager.com/book/\">I advocated strongly for the managerial opportunities that high-growth start-ups can offer you in the penultimate chapter of my book</a>. After all, how do you reckon many CTOs became CTOs for the first time?</p><p>So where am I going with this? To use the cheesiest quote, you’ve gotta skate where the puck is going. (Thanks Wayne.) Yes, you can keep an eye on external adverts, apply to anything and everything, and hope you land the job. However, depending on where you currently work, it may be more fruitful to change your role sooner at your <em>current</em> level – which is often easier – to stand more of a chance of upward growth over time.</p><p>There are parallels here with the early stages of an individual contributor’s career. It’s often hard to land that first job because the applicant has yet to prove themselves. However, once they’ve stuck around for a few years and have gained experience by shipping lots of code, they find themselves having to bat the recruiters away.</p><p>The same thing is true about progressing further up the management track. Getting your first management role is tough, but you only have to do it once to prove you can do it again. The same is true about the next step of managing managers. People often grow from within by being excellent performers and working their way upwards.</p><p>If you’re looking to grow from managing individual contributors to managing managers, think about the following points.</p><ul><li><p><strong>How likely will this be possible at your current company within a reasonable timeframe?</strong> If it’s not, you might need to look elsewhere sooner rather than later.</p></li><li><p><strong>Is your current Engineering Manager role defined similarly to how other notable companies in the industry define it?</strong> If not, why not? The more your current EM role fits that of the best employers in the industry, the better chance you have of moving sideways and upwards.</p></li><li><p><strong>How many years of experience in this role do you have?</strong> I would expect a manager of managers to be a high growth EM with at least a few years of tenure.</p></li><li><p><strong>What notable infrastructure, features or products have you shipped while being an EM?</strong></p></li><li><p><strong>Are you seen as an influential person in your current department?</strong> Do people outside your team seek your advice? If not, why not?</p></li><li><p><strong>Have you coached anyone outside of your team?</strong> If not, I’d advise you to start giving it a go.</p></li><li><p><strong>Have you found anyone else doing this role at your existing company, your network or online?</strong> Get in touch with them to see if they’ll have a chat with you about what it’s like to do that job, and ask them how they got into it. What changed for them when compared to just running one team? What happened to their time to contribute technically?</p></li></ul><p>What’s your current story? Does it feel like you’re ready for the next step? Have you already been working at the level of your next promotion?</p><p>Until the next one, good luck!</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 101,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "👋 Hi, this is Ryan with another edition of my newsletter about software engineering and career growth. ​​Thanks to your support, we hit 101k readers this week!",
+  "wordcount": 1391,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        192.66666666666674,
+        147.33333333333337,
+        62.33333333333325
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        100.18666666666671,
+        76.61333333333334,
+        32.41333333333329
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        244,
+        236,
+        221
+      ],
+      "population": 5
+    },
+    "Muted": {
+      "rgb": [
+        132,
+        132,
+        124
+      ],
+      "population": 2
+    },
+    "DarkMuted": {
+      "rgb": [
+        72,
+        72,
+        72
+      ],
+      "population": 76
+    },
+    "LightMuted": {
+      "rgb": [
+        208,
+        206,
+        192
+      ],
+      "population": 22
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    },
+    {
+      "id": 2176233,
+      "name": "James Stanier",
+      "handle": "jstanier",
+      "previous_name": null,
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/60f9e903-ad5f-4f21-8153-73fd277b22a3_400x400.jpeg",
+      "bio": "Engineering leadership. Likes writing, mostly on long-term and timeless things.",
+      "profile_set_up_at": "2022-07-03T15:28:39.121Z",
+      "reader_installed_at": "2022-07-06T19:11:36.451Z",
+      "twitter_screen_name": "jstanier",
+      "is_guest": true,
+      "bestseller_tier": 100,
+      "status": {
+        "bestsellerTier": 100,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "bestseller",
+          "tier": 100
+        },
+        "paidPublicationIds": [
+          10845
+        ],
+        "subscriber": null
+      },
+      "primaryPublicationId": 991131,
+      "primaryPublicationName": "The Engineering Manager",
+      "primaryPublicationUrl": "https://theengineeringmanager.substack.com",
+      "primaryPublicationSubscribeUrl": "https://theengineeringmanager.substack.com/subscribe?"
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 42,
+  "comment_count": 2,
+  "child_comment_count": 2,
+  "audio_items": [
+    {
+      "post_id": 156467500,
+      "voice_id": "en-US-OnyxTurboMultilingualNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/156467500/tts/671ac19c-9022-4907-a382-53a99f25085b/en-US-OnyxTurboMultilingualNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 91930478,
+      "body": "This resonates with me and generally my experience. Your last questions are so crucial, specifically \"Have you already been working at the level of your next promotion?\". I invite anyone reading this article to focus on operating at the next level already. Make the promotion so obvious they have to give it to you. Work with your manager to find out how you can prove already you can operate at the next level.\nEven if you end up having to look for that role elsewhere, you have your next level delivery on your resume which should help with the conversation. Good luck to everyone on this journey for growth!",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "This resonates with me and generally my experience. Your last questions are so crucial, specifically \"Have you already been working at the level of your next promotion?\". I invite anyone reading this article to focus on operating at the next level already. Make the promotion so obvious they have to give it to you. Work with your manager to find out how you can prove already you can operate at the next level."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Even if you end up having to look for that role elsewhere, you have your next level delivery on your resume which should help with the conversation. Good luck to everyone on this journey for growth!"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 156467500,
+      "user_id": 36151083,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2025-02-08T03:40:31.550Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Gabriele Cimato",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/779bff11-2e9b-4404-8683-3dd83b4f7769_1080x1080.jpeg",
+      "handle": "gabrielecimato",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "gabrielecimato",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Lead With Kindness",
+          "id": 3666525,
+          "base_url": "https://leadwithkindness.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 3,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 91853149,
+      "body": "I've been managing managers (Team Leaders) for almost 3 years and it's quite a change!\nYou focus more on strategy and less on coding and tactics. You no longer have a team. Your first team is now your peers. Those questions at the end are key! ",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I've been managing managers (Team Leaders) for almost 3 years and it's quite a change!"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "You focus more on strategy and less on coding and tactics. You no longer have a team. Your first team is now your peers. Those questions at the end are key!"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 156467500,
+      "user_id": 12296261,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2025-02-07T20:41:33.767Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Rafa Páez",
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe4d66e45-9f60-42c0-a039-faa7da4c791e_800x800.jpeg",
+      "handle": "rafapaez",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "rafapaez",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "unsubscribed",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "The Engineering Leader",
+          "id": 2218366,
+          "base_url": "https://newsletter.rafapaez.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 3,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    }
+  ]
+}

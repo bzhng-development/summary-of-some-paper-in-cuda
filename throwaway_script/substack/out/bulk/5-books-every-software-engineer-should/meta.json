@@ -1,0 +1,424 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/5-books-every-software-engineer-should",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 134231176,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-07-14T13:00:43.233Z",
+  "updated_at": "2023-07-14T13:01:39.573Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "5-books-every-software-engineer-should",
+  "social_title": null,
+  "subtitle": "Announcement at the end",
+  "teaser_post_eligible": true,
+  "title": "5 Books Every Software Engineer Should Read",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 27,
+  "reactions": {
+    "❤": 261
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "threads-invisible-armor",
+  "next_post_slug": "faang-career-ladder-junior-l3-vs",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!0IwF!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa3417950-abac-491f-be8d-f0a665c31ddc_1245x997.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Announcement at the end",
+  "body_html": "<p><em>👋 Hi, this is <a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a> with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your continued readership, we welcomed almost 2000 new subs last week 🙏🤯</em></p><p><em>Note: There are no affiliate links in my book list. Enjoy!</em></p><div><hr></div><p>The goal for my book list is simple. I wanted it to cover the 20% of reading that you need to do to get 80% of the skills you need on the job.</p><p>To make sure this list is high quality, I cross-referenced my recommendations against three sources: Hacker News mentions, Reddit mentions, and Amazon reviews. From my research and experience, here are the top five books every software engineer should read.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!0IwF!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa3417950-abac-491f-be8d-f0a665c31ddc_1245x997.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!0IwF!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa3417950-abac-491f-be8d-f0a665c31ddc_1245x997.png 424w, https://substackcdn.com/image/fetch/$s_!0IwF!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa3417950-abac-491f-be8d-f0a665c31ddc_1245x997.png 848w, https://substackcdn.com/image/fetch/$s_!0IwF!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa3417950-abac-491f-be8d-f0a665c31ddc_1245x997.png 1272w, https://substackcdn.com/image/fetch/$s_!0IwF!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa3417950-abac-491f-be8d-f0a665c31ddc_1245x997.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!0IwF!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa3417950-abac-491f-be8d-f0a665c31ddc_1245x997.png\" width=\"642\" height=\"514.1156626506024\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/a3417950-abac-491f-be8d-f0a665c31ddc_1245x997.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:997,&quot;width&quot;:1245,&quot;resizeWidth&quot;:642,&quot;bytes&quot;:680231,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!0IwF!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa3417950-abac-491f-be8d-f0a665c31ddc_1245x997.png 424w, https://substackcdn.com/image/fetch/$s_!0IwF!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa3417950-abac-491f-be8d-f0a665c31ddc_1245x997.png 848w, https://substackcdn.com/image/fetch/$s_!0IwF!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa3417950-abac-491f-be8d-f0a665c31ddc_1245x997.png 1272w, https://substackcdn.com/image/fetch/$s_!0IwF!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa3417950-abac-491f-be8d-f0a665c31ddc_1245x997.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><h3><em>Introduction to Algorithms - “CLRS” </em>(<a href=\"https://www.amazon.com/Introduction-Algorithms-3rd-MIT-Press/dp/0262033844/\">link</a>)</h3><p>This book is the most famous algorithms &amp; data structures textbook in the world for good reason. It covers everything you need to know on these topics.</p><p>When I read it in college for my algorithms class, I was impressed with how applicable it was for interview prep. All Leetcode questions are applications of the knowledge in this book. </p><p>It goes further than just Leetcode though. A basic understanding of common data structures is important on the job. Besides, its popularity and ratings speak for themselves:</p><ul><li><p><strong><a href=\"https://www.redditreads.com/r/programming\">#1 most mentioned book on /r/programming</a></strong></p></li><li><p><strong><a href=\"https://www.redditreads.com/r/cscareerquestions\">#2 most mentioned book on /r/cscareerquestions</a> -</strong> second to an interview prep book (CTCI)</p></li><li><p>One of the <a href=\"https://hackernewsbooks.com/top-books-on-hacker-news\">top all-time mentioned books on Hacker News</a></p></li><li><p>Average <a href=\"https://www.amazon.com/Introduction-Algorithms-3rd-MIT-Press/dp/0262033844/\">4.6 star rating on Amazon (2341 ratings)</a> - <strong>much higher than I would have expected for a textbook</strong></p></li></ul><h3><em>Clean Code </em>(<a href=\"https://www.amazon.com/Clean-Code-Handbook-Software-Craftsmanship-ebook/dp/B001GSTOAM/\">link</a>)</h3><p>Engineers must maintain and modify software to handle business needs. This is much easier to do when code is well organized. This book covers how to write maintainable code. </p><p><strong>The knowledge in this book is what helps me write high-quality code and provide useful feedback on code reviews</strong>. Given how valuable this book is, it makes sense why it’s so popular and highly rated:</p><ul><li><p><strong>Top 10 mentioned book on <a href=\"https://www.redditreads.com/r/programming\">/r/programming</a>, <a href=\"https://www.redditreads.com/r/cscareerquestions\">/r/cscareerquestions</a>, and <a href=\"https://www.redditreads.com/r/ExperiencedDevs\">/r/ExperiencedDevs</a></strong></p></li><li><p>One of the <a href=\"https://hackernewsbooks.com/top-books-on-hacker-news\">top all-time mentioned books on Hacker News</a></p></li><li><p>Average <a href=\"https://www.amazon.com/Clean-Code-Handbook-Software-Craftsmanship-ebook/dp/B001GSTOAM/\">4.7 star rating on Amazon (5722 ratings)</a> - <strong>even higher average ratings than the last book</strong></p></li></ul><h3><em>Designing Data-Intensive Applications </em>(<a href=\"https://www.amazon.com/Designing-Data-Intensive-Applications-Reliable-Maintainable-ebook/dp/B06XPJML5D\">link</a>)</h3><p>System design is a critical skill for experienced developers. This is because senior developers are responsible for their team’s end-to-end systems. Reading this book will help you build modern, scalable systems. <strong>I highly recommend this book if you’re looking to expand your system design understanding.</strong> </p><ul><li><p>Average <a href=\"https://www.amazon.com/Designing-Data-Intensive-Applications-Reliable-Maintainable-ebook/dp/B06XPJML5D\">4.8 star rating on Amazon (3893 ratings)</a> - <strong>highest among all the books I recommend</strong></p></li><li><p><strong><a href=\"https://www.redditreads.com/r/ExperiencedDevs\">Most mentioned book on /r/ExperiencedDevs</a></strong> - makes sense that this subreddit would be the one talking about this book most</p></li><li><p>One of the <a href=\"https://hackernewsbooks.com/top-books-on-hacker-news\">top all-time mentioned books on Hacker News</a></p></li></ul><h3><em>On Writing Well </em>(<a href=\"https://www.amazon.com/Writing-Well-30th-Anniversary-Nonfiction-ebook/dp/B0090RVGW0\">link</a>)</h3><p><a href=\"https://www.developing.dev/p/why-engineers-need-to-write\">Writing well is valuable for software engineers</a>. Top Hacker News posts (<a href=\"https://news.ycombinator.com/item?id=35093273\">ex1</a>, <a href=\"https://news.ycombinator.com/item?id=31060362\">ex2</a>) and figures like <a href=\"http://www.paulgraham.com/writing44.html\">Paul Graham</a> agree. Yet, <strong>engineers don’t get any training on how to write and have to figure it out on the job</strong>.</p><p><em>On Writing Well</em> should help; It’s a famous book focused on how to write nonfiction better. I recommend this book over <em>The Elements of Style</em> (the other famous book on writing) because this one gives you general guidelines rather than specific rules to memorize. <strong>It’s helped make my writing clearer</strong>. Not to mention that it has great ratings and is often mentioned on Hacker News:</p><ul><li><p>Average <a href=\"https://www.amazon.com/Writing-Well-30th-Anniversary-Nonfiction-ebook/dp/B0090RVGW0\">4.8 start rating on Amazon (4872 ratings)</a> - <strong>tied for first among my recommendations</strong></p></li><li><p>One of the <a href=\"https://hackernewsbooks.com/top-books-on-hacker-news\">top all-time mentioned books on Hacker News</a></p></li></ul><h3><em>How to Win Friends and Influence People</em> (<a href=\"https://www.amazon.com/How-Win-Friends-Influence-People/dp/0671027034\">link</a>)</h3><p>Last but not least, if you only have time to read one book, it should probably be this one. The title is a little strange but hear me out.</p><p>Just about everything at your job involves other people. <strong>You won’t go far if you’re difficult to work with even if you’re talented.</strong> The better you are at working with others, the easier it is to get things done. This book is a great guide for soft skills. The popularity of this book matches my recommendation:</p><ul><li><p><strong>It is the <a href=\"https://www.redditreads.com/r/all\">most-mentioned book across all of Reddit</a></strong></p></li><li><p><strong>Has the <a href=\"https://www.amazon.com/How-Win-Friends-Influence-People/dp/0671027034\">most Amazon reviews by far at 111,401 reviews</a></strong> with an average of 4.7 stars</p></li></ul><p>To show you that this recommendation comes from personal experience, here’s my copy of the book. It was a gift from my Dad and is older than I am. It’s also a bit worn since I’ve read it a few times:</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!-bvw!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!-bvw!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic 424w, https://substackcdn.com/image/fetch/$s_!-bvw!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic 848w, https://substackcdn.com/image/fetch/$s_!-bvw!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic 1272w, https://substackcdn.com/image/fetch/$s_!-bvw!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!-bvw!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic\" width=\"300\" height=\"399.93131868131866\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:1941,&quot;width&quot;:1456,&quot;resizeWidth&quot;:300,&quot;bytes&quot;:3081330,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/heic&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!-bvw!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic 424w, https://substackcdn.com/image/fetch/$s_!-bvw!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic 848w, https://substackcdn.com/image/fetch/$s_!-bvw!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic 1272w, https://substackcdn.com/image/fetch/$s_!-bvw!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8e8638e2-abe9-4032-b4bc-c4eccafd3bb3.heic 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 6500+ software engineers from companies like Google, Meta, and Amazon who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><div><hr></div><p>To go along with my list of book recommendations, I’m announcing the launch of the Developing Dev’s referral program 🎉. I believe the knowledge in these books is valuable enough that I’d be happy to give them away in exchange for spreading the word. I’ll be spending money out of my own pocket to do this. Here’s how it works:</p><h3>1) Share the Developing Dev 📣</h3><p>When you use the referral link below or the “share” button on any post, you’ll get credit for any new subscribers. For example, here’s a <a href=\"https://www.linkedin.com/posts/ryanlpeterman_the-developing-dev-ryan-peterman-substack-activity-7083474823015763968-rwBW?utm_source=share&amp;utm_medium=member_desktop\">post I shared on LinkedIn</a> that <a href=\"https://careercutler.substack.com/leaderboard\">drove over 600 subscribers to Jordan Cutler’s Substack</a> (can anyone beat that?).</p><p class=\"button-wrapper\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/leaderboard?&amp;utm_source=post&quot;,&quot;text&quot;:&quot;Refer a friend&quot;,&quot;action&quot;:null,&quot;class&quot;:&quot;button-wrapper&quot;}\" data-component-name=\"ButtonCreateButton\"><a class=\"button primary button-wrapper\" href=\"https://www.developing.dev/leaderboard?&amp;utm_source=post\"><span>Refer a friend</span></a></p><h3>2) Earn Benefits 🎁</h3><p>Once enough people subscribe through your link, you’ll receive benefits. I tailored the benefits to revolve around these books:</p><ul><li><p>Tier 1 (<strong>3 referrals</strong>) - <strong>Guide of Chapters That Matter</strong> - I put together a short guide that explains which chapters of these books are most important to read if you’re strapped for time</p></li><li><p>Tier 2 (<strong>35 referrals</strong>) - Copy of <em>How To Win Friends and Influence People</em></p></li><li><p>Tier 3 (<strong>100 referrals</strong>) - Copy of <em>Designing Data-Intensive Applications</em></p></li></ul><p>You can choose if you want a physical (if Amazon ships to you) or Kindle copy.  I’ve also enabled the leaderboard so you can compare how your referrals stack up with others:</p><p class=\"button-wrapper\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/leaderboard?&amp;utm_source=post&quot;,&quot;text&quot;:&quot;Visit the leaderboard&quot;,&quot;action&quot;:null,&quot;class&quot;:&quot;button-wrapper&quot;}\" data-component-name=\"ButtonCreateButton\"><a class=\"button primary button-wrapper\" href=\"https://www.developing.dev/leaderboard?&amp;utm_source=post\"><span>Visit the leaderboard</span></a></p><p>Thank you for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your continued readership, we welcomed almost 2000 new subs last week 🙏🤯",
+  "wordcount": 994,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "5a4683e9-1121-4159-b2d7-6ca77779173f",
+      "publication_id": 1340878,
+      "name": "Career",
+      "slug": "career",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        251,
+        5,
+        15
+      ],
+      "population": 284
+    },
+    "DarkVibrant": {
+      "rgb": [
+        18,
+        75,
+        115
+      ],
+      "population": 46
+    },
+    "LightVibrant": {
+      "rgb": [
+        244,
+        72,
+        85
+      ],
+      "population": 101
+    },
+    "Muted": {
+      "rgb": [
+        122,
+        175,
+        191
+      ],
+      "population": 197
+    },
+    "DarkMuted": {
+      "rgb": [
+        41,
+        73,
+        80
+      ],
+      "population": 72
+    },
+    "LightMuted": {
+      "rgb": [
+        205,
+        182,
+        151
+      ],
+      "population": 40
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 261,
+  "comment_count": 24,
+  "child_comment_count": 12,
+  "audio_items": [
+    {
+      "post_id": 134231176,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/134231176/tts/e7a5a198-54b2-4724-82dd-08bba009ea6d/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 39348612,
+      "body": "I've started reading, On Writing Well. Holy crap did I basically do everything wrong hahahaha",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I've started reading, On Writing Well. Holy crap did I basically do everything wrong hahahaha"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 134231176,
+      "user_id": 163959351,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-08-31T13:43:58.790Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "David Good",
+      "photo_url": null,
+      "handle": "davidgood268000",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 3
+      },
+      "reaction_count": 3,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "davidgood268000",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 8,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    },
+    {
+      "id": 19139019,
+      "body": "I absolutely love \"On Writing Well\" by Willian Zinsser. It completely changed how I write and edit my texts. The biggest a-ha moment was \"clear writing is clear thinking\". 🤯 so simple, yet so profound!",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I absolutely love \"On Writing Well\" by Willian Zinsser. It completely changed how I write and edit my texts. The biggest a-ha moment was \"clear writing is clear thinking\". 🤯 so simple, yet so profound!"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 134231176,
+      "user_id": 4332862,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-07-14T18:52:56.053Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Irina Stanescu",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/8d632ba1-7624-45cb-baed-f9ba72aff428_1284x1284.jpeg",
+      "handle": "thecaringtechie",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "thecaringtechie",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "The Caring Techie Newsletter",
+          "id": 341480,
+          "base_url": "https://www.thecaringtechie.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 7,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    }
+  ]
+}

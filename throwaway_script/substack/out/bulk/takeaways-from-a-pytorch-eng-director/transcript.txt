@@ -1,0 +1,48 @@
+John Myles White was an Engineering Director on PyTorch in MSL. Since he quit recently, we got to talk openly.
+
+He ran promotions for AI infra and was refreshingly honest about promo culture, how big tech has changed, and org dynamics. We also went over the parts of his career that led him to Director at MSL.
+
+Below are my main takeaways to save you time.
+
+You can find the full conversation on YouTube, Spotify, or Apple Podcasts. The transcript is on Substack if you prefer to skim
+
+
+## Brought to you by:
+
+
+Cursor3: a unified workspace for building software with agents. I used it to build tools for the podcast and shared the process in this episode’s ad read.
+
+
+## Takeaways from the conversation:
+
+
+1) Promo culture in big tech and its downsides - John mentioned that promo culture became so strong that every single engineer he’d meet had the primary goal of promotion. This caused people to ship bad software just because it was their “promo bar”.
+
+For instance, in some of his stories engineers were incentivized to ship software they would delete weeks after it shipped. In another story, people made their projects detrimentally complex just to show their work was sufficient scope. Also, orgs would cannibalize each other by stealing engineers through promising faster promotion paths.
+
+2) How employee power has weakened – Pre-COVID, big tech cared a lot about keeping employees even when it was at employer expense. Engineers had lots of perks and optionality. Now the sense is there are too many software engineers, and maybe way too many if you count AI costs and productivity gains.
+
+This has a lot of downstream effects. For instance, in reorgs, employee retention is a major factor when management is making decisions. If it doesn’t matter if employees leave, then management can be much more bold in making decisions that don’t favor the employees.
+
+3) How to avoid playing the game - The main power you have is in where you choose to work. Even at a big company where promotion is a natural incentive that impacts everyone, there are still many teams that focus more on engineering excellence. Your career may grow more slowly but you’ll enjoy the path more.
+
+He shared an example of how the PyTorch org focused on engineering first. Because of that engineers were almost always under leveled. But the benefit of that was the engineers in that org were more skilled and had better career mobility because people respected their levels more.
+
+We talked about other topics too but these were the three I figured would be most interesting.
+
+I’m going to start sharing quick summaries of the most interesting takeaways. If you don’t have time for the full conversation but want the key points, these should help. Let me know if you have feedback.
+
+Also, a couple of operational updates:
+
+  - Cursor is sponsoring the podcast! Huge milestone towards this podcast supporting itself so I’m not spending my savings to chase this dream.
+
+Cursor is sponsoring the podcast! Huge milestone towards this podcast supporting itself so I’m not spending my savings to chase this dream.
+
+  - I rebranded the newsletter to “The Peterman Post” so I can focus more on what’s useful and interesting to software engineers instead of just how to get promoted.
+
+I rebranded the newsletter to “The Peterman Post” so I can focus more on what’s useful and interesting to software engineers instead of just how to get promoted.
+
+If you’ve been here since “The Developing Dev,” thanks for sticking with me. I’m keeping the domain the same for now, since I haven’t found a better one yet. Maybe someday if the podcast earns more I can grab a nice one.
+
+Thanks for reading,
+Ryan Peterman

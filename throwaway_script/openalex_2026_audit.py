@@ -45,55 +45,55 @@ ARXIV_SOURCE_ID = "S4306400194"  # arxiv.org in OpenAlex
 # All IDs hand-verified via Institutions().search() — see openalex_audit
 # follow-up. Many earlier guesses were wrong (returned 0 works).
 INSTITUTION_OVERRIDES: dict[str, str | None] = {
-    "DeepMind":          "I4210090411",  # Google DeepMind UK, 8929 works
-    "Google Research":   "I1291425158",  # Google parent
-    "OpenAI":            "I4210161460",  # 1703 works
-    "Anthropic":         "I4387930290",  # 0 works currently — they don't push to OpenAlex
-    "Meta / FAIR":       "I4210114444",  # Meta (US), 4153 works (= Facebook + Meta AI)
-    "Microsoft Research":"I1290206253",  # Microsoft parent
-    "Apple":             "I4210153776",  # Apple (US), 3041 works
-    "NVIDIA":            "I4210127875",  # Nvidia US, 5081 works
-    "IBM Research":      "I1283280774",
-    "Salesforce":        "I4210155268",  # Salesforce US, 1353 works
-    "Mistral":           "I4390039361",  # Mistral AI France, 34 works
-    "Cohere":            "I4401726847",  # Cohere Canada, 0 works
-    "Snowflake":         "I4400600931",
-    "Tencent":           "I2250653659",  # Tencent China, 9807 works (big)
-    "ByteDance":         "I4405256866",
-    "Baidu":             None,  # search fallback
-    "Huawei":            None,
-    "Samsung":           None,
-    "Sony":              None,
-    "LinkedIn":          "I1316064682",  # 1324 works
-    "Snap":              "I4210142583",  # 674 works
-    "Pinterest":         "I4401726932",
-    "Netflix":           "I869089601",
-    "Spotify":           "I4401726855",
-    "Adobe":             "I1306409833",  # Adobe Systems US, 5948 works
-    "Amazon":            None,  # search fallback
-    "AllenAI":           "I4210156221",  # Allen Inst for AI, 1291 works
-    "HuggingFace":       "I4387154989",  # 278 works
-    "DeepSeek":          "I4405257960",
-    "Moonshot AI":       "I4405260227",
-    "Zhipu / GLM":       "I4401726915",
-    "MiniMax":           "I4405258935",
-    "01.AI":             "I4405259341",
-    "StepFun":           "I4405260255",
-    "Tsinghua":          "I29280464",
-    "Berkeley":          "I95457486",
-    "Stanford":          "I97018004",
-    "CMU":               "I74973139",
-    "UW":                "I201448701",
-    "MIT":               "I63966007",
-    "Princeton":         "I20231570",
-    "NYU":               "I57206974",
+    "DeepMind": "I4210090411",  # Google DeepMind UK, 8929 works
+    "Google Research": "I1291425158",  # Google parent
+    "OpenAI": "I4210161460",  # 1703 works
+    "Anthropic": "I4387930290",  # 0 works currently — they don't push to OpenAlex
+    "Meta / FAIR": "I4210114444",  # Meta (US), 4153 works (= Facebook + Meta AI)
+    "Microsoft Research": "I1290206253",  # Microsoft parent
+    "Apple": "I4210153776",  # Apple (US), 3041 works
+    "NVIDIA": "I4210127875",  # Nvidia US, 5081 works
+    "IBM Research": "I1283280774",
+    "Salesforce": "I4210155268",  # Salesforce US, 1353 works
+    "Mistral": "I4390039361",  # Mistral AI France, 34 works
+    "Cohere": "I4401726847",  # Cohere Canada, 0 works
+    "Snowflake": "I4400600931",
+    "Tencent": "I2250653659",  # Tencent China, 9807 works (big)
+    "ByteDance": "I4405256866",
+    "Baidu": None,  # search fallback
+    "Huawei": None,
+    "Samsung": None,
+    "Sony": None,
+    "LinkedIn": "I1316064682",  # 1324 works
+    "Snap": "I4210142583",  # 674 works
+    "Pinterest": "I4401726932",
+    "Netflix": "I869089601",
+    "Spotify": "I4401726855",
+    "Adobe": "I1306409833",  # Adobe Systems US, 5948 works
+    "Amazon": None,  # search fallback
+    "AllenAI": "I4210156221",  # Allen Inst for AI, 1291 works
+    "HuggingFace": "I4387154989",  # 278 works
+    "DeepSeek": "I4405257960",
+    "Moonshot AI": "I4405260227",
+    "Zhipu / GLM": "I4401726915",
+    "MiniMax": "I4405258935",
+    "01.AI": "I4405259341",
+    "StepFun": "I4405260255",
+    "Tsinghua": "I29280464",
+    "Berkeley": "I95457486",
+    "Stanford": "I97018004",
+    "CMU": "I74973139",
+    "UW": "I201448701",
+    "MIT": "I63966007",
+    "Princeton": "I20231570",
+    "NYU": "I57206974",
     # No OpenAlex institution exists for these — skipped by resolver:
-    "Together AI":       None,
-    "AI21":              None,
-    "EleutherAI":        None,
-    "LAION":             None,
-    "Baichuan":          None,
-    "Alibaba":           None,
+    "Together AI": None,
+    "AI21": None,
+    "EleutherAI": None,
+    "LAION": None,
+    "Baichuan": None,
+    "Alibaba": None,
 }
 
 
@@ -123,7 +123,6 @@ ORGS: list[tuple[str, list[str]]] = [
     ("Pinterest", ["Pinterest"]),
     ("Netflix", ["Netflix"]),
     ("Spotify", ["Spotify"]),
-
     # Chinese / Asian labs
     ("DeepSeek", ["DeepSeek AI", "DeepSeek"]),
     ("Moonshot AI", ["Moonshot AI"]),
@@ -139,7 +138,6 @@ ORGS: list[tuple[str, list[str]]] = [
     ("Huawei", ["Huawei Noah's Ark"]),
     ("Samsung", ["Samsung Research"]),
     ("Sony", ["Sony"]),
-
     # Universities
     ("Berkeley", ["University of California Berkeley"]),
     ("Stanford", ["Stanford University"]),
@@ -149,7 +147,6 @@ ORGS: list[tuple[str, list[str]]] = [
     ("Princeton", ["Princeton University"]),
     ("NYU", ["New York University"]),
     ("Tsinghua", ["Tsinghua University"]),
-
     # Research nonprofits
     ("AllenAI", ["Allen Institute for AI"]),
     ("EleutherAI", ["EleutherAI"]),
@@ -241,8 +238,9 @@ def fetch_org_works(inst_id: str, max_pages: int = 10) -> list[dict]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--output", type=Path, default=Path("local_data/openalex_2026_audit.jsonl"))
-    ap.add_argument("--email", type=str, default=None,
-                    help="Optional contact email for OpenAlex polite pool (10/s vs default).")
+    ap.add_argument(
+        "--email", type=str, default=None, help="Optional contact email for OpenAlex polite pool (10/s vs default)."
+    )
     args = ap.parse_args()
 
     if args.email:
@@ -295,7 +293,9 @@ def main() -> int:
             total = org_in_neon + org_missing
             per_org.append((label, total, org_in_neon, org_missing))
             grand_new += org_missing
-            print(f"  [{label:25s}] total={total:>4}  in_neon={org_in_neon:>4}  MISSING={org_missing:>4}  ({display[:50]})")
+            print(
+                f"  [{label:25s}] total={total:>4}  in_neon={org_in_neon:>4}  MISSING={org_missing:>4}  ({display[:50]})"
+            )
             time.sleep(0.15)
 
     print("\n=== SUMMARY (sorted by NEW missing from Neon) ===")

@@ -1,0 +1,52 @@
+👋 Hi, this is Ryan with another edition of my weekly newsletter. Each week, I write about topics in software engineering, big tech/startups and career growth. Send me your questions (just reply to this email or comment below) and in return, I’ll humbly share my thoughts (example past question).
+
+My biggest gap going from Senior to Staff Software Engineer was in finding Staff-level scope. My manager paired me with a few mentors to fix this. I took tons of notes and followed their advice, which helped me get promoted to the Staff level in 2 halves. Here’s what I learned.
+
+
+## What is Staff-Level Scope?
+
+
+Engineering work meets the Staff bar based on a few high-level characteristics:
+
+  - Complexity - Solving problems that senior engineers can’t
+
+Complexity - Solving problems that senior engineers can’t
+
+  - Impact - Wins span more than just your team and achieve a significant part of collaborative goals
+
+Impact - Wins span more than just your team and achieve a significant part of collaborative goals
+
+  - Workstream size - Many engineers involved and roadmap spanning quarters
+
+Workstream size - Many engineers involved and roadmap spanning quarters
+
+To become a Staff Engineer you need to find work that fits these criteria and then deliver it. Otherwise you can’t grow to that level no matter how hard you work. We’ll go over two approaches for how to find staff-level scope.
+
+
+## Finding “Top Down” Opportunity
+
+
+It is part of the engineering manager’s job to know what the top problems their teams are facing. Because of this, your leadership chain is likely aware of some Staff-level problems. To find potential work you can ask your manager or skip manager about their top-of-mind problems and opportunities.
+
+This approach is easiest since there is already alignment on the work’s importance and potential business impact. Sourcing work in this way also has the added benefit of building trust which can lead to future opportunities.
+
+For example, my director was aware of my work since I’d been consistent and reliable on past projects. Because of this, he gave me the opportunity to lead two org-wide initiatives that contributed to my promotion.
+
+
+## Finding “Bottom Up” Opportunity
+
+
+What if there is impactful work that your management chain isn’t aware of yet? You have the opportunity to convince people that the work is important and then see it through.
+
+This approach is riskier since there’s an extra step in convincing others. However, it’s the more common path I see for engineers to have unusually fast growth. This "bottom up" scope has one major benefit: No one needs to trust you with the project; you create the scope yourself. Here’s two ways I’ve seen engineers find “bottom up” scope:
+
+Leveraging domain expertise - Ideas for improvement flow naturally if you have a strong end-to-end understanding of the system. For instance, my experience in video processing for organic media gave me strong opinions of how things should be. When I started digging into the ads video pipeline, I realized there were a ton of opportunities to improve it. This understanding turned into massive business impact through many halves of collaboration with the ads team.
+
+Discovering a significant problem - Often in less mature areas, you will find major problems just by digging around. For me, one of the main projects that got me promoted to Staff came this way. Video compute efficiency was a less mature space with lots of opportunity. When I dug around, I realized that we were running out of compute. Chasing down this problem turned out to be a massive initiative that led to huge savings for the company that even Zuck wrote about.
+
+Finding Staff-level scope is hard. Often, such scope may not exist on your immediate team. When this happens, think outside of your immediate team (e.g partnerships or within your larger engineering org). That is a key behavior difference between the Staff and Senior levels.
+
+If you have any questions, feel free to reply to this email or drop a comment with your thoughts. I will reply to every comment as usual.
+
+Thanks for reading,
+Ryan Peterman

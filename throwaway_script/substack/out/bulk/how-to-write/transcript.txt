@@ -1,0 +1,92 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups, and career growth. Thank you for your readership, we hit 41,000 readers this week 🙏 🎉
+
+This week, I’m sharing how to write for software engineers. If you find the post helpful, please share it with your friends and coworkers. Enjoy!
+
+In 2018, Naval Ravikant wrote a famous thread about “how to get rich (without getting lucky)”. It’s worth reading if you haven’t yet. One idea from it changed the way I think about how to have more impact:
+
+“Business leverage” helps us have more impact with less effort. To me, code and media stood out as the most actionable. I was already coding a lot, but I hadn’t thought much about creating media.
+
+The most relevant media to create as a software engineer is writing. This is because of its importance in our careers. That’s why I started caring more about it and part of why I write this newsletter.
+
+After writing for thousands of hours, I’ve made some adjustments to the basic writing process to improve my writing quality. As a refresher, here are the basic steps:
+
+  - Outline - create a bulleted list to structure your thoughts
+
+Outline - create a bulleted list to structure your thoughts
+
+  - Rough Draft - turn your outline into prose
+
+Rough Draft - turn your outline into prose
+
+  - Final Draft - polish your rough draft until satisfied
+
+Final Draft - polish your rough draft until satisfied
+
+There’s nothing wrong with this basic process, but it’s easy to make mistakes at each step. Here are the adjustments that I’ve made after some mistakes:
+
+
+## 1) Spend Extra Time on the Outline
+
+
+> “Measure twice, cut once”
+
+“Measure twice, cut once”
+
+I’ve wasted a lot of time throwing away rough drafts that were off-track. Each time, I realized my thinking wasn’t clear in the outline. Now, I spend more time on the outline to make sure the draft will make sense.
+
+It’s worth spending extra time here while you can make efficient changes. The outline is the most simple and malleable form of our writing.
+
+
+## 2) Don’t Sweat the Rough Draft
+
+
+It’s common to get blocked because your writing seems bad while creating the rough draft. This is expected though because it’s “rough”. I found that the best way to fight writer’s block is to get all the words down without thinking about quality yet.
+
+
+## 3) Polish Until Perfect
+
+
+Consider the read-to-write ratio for your writing. In most cases, your writing will be read orders of magnitude more times than it’s written. All future readers will benefit from your work to polish your words. Not to mention that it’s more satisfying to produce something you can be proud of.
+
+I spend about 80% of my writing time polishing the final draft. I read it over and over trying to reduce clutter and make it easier to read. Here are a few tools that help me:
+
+  - For typos and grammar errors → Grammarly
+
+For typos and grammar errors → Grammarly
+
+  - For making my writing easier to read → Hemingway (I aim for ~6th grade readability)
+
+For making my writing easier to read → Hemingway (I aim for ~6th grade readability)
+
+  - For rewordings → ChatGPT
+
+For rewordings → ChatGPT
+
+
+## The Ultimate Goal
+
+
+After some time, you’ll find a writing process that works best for you. The process itself isn’t as important; it’s just an implementation detail. What matters most is to focus on being understood by the reader.
+
+There are two components to writing to be understood:
+
+  - Make the reader want to read - Write in a way that is interesting for your audience. Knowing your audience is a critical skill and worth exploring in another post.
+
+Make the reader want to read - Write in a way that is interesting for your audience. Knowing your audience is a critical skill and worth exploring in another post.
+
+  - Make your writing easy to read - Once they want to read it, help them by making it easy to. There are two aspects to this:Be concise - don’t waste your reader’s mental capacity on needless wordsWrite simply - don’t pick words that are more complicated than they need to be. Paul Graham’s essay explains this well. I’ve included a blurb from it below:
+
+Make your writing easy to read - Once they want to read it, help them by making it easy to. There are two aspects to this:
+
+  - Be concise - don’t waste your reader’s mental capacity on needless words
+
+Be concise - don’t waste your reader’s mental capacity on needless words
+
+  - Write simply - don’t pick words that are more complicated than they need to be. Paul Graham’s essay explains this well. I’ve included a blurb from it below:
+
+Write simply - don’t pick words that are more complicated than they need to be. Paul Graham’s essay explains this well. I’ve included a blurb from it below:
+
+The best way to get better at writing is to write more. Try writing and asking for feedback from someone who writes well. Over time, this feedback loop will make you an excellent writer.
+
+Thanks for reading,
+Ryan Peterman

@@ -167,11 +167,7 @@ def main() -> int:
         if not old_sections:
             stats.no_sections_parsed += 1
             continue
-        new_sections: dict[int, str] = {
-            n: t
-            for n in SECTION_RANGE
-            if (t := by_section.get(n, {}).get(aid))
-        }
+        new_sections: dict[int, str] = {n: t for n in SECTION_RANGE if (t := by_section.get(n, {}).get(aid))}
         if 7 in new_sections:
             stats.s7_new += 1
         elif 7 in old_sections:

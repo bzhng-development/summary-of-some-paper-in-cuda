@@ -1,0 +1,80 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth.
+
+Since last week’s article was well-received, we’ll continue our “FAANG Career Ladder” series, comparing IC levels from Junior (L3) to Principal (L8) at FAANG-like companies.
+
+If you enjoy the content, drop a like. It helps me prioritize the content you want to see more of. Here’s the L4 vs L5 article; enjoy!
+
+The L4 → L5 gap is larger than the L3 → L4 one. This is because L5 promotion requires significant behavior changes. L5s are expected to lead and influence their teams. Here are the key differences between L4 and L5 engineers:
+
+
+## Team-Level Influence
+
+
+The biggest difference is that L5 engineers should have team-level influence. It’s easiest to see this by looking at some examples of how L5s expand influence to the team level:
+
+Example 1 - Improving the codebase
+
+  - L4  - Initiates refactoring and code cleanups.
+
+L4  - Initiates refactoring and code cleanups.
+
+  - L5  - Identifies areas of improvement, influences the team to take goals on improving it together, then leads the charge on those goals.
+
+L5  - Identifies areas of improvement, influences the team to take goals on improving it together, then leads the charge on those goals.
+
+Example 2 - Production excellence
+
+  - L4 - Participates in team’s oncall and mitigating outages.
+
+L4 - Participates in team’s oncall and mitigating outages.
+
+  - L5 - Creates an “oncall improvement” workstream and builds a process for everyone to make the team’s oncall better.
+
+L5 - Creates an “oncall improvement” workstream and builds a process for everyone to make the team’s oncall better.
+
+Example 3 - Project direction
+
+  - L4 - Owns the project management of a medium-to-large feature.
+
+L4 - Owns the project management of a medium-to-large feature.
+
+  - L5 - Drives team planning, and builds a roadmap of several medium-to-large features.
+
+L5 - Drives team planning, and builds a roadmap of several medium-to-large features.
+
+The key difference is behavioral. I wouldn’t say the L5 examples are harder. They just require a mindset shift to own things at the team level. You can see how soft skills start to become more important at L5 since you’re expected to lead and influence others.
+
+
+## Project Scope
+
+
+L5s should handle larger-scope projects. Big tech companies measure scope in a few ways. Here’s a comparison of the criteria for L4 and L5 levels:
+
+These criteria aren’t a checklist. Your work can be L5 scope by meeting only some of these criteria.
+
+Your manager will use these criteria to argue that your work is L5 scope. This is one of the reasons why it’s important to align with your manager on your work’s scope. If you only work on L4 scope, you won’t get any closer to promotion, no matter how good your work is.
+
+
+## Mentorship & Team Culture
+
+
+L5 is the first level where engineers are expected to grow others. L4s just need to be good team players. L5s are responsible for mentoring others and building up the team’s culture. Here are some example L5 team culture contributions:
+
+  - Knowledge sharing - Writing wikis, organizing knowledge-sharing presentations, contributing to Q&A groups
+
+Knowledge sharing - Writing wikis, organizing knowledge-sharing presentations, contributing to Q&A groups
+
+  - Recruiting activities - Interviewing, outreach, attending college career fairs
+
+Recruiting activities - Interviewing, outreach, attending college career fairs
+
+  - Team activities - Organizing happy hours, social activities, bug bashes
+
+Team activities - Organizing happy hours, social activities, bug bashes
+
+These contributions are necessary, but not the top priority. Influence and impact are much stronger drivers of promotion to L5. If you’re L4 looking to grow to L5, I’d focus on those first. If you do that, you’ll get promoted quickly (~2-3 halves).
+
+In the last post, I asked people to like it if they were interested in a L3 → L5 speed running guide. There was a lot of interest so I’ll put that out in the next few weeks. In that guide, I’ll distill what I’ve learned from growing from L3 → L6 in 3 years. Stay tuned!
+
+Thanks for reading,
+Ryan Peterman

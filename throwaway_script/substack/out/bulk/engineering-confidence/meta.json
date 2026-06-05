@@ -1,0 +1,448 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/engineering-confidence",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 150399403,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-10-18T13:02:37.408Z",
+  "updated_at": "2025-08-03T18:37:31.938Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "engineering-confidence",
+  "social_title": null,
+  "subtitle": "",
+  "teaser_post_eligible": true,
+  "title": "Engineering Confidence",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 16,
+  "reactions": {
+    "❤": 149
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "write-down-the-plan",
+  "next_post_slug": "what-you-work-on-how-hard-you-work",
+  "cover_image": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6adaa7f4-6027-468c-bdcc-ce71b1b408a9_3256x1172.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 150399403,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "As a junior engineer, I had a sad realization from the following thought experiment:",
+  "body_html": "<p>As a junior engineer, I had a sad realization from the following thought experiment. Which engineer do you think will have more impact (drop a comment below):</p><ol><li><p>An engineer with above-average confidence and average skills</p></li><li><p>An engineer with above-average skills and average confidence</p></li></ol><p>From my experience, the confident engineer with average skills performs better. Their confidence opens up many opportunities through influence. Even if you aren’t a tech lead, influence is necessary to grow your career. And having confidence is a key part of influence.</p><p>Of course, it’s best to have both confidence and the ability to back it up. I’m not saying skills aren’t important, but they only matter to a certain extent in most domains. <strong>Confidence has disproportionate impact in collaborative environments.</strong> So, unless you’re a solopreneur, you should care about this soft skill.</p><p>I used to think that confidence that accurately matches your abilities was best. Given the above, I now think a slight bias towards overconfidence is better. It helps you influence others and gives you opportunities to grow outside the comfort zone of your abilities.</p><p>Confidence is just an assessment of your abilities. It’s a prediction of future results. Proving your abilities with past results will build your confidence. This is the long-term solution.</p><p>However, this is much slower than it needs to be. <strong>What is even better is to have confidence before you have the ability.</strong> A little bit of overconfidence will push you out of your comfort zone so you can grow. To do this, it’s helpful to fake it until you make it.</p><p>You’ll be surprised at how well this works. People rarely know how you feel just by looking at you. Unless you have some obvious nervous body language, people will assume you’re not anxious. So, if you just force yourself to do what a confident person would, people will tend to go with it.</p><p>For example, I give speeches at a public speaking club called Toastmasters. Everyone in the audience writes anonymous feedback for the speakers. I feel nervous whenever I give a speech, yet the feedback often says delivery and confidence are my strong points. <strong>Little do they know, I’m faking it until I make it.</strong></p><p>Years ago, I stumbled upon <a href=\"https://www.youtube.com/watch?v=Ks-_Mh1QhMc\">this TED talk</a> about body language. The research presented in it claims that just as your thoughts shape your body language, the opposite is also true. Your body language can shape your thoughts.</p><p>Therefore, one research-backed tip to build confidence is to control your body language. If you catch me before a big speech, you’ll find me standing with my arms wide somewhere private because of this.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!SKgK!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6adaa7f4-6027-468c-bdcc-ce71b1b408a9_3256x1172.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!SKgK!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6adaa7f4-6027-468c-bdcc-ce71b1b408a9_3256x1172.png 424w, https://substackcdn.com/image/fetch/$s_!SKgK!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6adaa7f4-6027-468c-bdcc-ce71b1b408a9_3256x1172.png 848w, https://substackcdn.com/image/fetch/$s_!SKgK!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6adaa7f4-6027-468c-bdcc-ce71b1b408a9_3256x1172.png 1272w, https://substackcdn.com/image/fetch/$s_!SKgK!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6adaa7f4-6027-468c-bdcc-ce71b1b408a9_3256x1172.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!SKgK!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6adaa7f4-6027-468c-bdcc-ce71b1b408a9_3256x1172.png\" width=\"1456\" height=\"524\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/6adaa7f4-6027-468c-bdcc-ce71b1b408a9_3256x1172.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:524,&quot;width&quot;:1456,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:2427626,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!SKgK!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6adaa7f4-6027-468c-bdcc-ce71b1b408a9_3256x1172.png 424w, https://substackcdn.com/image/fetch/$s_!SKgK!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6adaa7f4-6027-468c-bdcc-ce71b1b408a9_3256x1172.png 848w, https://substackcdn.com/image/fetch/$s_!SKgK!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6adaa7f4-6027-468c-bdcc-ce71b1b408a9_3256x1172.png 1272w, https://substackcdn.com/image/fetch/$s_!SKgK!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6adaa7f4-6027-468c-bdcc-ce71b1b408a9_3256x1172.png 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">Recommend watching the talk, it’s interesting and can change how you think about body language.</figcaption></figure></div><div><hr></div><p>The last thing I’d like to leave you with is that confidence is a muscle. Just as you can build it, you can also easily lose it.</p><p>During the pandemic, I got used to only speaking to people through video calls. When I finally gave a speech in front of a live audience, I realized that I had lost some of my confidence. </p><p>So if you see the value of confidence, never stop proving to yourself that you can do hard things.</p><p>If you liked this post, consider sharing it with a friend. As always, you can find more of my stuff here:</p><ul><li><p><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">LinkedIn</a></p></li><li><p><a href=\"https://twitter.com/ryanlpeterman\">Twitter</a></p></li><li><p><a href=\"https://www.threads.net/@ryanlpeterman\">Threads</a></p></li><li><p><a href=\"https://www.youtube.com/@RyanLPeterman\">Youtube</a></p></li></ul><p>Thanks for reading,<br>Ryan Peterman</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 82,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p></p>",
+  "truncated_body_text": "As a junior engineer, I had a sad realization from the following thought experiment. Which engineer do you think will have more impact (drop a comment below):",
+  "wordcount": 571,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "7944911a-7d9b-49e5-a951-df44d652b086",
+      "publication_id": 1340878,
+      "name": "Soft Skills",
+      "slug": "soft-skills",
+      "hidden": false
+    },
+    {
+      "id": "bbec9c1f-66ea-461d-baa6-2a8acc4d8aa9",
+      "publication_id": 1340878,
+      "name": "Blog",
+      "slug": "blog",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        220,
+        16,
+        47
+      ],
+      "population": 39
+    },
+    "DarkVibrant": {
+      "rgb": [
+        148,
+        148,
+        4
+      ],
+      "population": 1
+    },
+    "LightVibrant": {
+      "rgb": [
+        228,
+        189,
+        183
+      ],
+      "population": 28
+    },
+    "Muted": {
+      "rgb": [
+        92,
+        112,
+        162
+      ],
+      "population": 346
+    },
+    "DarkMuted": {
+      "rgb": [
+        104,
+        71,
+        53
+      ],
+      "population": 44
+    },
+    "LightMuted": {
+      "rgb": [
+        122,
+        158,
+        194
+      ],
+      "population": 78
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 149,
+  "comment_count": 13,
+  "child_comment_count": 10,
+  "audio_items": [
+    {
+      "post_id": 150399403,
+      "voice_id": "en-US-AlloyTurboMultilingualNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/150399403/tts/8041e758-bc82-4d44-97da-c9210993b253/en-US-AlloyTurboMultilingualNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 73112115,
+      "body": "I also agree, a confident collaborator will be more productive, take risks also propose more ideas, if they feel that what they do has a positive impact it would create a positive circle.\n\nThis is the reason of why companies and managers should try to thrive the confident of every member of the organization, the greatest ideas can come from everywhere.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I also agree, a confident collaborator will be more productive, take risks also propose more ideas, if they feel that what they do has a positive impact it would create a positive circle."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "This is the reason of why companies and managers should try to thrive the confident of every member of the organization, the greatest ideas can come from everywhere."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 150399403,
+      "user_id": 102114010,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-10-18T13:47:50.647Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Ender Bonnet",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/8ac3ded6-b65a-4f00-bebb-746931fa89fe_967x967.jpeg",
+      "handle": "enbonnet",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 3
+      },
+      "reaction_count": 3,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "enbonnet",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Ender Bonnet",
+          "id": 5557604,
+          "base_url": "https://enbonnet.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 8,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 73352667,
+      "body": "I enjoyed this thought: Little do they know, I’m faking it until I make it. Thanks for sharing it :)",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I enjoyed this thought: Little do they know, I’m faking it until I make it. Thanks for sharing it :)"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 150399403,
+      "user_id": 135154576,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-10-20T13:29:06.492Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Diego Turco",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/9775d331-ba5a-4395-b667-e196e85562d8_171x171.jpeg",
+      "handle": "dhturco",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "dhturco",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 7,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply"
+    }
+  ]
+}

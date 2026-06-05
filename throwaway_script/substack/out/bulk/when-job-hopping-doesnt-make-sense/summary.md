@@ -1,0 +1,29 @@
+<sup>Source: <https://www.developing.dev/p/when-job-hopping-doesnt-make-sense></sup>
+
+Here are the takeaways from this job-hopping discussion (a conversation between Ryan Peterman and Rahul Pandey about why the default "job hop every 2-3 years" advice breaks down at Staff+ levels):
+
+**The conventional wisdom and where it stops working**
+
+The standard career advice—especially popular in tech—is that job hopping is the fastest way to make more money and get promoted. On its face, this looks obvious: Zach (a mutual friend) got promoted to Senior at Netflix and then Staff at Airbnb through job hops in just a few years. For early-career engineers, "if you're early in your career and have a guaranteed job-hop promotion, it's a great idea." The math is straightforward: you can often secure a clear title bump and compensation increase by moving companies, especially when the gap between levels (say, mid-level to Senior) is relatively modest and well-understood across the industry.
+
+But at Staff+ levels, the calculus flips. "Once you get to the Staff+ levels, the gaps between the next levels are much bigger." A Senior-to-Staff move isn't the same kind of incremental step as earlier promotions—the scope, expectations, and impact required are fundamentally different. Because of this, "it's rare that any top company would offer you a promotion to join" at those levels. Even if a smaller company dangles a flashy title (which Ryan notes often doesn't carry real meaning—"you can use levels.fyi as a source of truth"), a true same-tier bump is uncommon. But the title availability isn't even the main reason to stay put. "Even if you could get a minor compensation bump from switching companies you might want to reconsider."
+
+**Influence as the bottleneck at Staff+**
+
+The deeper reason job hopping slows growth at higher levels comes down to how impact is actually generated. "At the highest levels, the primary way you scale yourself and have more impact is through influence." You're no longer evaluated primarily on your individual code output; you're evaluated on your ability to shape technical direction across teams, align stakeholders, and drive outcomes through others. Influence is the multiplier—and influence is not portable in the way raw coding skill is.
+
+"Every time you switch companies, you reset your credibility and domain-specific knowledge." When you walk into a new organization, nobody knows your track record. People don't yet trust your judgment on architectural decisions, they don't know whether you deliver on commitments, and they certainly don't default to following your lead. You also lose all the domain context—the why behind past decisions, the political landscape, the unwritten rules of how things actually get done. Rebuilding that takes time, and during that rebuilding period, you are operating far below your potential Staff+ impact. "This will slow you down since you need to build those back up to regain influence in the new organization."
+
+Ryan ties this directly to his own trajectory at Meta: "A large part of why I got my Staff promotion in one year is that people already trusted me and I had a successful track record." The accumulated credibility meant he didn't have to prove himself before being given scope—the scope was offered because the trust was already there. "If I job hopped into Senior, I probably wouldn't have grown to Staff at Meta as quickly as I did." The speed of the promotion wasn't just about raw ability; it was about not having to spend 12-18 months re-establishing the foundation that enables Staff-level work.
+
+**The trade-off: repositioning vs. momentum**
+
+This doesn't mean job hopping is always wrong at later career stages—it means it should be a calculated decision rather than a reflex. "Later in your career, you'll almost never find job hop promotions, so you'll need to be calculated when you take on a new role." The frame is one of trade-offs: "Job hopping can reposition you for your next period of growth at the expense of momentum and taking on some risk." Maybe the new company gives you access to a domain you're passionate about, or a problem space with massive scope, or a leadership gap you're uniquely positioned to fill. Those can be valid reasons to reset your influence meter and start from scratch. But doing it purely for a compensation bump or a marginal title improvement—the same calculus that served you well earlier—likely sacrifices the momentum that actually gets you to the next level, all for a move that top-tier companies rarely even offer at that stage.
+
+**A tactical note on evaluating titles**
+
+Ryan adds a practical caveat for anyone tempted by an external offer with a shiny title: many smaller companies offer significant title bumps to entice people, but the title itself often doesn't carry real meaning. His concrete recommendation is to "use levels.fyi as a source of truth"—a standardized benchmark that cuts through title inflation and lets you compare actual leveling across companies. What looks like a promotion on paper may not be one in practice, and sacrificing accumulated influence for a hollow title is a poor trade.
+
+---
+
+The entire argument hinges on a single, quietly radical reframe: **influence**, not output, is the real currency of senior IC growth. His own Staff promotion in one year wasn't a feat of raw technical brilliance but of **accumulated credibility**—people already trusted him and knew his track record, so scope came quickly. Job hopping forcibly resets that credibility meter. The post's closing distinction between blind hopping and **calculated repositioning** is the mature version of the early-career playbook: the same tool, but wielded with an awareness that what you lose (momentum, trust, domain context) might outweigh what you gain if you're not deliberate.

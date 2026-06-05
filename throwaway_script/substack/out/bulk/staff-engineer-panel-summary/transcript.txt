@@ -1,0 +1,224 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 52,000 readers this week 🙏 🎉
+
+This week, I joined several other engineering creators who got promoted to Staff (L6) for a live Q&A about growth to that level. The panelists have a ton of relevant, unique experience:
+
+  - Zach Wilson - past Staff Data Engineer at Airbnb, Ex-Netflix, Ex-MetaUnique Experience: Job hopping into promotions
+
+Zach Wilson - past Staff Data Engineer at Airbnb, Ex-Netflix, Ex-Meta
+
+  - Unique Experience: Job hopping into promotions
+
+Unique Experience: Job hopping into promotions
+
+  - Rahul Pandey - past Staff Software Engineer at Meta, Ex-PinterestUnique Experience: Promotions within company and Tech Lead Manager (TLM) transition
+
+Rahul Pandey - past Staff Software Engineer at Meta, Ex-Pinterest
+
+  - Unique Experience: Promotions within company and Tech Lead Manager (TLM) transition
+
+Unique Experience: Promotions within company and Tech Lead Manager (TLM) transition
+
+  - Lee McKeeman - Staff Software Engineer at Google, Ex-Meta, Ex-AmazonUnique Experience: Management experience and transition back to IC
+
+Lee McKeeman - Staff Software Engineer at Google, Ex-Meta, Ex-Amazon
+
+  - Unique Experience: Management experience and transition back to IC
+
+Unique Experience: Management experience and transition back to IC
+
+  - Carly Taylor - Director and Past ML Engineer Lead at ActivisionUnique Experience: Management experience and promotions within company
+
+Carly Taylor - Director and Past ML Engineer Lead at Activision
+
+  - Unique Experience: Management experience and promotions within company
+
+Unique Experience: Management experience and promotions within company
+
+  - Ryan Peterman (myself) - Staff Software Engineer at Meta, Ex-AmazonUnique Experience: Promotions within company
+
+Ryan Peterman (myself) - Staff Software Engineer at Meta, Ex-Amazon
+
+  - Unique Experience: Promotions within company
+
+Unique Experience: Promotions within company
+
+The event was an hour long but I cut it down to something you can skim in just a few minutes. Below are paraphrased notes along with links to the video clips if you’d like to watch the original responses.
+
+
+## Background: What Is a Staff Engineer?
+
+
+Rahul (full video clip ~2 min):
+
+  - Staff Engineer is the next level after Senior engineer (L5) on the IC track
+
+Staff Engineer is the next level after Senior engineer (L5) on the IC track
+
+  - It is a way to continue growing your career without becoming a manager
+
+It is a way to continue growing your career without becoming a manager
+
+  - Leadership is a requirement at the Staff level
+
+Leadership is a requirement at the Staff level
+
+  - Not everyone gets to Staff; it’s a difficult role to get promoted into
+
+Not everyone gets to Staff; it’s a difficult role to get promoted into
+
+  - Staff engineers own larger scope (e.g. across teams, product-wide)
+
+Staff engineers own larger scope (e.g. across teams, product-wide)
+
+If you want to learn more about what the expectations are for the Staff level, you can take a look at this article I wrote about Senior (L5) vs Staff (L6).
+
+
+## How To Find Staff-Level Problems?
+
+
+  - Zach: Had a few options for projects at Netflix. A project about building graph database infrastructure stood out since there were so many use cases for it at the company. The leverage and impact were clear.
+
+Zach: Had a few options for projects at Netflix. A project about building graph database infrastructure stood out since there were so many use cases for it at the company. The leverage and impact were clear.
+
+  - Ryan: Build the intuition about what is impactful before investing your time. I learned this by seeing what different teams were goaling on to know what they considered impactful. Also, in some areas, it’s clear there’s low-hanging fruit even without existing team goals.
+
+Ryan: Build the intuition about what is impactful before investing your time. I learned this by seeing what different teams were goaling on to know what they considered impactful. Also, in some areas, it’s clear there’s low-hanging fruit even without existing team goals.
+
+Here’s the full video clip (~4 min).
+
+
+## Should You Ask About Promotion Explicitly?
+
+
+  - Carly: As a director, I have a ton of reports. Sometimes I am proactive with initiating promotions, but you shouldn’t count on that. It’s always better to initiate conversations with your manager about promotion (assuming you’re open to feedback).
+
+Carly: As a director, I have a ton of reports. Sometimes I am proactive with initiating promotions, but you shouldn’t count on that. It’s always better to initiate conversations with your manager about promotion (assuming you’re open to feedback).
+
+  - Lee: Being open to feedback and actioning on it is necessary for promotion.
+
+Lee: Being open to feedback and actioning on it is necessary for promotion.
+
+  - Zach: On the other side, if you hear feedback that you don’t agree with then interview and see what other companies think. I’ve only been promoted once in my career. The rest of my promotions came from job hopping.
+
+Zach: On the other side, if you hear feedback that you don’t agree with then interview and see what other companies think. I’ve only been promoted once in my career. The rest of my promotions came from job hopping.
+
+  - Rahul: I agree with Carly that you should ask. It’s important how you ask though. Communicate that you want to be promoted but make sure you land meaningful impact first.
+
+Rahul: I agree with Carly that you should ask. It’s important how you ask though. Communicate that you want to be promoted but make sure you land meaningful impact first.
+
+  - Ryan: I’ve always been explicit with my managers about wanting to be promoted and it made a big difference for me. It shouldn’t be an uncomfortable conversation; your manager will likely be supportive.
+
+Ryan: I’ve always been explicit with my managers about wanting to be promoted and it made a big difference for me. It shouldn’t be an uncomfortable conversation; your manager will likely be supportive.
+
+Here’s the full video clip (~7 min).
+
+
+## How Much Control Does Your Manager Have in Your Promotion?
+
+
+  - Ryan: If you are a high performer and you do a lot of great work for your manager, they will be more willing to help you grow to retain you.
+
+Ryan: If you are a high performer and you do a lot of great work for your manager, they will be more willing to help you grow to retain you.
+
+  - Lee: Even if your manager wants to promote you, they don’t have full control. Your manager needs to follow company processes.
+
+Lee: Even if your manager wants to promote you, they don’t have full control. Your manager needs to follow company processes.
+
+  - Zach: Airbnb’s promotions before Staff were controlled by the manager. After that, it was promotion by committee.
+
+Zach: Airbnb’s promotions before Staff were controlled by the manager. After that, it was promotion by committee.
+
+  - Lee: At Amazon, promotions were signed off by folks higher up in the management chain than just your manager.
+
+Lee: At Amazon, promotions were signed off by folks higher up in the management chain than just your manager.
+
+  - Ryan: There isn’t as much ambiguity in promotions to Senior so what your manager says is likely what will happen. Starting at Staff your manager is just a messenger for the promotion committee and has much less control.
+
+Ryan: There isn’t as much ambiguity in promotions to Senior so what your manager says is likely what will happen. Starting at Staff your manager is just a messenger for the promotion committee and has much less control.
+
+Here’s the full video clip (~3 min).
+
+
+## What Kind of Team Should You Choose for Growth to Staff?
+
+
+  - Rahul: Working on teams that are a top company priority will generally help you get promoted.
+
+Rahul: Working on teams that are a top company priority will generally help you get promoted.
+
+  - Lee: Although often true, that doesn’t mean that you can’t get promoted on teams that work on lower priorities. There can be opportunities to create Staff scope.
+
+Lee: Although often true, that doesn’t mean that you can’t get promoted on teams that work on lower priorities. There can be opportunities to create Staff scope.
+
+  - Carly: The most important thing for me was finding a team with work I enjoyed. Finding teams like this led to me doing my best work and helped me grow faster.
+
+Carly: The most important thing for me was finding a team with work I enjoyed. Finding teams like this led to me doing my best work and helped me grow faster.
+
+  - Ryan: Up to Senior, team choice doesn’t matter that much since most teams have sufficient scope. For Staff+ growth, I’ve noticed that there tend to be more opportunities on infrastructure teams than on product teams. Staff+ engineers in product orgs tend to have leverage through leading large projects (there are fewer spots). Infrastructure teams tend to have natural leverage through the technology itself (there are more spots).
+
+Ryan: Up to Senior, team choice doesn’t matter that much since most teams have sufficient scope. For Staff+ growth, I’ve noticed that there tend to be more opportunities on infrastructure teams than on product teams. Staff+ engineers in product orgs tend to have leverage through leading large projects (there are fewer spots). Infrastructure teams tend to have natural leverage through the technology itself (there are more spots).
+
+  - Zach: +1 to infrastructure having more leveraged opportunities in my experience.
+
+Zach: +1 to infrastructure having more leveraged opportunities in my experience.
+
+Here’s the full video clip (~7 min).
+
+
+## Additional Questions:
+
+
+  - How many hours did you work for your Staff promotion? (~2 min video clip here)Ryan, Carly, Zach, and Rahul: Often worked much more than 40+ hoursLee: I didn’t work extra. I focused on being a force multiplier so I could have more impact with less time spent.
+
+How many hours did you work for your Staff promotion? (~2 min video clip here)
+
+  - Ryan, Carly, Zach, and Rahul: Often worked much more than 40+ hours
+
+Ryan, Carly, Zach, and Rahul: Often worked much more than 40+ hours
+
+  - Lee: I didn’t work extra. I focused on being a force multiplier so I could have more impact with less time spent.
+
+Lee: I didn’t work extra. I focused on being a force multiplier so I could have more impact with less time spent.
+
+  - How do you avoid being down-leveled when you interview at FAANG? (~2 min video clip here)Lee: You aren’t getting down-leveled, you’re getting leveled correctly for the scope of the work you do. Besides the pay is often much better at FAANG.Zach: I got an 80% pay bump when I was down-leveled in FAANG so it was a no-brainer for me.Ryan: Levels are arbitrary. The scope of your work is what matters most. Compare that across companies to see where you stand.
+
+How do you avoid being down-leveled when you interview at FAANG? (~2 min video clip here)
+
+  - Lee: You aren’t getting down-leveled, you’re getting leveled correctly for the scope of the work you do. Besides the pay is often much better at FAANG.
+
+Lee: You aren’t getting down-leveled, you’re getting leveled correctly for the scope of the work you do. Besides the pay is often much better at FAANG.
+
+  - Zach: I got an 80% pay bump when I was down-leveled in FAANG so it was a no-brainer for me.
+
+Zach: I got an 80% pay bump when I was down-leveled in FAANG so it was a no-brainer for me.
+
+  - Ryan: Levels are arbitrary. The scope of your work is what matters most. Compare that across companies to see where you stand.
+
+Ryan: Levels are arbitrary. The scope of your work is what matters most. Compare that across companies to see where you stand.
+
+  - Does seniority lead to more opportunities? (~2 min video clip here)Ryan: Often yes, but it isn’t the only way. If you are visible and have a strong internal brand, people will give you opportunities.Lee: Your title opens the door but organizational trust is what matters. If you have a Director level sponsor, doors will open for you.
+
+Does seniority lead to more opportunities? (~2 min video clip here)
+
+  - Ryan: Often yes, but it isn’t the only way. If you are visible and have a strong internal brand, people will give you opportunities.
+
+Ryan: Often yes, but it isn’t the only way. If you are visible and have a strong internal brand, people will give you opportunities.
+
+  - Lee: Your title opens the door but organizational trust is what matters. If you have a Director level sponsor, doors will open for you.
+
+Lee: Your title opens the door but organizational trust is what matters. If you have a Director level sponsor, doors will open for you.
+
+  - How can remote employees compete with in-person employees? (30 sec video clip here)Zach: I’ve worked full-remote mostly. The way to do this is to create documentation and communicate well in writing.
+
+How can remote employees compete with in-person employees? (30 sec video clip here)
+
+  - Zach: I’ve worked full-remote mostly. The way to do this is to create documentation and communicate well in writing.
+
+Zach: I’ve worked full-remote mostly. The way to do this is to create documentation and communicate well in writing.
+
+This is my first time experimenting with video content about career growth. The full playlist of clips is up on YouTube here if you want to listen to it in the background. Let me know what you think about it compared to writing and I’ll keep it in mind for future content I create.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already.
+
+Thanks for reading,
+Ryan Peterman

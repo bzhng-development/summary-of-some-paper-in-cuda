@@ -1,0 +1,102 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 64,000 readers this week 🙏 🎉
+
+This week, I’m writing about how and when to go for promotion via job hopping. If you find the post helpful, please share it with your friends and coworkers. Enjoy!
+
+Job hopping can get you promoted years faster than you would’ve otherwise. The key is to understand how companies pick what level they interview you for. I’ll share what I’ve learned about interview leveling and some example cases where people have gotten promotions by job hopping.
+
+
+## When It Makes Sense
+
+
+Some companies (e.g. Meta) don’t hesitate to promote you if there is enough signal showing you can perform at the next level. However, most companies (e.g. Google, Amazon) are much slower to promote even if you have strong next-level performance.
+
+Job hopping can be a great way to get promoted faster to the level you are already performing at. This benefit doesn’t come for free though.
+
+
+## Trade-Offs
+
+
+Each time you start a new job, you need to ramp up before you’re effective. You need to build trust with people and learn a new tech stack. This takes time away from impactful work you could be doing towards subsequent promotions.
+
+Switching companies also resets your track record which future promotions rely on. For example, I got promoted from Senior to Staff in one year because I was already doing Staff-level work when I was a mid-level engineer. When you switch companies you start from scratch.
+
+On the plus side, switching companies is a great opportunity to change your manager and team. If you think your team situation isn’t that great, trying a new team and getting a promotion at the same time is a win-win.
+
+
+## How Companies Decide Interview Levels
+
+
+The level you are interviewed for is a combination of:
+
+  - Level in your current role - Major tech companies use lookup tables to see what other companies’ levels map to. For example, L4 @ Google is roughly the same as E4 @ Meta. Levels.fyi gives a decent approximation of these tables
+
+Level in your current role - Major tech companies use lookup tables to see what other companies’ levels map to. For example, L4 @ Google is roughly the same as E4 @ Meta. Levels.fyi gives a decent approximation of these tables
+
+  - Years of experience (YoE) - Each level is generally correlated with how many years of experience you have:Junior = 0-2 YoEMid-Level = 2-5+ YoESenior = 5+ YoEStaff = 10+ YoE
+
+Years of experience (YoE) - Each level is generally correlated with how many years of experience you have:
+
+  - Junior = 0-2 YoE
+
+Junior = 0-2 YoE
+
+  - Mid-Level = 2-5+ YoE
+
+Mid-Level = 2-5+ YoE
+
+  - Senior = 5+ YoE
+
+Senior = 5+ YoE
+
+  - Staff = 10+ YoE
+
+Staff = 10+ YoE
+
+  - Scope - How large and complex are the workstreams you drove? What level’s expectations does your work fit?
+
+Scope - How large and complex are the workstreams you drove? What level’s expectations does your work fit?
+
+Based on these criteria, recruiters will add you to an interview loop that borders on two levels. Depending on how you perform in the interview, they may downlevel you or keep your level as is.
+
+
+## Strategizing Your Jump
+
+
+Job hopping for a promotion is easy from Junior to Mid-level because of the low YoE and scope requirements. For instance, I was able to get Mid-level offers from Blend and Affirm with only 8 months of experience at Amazon as a Junior engineer.
+
+For Senior+ levels, it’s harder to get an interview at the next level if you’re coming from a company with a well-defined ladder. Recruiters can easily figure out where you fit on the ladder so there isn’t any reason to interview you for a higher level.
+
+That’s not to say that it’s impossible to jump to Senior+ levels if you work at a major tech company. Zach Wilson jumped to Staff at Airbnb in just a few years:
+
+  - Junior → Mid-level promo at Meta (4 YoE)
+
+Junior → Mid-level promo at Meta (4 YoE)
+
+  - Mid-level →Senior promo jump to Netflix (6 YoE)
+
+Mid-level →Senior promo jump to Netflix (6 YoE)
+
+  - Senior → Staff promo jump to Airbnb (8YoE)
+
+Senior → Staff promo jump to Airbnb (8YoE)
+
+If you work outside of the well-defined tech ladder, you have a much better opportunity to hop to higher levels. I know of a few people who left the industry ladder to do their own thing. When these people came back, they were all able to get interviews for levels higher than the one they left:
+
+  - Failed founder - Left as a Mid-level engineer, got Senior interviews after a year
+
+Failed founder - Left as a Mid-level engineer, got Senior interviews after a year
+
+  - Open-source contributor - Left as a Junior engineer, got Senior/Staff interviews after a year or two
+
+Open-source contributor - Left as a Junior engineer, got Senior/Staff interviews after a year or two
+
+  - Failed founder & writer - Left as a Senior engineer, got Senior Staff interviews in just 2 years
+
+Failed founder & writer - Left as a Senior engineer, got Senior Staff interviews in just 2 years
+
+My theory is that when you aren’t coming from a well-defined ladder, there’s uncertainty about where you might fit in the ladder. If you sell your experience and interview well, you can place on the high side of that range of uncertainty.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already. Also, if you have feedback about how I can make the content better, please share it here 🙏
+
+Thanks for reading,
+Ryan Peterman

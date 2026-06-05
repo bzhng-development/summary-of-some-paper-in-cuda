@@ -37,9 +37,7 @@ import asyncio
 import json
 import re
 import sys
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 import httpx
 from loguru import logger
@@ -126,7 +124,6 @@ EXTRA_ORGS: tuple[OrgPub, ...] = (
         paper_link_must_contain="rit.rakuten.com",
         max_paper_links=80,
     ),
-
     # ============ Tencent broader (separate from Hunyuan-Tencent) ============
     # Existing Hunyuan-Tencent covers hf:tencent + hunyuan.tencent.com. This
     # entry covers Tencent AI Lab + WeChat AI + research arms via:
@@ -149,7 +146,6 @@ EXTRA_ORGS: tuple[OrgPub, ...] = (
         paper_link_must_not_contain=("/people", "/team", "/about", "/contact"),
         max_paper_links=200,
     ),
-
     # ============ US universities ============
     # Cap detail-page hops at 300 to stay polite. Most pub pages have arxiv
     # links inline in the listing (Stanford NLP) but BAIR's blog requires
@@ -208,7 +204,6 @@ EXTRA_ORGS: tuple[OrgPub, ...] = (
         paper_link_must_contain="arxiv.org/abs/",
         max_paper_links=200,
     ),
-
     # ============ All-other-ML section (engineering blogs) ============
     OrgPub(
         label="GitHub",
@@ -584,8 +579,7 @@ async def run(args: argparse.Namespace) -> int:
         args.crack_output,
         args.output,
     )
-    logger.info("dedup baseline: {} arxiv_ids (main + crack + own prior runs)",
-                len(baseline_ids))
+    logger.info("dedup baseline: {} arxiv_ids (main + crack + own prior runs)", len(baseline_ids))
 
     done_orgs = load_completed_orgs(args.output)
     logger.info("already-completed orgs in own output: {}", len(done_orgs))
@@ -635,14 +629,14 @@ async def run(args: argparse.Namespace) -> int:
                     await route.continue_()
             except Exception:
                 pass
+
         await context.route("**/*", block_route)
         page = await context.new_page()
         page.set_default_timeout(30_000)
 
         try:
             for org in selected:
-                logger.info("=== {} (mode={}, primary={}) ===",
-                            org.label, org.mode, org.primary_url or "—")
+                logger.info("=== {} (mode={}, primary={}) ===", org.label, org.mode, org.primary_url or "—")
                 primary_ids: dict[str, str] = {}
                 hf_ids_per_slug: dict[str, dict[str, str]] = {}
                 err_notes: list[str] = []
@@ -665,15 +659,15 @@ async def run(args: argparse.Namespace) -> int:
                 for slug in org.hf_orgs:
                     try:
                         ids = await scrape_hf_org(
-                            http_client, slug,
+                            http_client,
+                            slug,
                             max_models=org.hf_max_models,
                             concurrency=org.hf_concurrency,
                         )
                         hf_ids_per_slug[slug] = ids
                     except Exception as e:
                         err_notes.append(f"hf:{slug}: {type(e).__name__}: {str(e)[:160]}")
-                        logger.exception("hf scrape outer-exception for {}/{}",
-                                         org.label, slug)
+                        logger.exception("hf scrape outer-exception for {}/{}", org.label, slug)
 
                 # Merge primary + hf with via attribution
                 # Per-org override of primary source URL for "none"-mode orgs
@@ -728,19 +722,28 @@ async def run(args: argparse.Namespace) -> int:
                 per_org_stats.append(stat)
                 logger.info(
                     "[{}] DONE primary={} hf={} unique={} NEW={}",
-                    org.label, stat["primary_count"], stat["hf_count"],
-                    stat["total_unique"], stat["new_emitted"],
+                    org.label,
+                    stat["primary_count"],
+                    stat["hf_count"],
+                    stat["total_unique"],
+                    stat["new_emitted"],
                 )
 
-                out_fh.write(json.dumps({
-                    "_completed": True,
-                    "org_label": org.label,
-                    "primary_count": stat["primary_count"],
-                    "hf_count": stat["hf_count"],
-                    "total_unique": stat["total_unique"],
-                    "new_emitted": stat["new_emitted"],
-                    "errors": err_notes,
-                }, ensure_ascii=False) + "\n")
+                out_fh.write(
+                    json.dumps(
+                        {
+                            "_completed": True,
+                            "org_label": org.label,
+                            "primary_count": stat["primary_count"],
+                            "hf_count": stat["hf_count"],
+                            "total_unique": stat["total_unique"],
+                            "new_emitted": stat["new_emitted"],
+                            "errors": err_notes,
+                        },
+                        ensure_ascii=False,
+                    )
+                    + "\n"
+                )
                 out_fh.flush()
                 await asyncio.sleep(args.sleep_between_orgs)
         finally:
@@ -757,8 +760,10 @@ async def run(args: argparse.Namespace) -> int:
     per_org_stats.sort(key=lambda s: -s["new_emitted"])
     for s in per_org_stats:
         errs = "; ".join(s["errors"])[:120]
-        print(f"{s['org']:<26s} {s['primary_count']:9d} {s['hf_count']:6d} "
-              f"{s['total_unique']:8d} {s['new_emitted']:6d}  {errs}")
+        print(
+            f"{s['org']:<26s} {s['primary_count']:9d} {s['hf_count']:6d} "
+            f"{s['total_unique']:8d} {s['new_emitted']:6d}  {errs}"
+        )
 
     total_new = sum(s["new_emitted"] for s in per_org_stats)
     zero_orgs = [s["org"] for s in per_org_stats if s["new_emitted"] == 0]
@@ -770,21 +775,17 @@ async def run(args: argparse.Namespace) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--output", type=Path,
-                    default=Path("local_data/playwright_extra_companies.jsonl"))
-    ap.add_argument("--main-output", type=Path,
-                    default=Path("local_data/playwright_company_pubs.jsonl"))
-    ap.add_argument("--crack-output", type=Path,
-                    default=Path("local_data/playwright_crack_failed.jsonl"))
-    ap.add_argument("--only",
-                    type=lambda s: [x.strip() for x in s.split(",") if x.strip()],
-                    default=None)
-    ap.add_argument("--smoke-test",
-                    type=lambda s: [x.strip() for x in s.split(",") if x.strip()],
-                    default=None,
-                    help="Comma-separated list of org labels to run only (smoke test).")
-    ap.add_argument("--force", action="store_true",
-                    help="Re-run orgs already marked _completed in --output.")
+    ap.add_argument("--output", type=Path, default=Path("local_data/playwright_extra_companies.jsonl"))
+    ap.add_argument("--main-output", type=Path, default=Path("local_data/playwright_company_pubs.jsonl"))
+    ap.add_argument("--crack-output", type=Path, default=Path("local_data/playwright_crack_failed.jsonl"))
+    ap.add_argument("--only", type=lambda s: [x.strip() for x in s.split(",") if x.strip()], default=None)
+    ap.add_argument(
+        "--smoke-test",
+        type=lambda s: [x.strip() for x in s.split(",") if x.strip()],
+        default=None,
+        help="Comma-separated list of org labels to run only (smoke test).",
+    )
+    ap.add_argument("--force", action="store_true", help="Re-run orgs already marked _completed in --output.")
     ap.add_argument("--sleep-between-orgs", type=float, default=1.5)
     args = ap.parse_args()
     return asyncio.run(run(args))

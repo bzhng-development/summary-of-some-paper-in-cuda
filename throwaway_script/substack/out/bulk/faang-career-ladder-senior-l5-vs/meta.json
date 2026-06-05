@@ -1,0 +1,440 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/faang-career-ladder-senior-l5-vs",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 136143194,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-08-18T13:00:46.217Z",
+  "updated_at": "2024-01-08T06:18:39.200Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "faang-career-ladder-senior-l5-vs",
+  "social_title": null,
+  "subtitle": "",
+  "teaser_post_eligible": true,
+  "title": "FAANG Career Ladder: Senior (L5) vs Staff (L6)",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 1,
+  "reactions": {
+    "❤": 87
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "speedrunning-guide-mid-level-l4-senior",
+  "next_post_slug": "speedrunning-guide-senior-l5-staff",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!z4ov!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd67e8af2-04b1-4873-8537-8c3646039384_1513x402.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Staff Engineers (L6) are at the same level as engineering managers. They solve problems that few others can and play a critical role in setting team direction. They lead major initiatives and influence the engineering culture of teams around them. Here are the major differences between L5 and L6:",
+  "body_html": "<p><em>👋 Hi, this is <a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a> with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 11,000 readers this week 🙏 🎉</em></p><p><em>This week, we’ll continue our “FAANG Career Ladder” series, comparing IC levels from Junior (L3) to Principal (L8) at FAANG-like companies.</em></p><p><em>If you enjoy the content, drop a like. It helps me prioritize the content you want to see more of. Here’s the L5 vs L6 article; enjoy!</em></p><div><hr></div><p>Staff Engineers (L6) are at the same level as engineering managers. They solve problems that few others can and play a critical role in setting team direction. They lead major initiatives and influence the engineering culture of teams around them. </p><p>Some say that promotion from L5 → L6 is harder than L6 → L7 due to the significant behavior changes needed. Here are the major differences between L5 and L6.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!z4ov!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd67e8af2-04b1-4873-8537-8c3646039384_1513x402.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!z4ov!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd67e8af2-04b1-4873-8537-8c3646039384_1513x402.png 424w, https://substackcdn.com/image/fetch/$s_!z4ov!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd67e8af2-04b1-4873-8537-8c3646039384_1513x402.png 848w, https://substackcdn.com/image/fetch/$s_!z4ov!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd67e8af2-04b1-4873-8537-8c3646039384_1513x402.png 1272w, https://substackcdn.com/image/fetch/$s_!z4ov!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd67e8af2-04b1-4873-8537-8c3646039384_1513x402.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!z4ov!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd67e8af2-04b1-4873-8537-8c3646039384_1513x402.png\" width=\"1456\" height=\"387\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/d67e8af2-04b1-4873-8537-8c3646039384_1513x402.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:387,&quot;width&quot;:1456,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:164387,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!z4ov!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd67e8af2-04b1-4873-8537-8c3646039384_1513x402.png 424w, https://substackcdn.com/image/fetch/$s_!z4ov!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd67e8af2-04b1-4873-8537-8c3646039384_1513x402.png 848w, https://substackcdn.com/image/fetch/$s_!z4ov!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd67e8af2-04b1-4873-8537-8c3646039384_1513x402.png 1272w, https://substackcdn.com/image/fetch/$s_!z4ov!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd67e8af2-04b1-4873-8537-8c3646039384_1513x402.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><h3>Influence Across Teams</h3><p>Staff Engineer’s projects often extend beyond their team. They take on larger problems by influencing other teams without authority.  </p><p>Once L6s establish these workstreams they tackle the hardest problems and work through others. They focus on outcomes and don’t always do the work themselves. <strong>Working through delegation and influence across teams is the biggest mindset shift in going from L5 → L6.</strong></p><p>This style of working isn’t limited to their main project impact. L6s should also be using their influence to inspire a culture of higher engineering quality and reliability across teams.</p><h3>Creating Scope </h3><p>Senior Engineers (L5) build roadmaps of several medium-to-large features that help achieve their team’s goals. In this case, the problem and its business impact are clear; we just need an engineer to create a plan to solve it.</p><p>Staff Engineers (L6) handle more ambiguity. They don’t just solve known problems; they create scope by finding impactful opportunities and problems.<strong> Managers work with their L6s to expand the scope of the team.</strong> </p><h3>L6 Project Scope</h3><p>Big tech companies determine what level projects are in a few ways. Here’s a comparison of the criteria for L5 and L6 levels:</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!0AvL!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd1a6bd28-f969-4764-bd9c-949d3c906f3e_817x506.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!0AvL!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd1a6bd28-f969-4764-bd9c-949d3c906f3e_817x506.png 424w, https://substackcdn.com/image/fetch/$s_!0AvL!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd1a6bd28-f969-4764-bd9c-949d3c906f3e_817x506.png 848w, https://substackcdn.com/image/fetch/$s_!0AvL!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd1a6bd28-f969-4764-bd9c-949d3c906f3e_817x506.png 1272w, https://substackcdn.com/image/fetch/$s_!0AvL!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd1a6bd28-f969-4764-bd9c-949d3c906f3e_817x506.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!0AvL!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd1a6bd28-f969-4764-bd9c-949d3c906f3e_817x506.png\" width=\"817\" height=\"506\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/d1a6bd28-f969-4764-bd9c-949d3c906f3e_817x506.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:506,&quot;width&quot;:817,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:54428,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!0AvL!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd1a6bd28-f969-4764-bd9c-949d3c906f3e_817x506.png 424w, https://substackcdn.com/image/fetch/$s_!0AvL!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd1a6bd28-f969-4764-bd9c-949d3c906f3e_817x506.png 848w, https://substackcdn.com/image/fetch/$s_!0AvL!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd1a6bd28-f969-4764-bd9c-949d3c906f3e_817x506.png 1272w, https://substackcdn.com/image/fetch/$s_!0AvL!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd1a6bd28-f969-4764-bd9c-949d3c906f3e_817x506.png 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><p>Project complexity also distinguishes L6 scope. <strong>Problems that L5s can’t solve are considered L6 scope</strong>. This is why specialists often have L6+ scope; their projects can’t be done by others by definition.</p><p>These criteria aren’t a checklist. Work can be L6 scope by meeting only some of these. Your manager will use these criteria to argue that your work is L6 scope. This is one of the reasons why it’s important to align with your manager on your work’s scope. <strong>If you only work on L5 scope, you won’t get any closer to promotion, no matter how good your work is.</strong></p><h3>People Development</h3><p>Staff engineers uplift others around them. <strong>They should have the ability to help L5 engineers grow</strong>. There are a few ways they uplift others:</p><ul><li><p>Mentorship - Dedicated mentorship, preferably with senior engineers</p></li><li><p>Knowledge sharing - Writing wikis, giving presentations, contributing to Q&amp;A groups</p></li><li><p>Collaborations - Growing others while working with them (e.g. code reviews, design reviews, discussions)</p></li></ul><p>L6 engineers should also contribute to growing the organization. This means that they help with recruiting and partner with their manager on improving team health.</p><div><hr></div><p>Getting to the Staff Engineering level can take a long time. Since L5 is considered “terminal”, there is no external pressure to achieve L6 fast. However, if you are eager to grow as fast as possible I plan to write a “speedrunning” guide for the Staff level. In it I’ll share some of the learnings that helped me get promoted to Staff in 1 year. Stay tuned!</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 11000+ software engineers from companies like Google, Meta, and Amazon who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 11,000 readers this week 🙏 🎉",
+  "wordcount": 620,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "b2c9552d-d53d-49a3-a154-bfba60c74c24",
+      "publication_id": 1340878,
+      "name": "FAANG Levels & Expectations",
+      "slug": "faang-career-ladder",
+      "hidden": false
+    },
+    {
+      "id": "f4df2d6e-046e-448c-b0bf-6dd4ae5a5a6a",
+      "publication_id": 1340878,
+      "name": "To Staff",
+      "slug": "to-staff",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        18.54545454545455,
+        236.45454545454544,
+        129.81818181818193
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        9.643636363636361,
+        122.95636363636365,
+        67.5054545454546
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        204,
+        251,
+        228
+      ],
+      "population": 307
+    },
+    "Muted": {
+      "rgb": [
+        125,
+        135,
+        130
+      ],
+      "population": 210
+    },
+    "DarkMuted": {
+      "rgb": [
+        77,
+        83,
+        80
+      ],
+      "population": 119
+    },
+    "LightMuted": {
+      "rgb": [
+        177,
+        220,
+        198
+      ],
+      "population": 34
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 87,
+  "comment_count": 6,
+  "child_comment_count": 3,
+  "audio_items": [
+    {
+      "post_id": 136143194,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/136143194/tts/71a66ca0-73f5-4a53-8aed-5c4c360d02dd/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 36764220,
+      "body": "Interesting! Loved the 'ambiguity' part, it defenitely takes some skill to lead projects where the problem isn't clear :)",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Interesting! Loved the 'ambiguity' part, it defenitely takes some skill to lead projects where the problem isn't clear :)"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 136143194,
+      "user_id": 121956618,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-08-19T08:01:44.293Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Anton Zaides",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/e37a1acd-c9a1-4968-b60d-907005004d84_1728x1728.jpeg",
+      "handle": "antonzaides",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "antonzaides",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "unsubscribed",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Manager.dev",
+          "id": 1804629,
+          "base_url": "https://zaidesanton.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 7,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    },
+    {
+      "id": 36722957,
+      "body": "Great article as always, Ryan! I love the senior / staff level diagram. Helps me understand if the project I'm on is staff level scope (seems like it is, which is nice)",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Great article as always, Ryan! I love the senior / staff level diagram. Helps me understand if the project I'm on is staff level scope (seems like it is, which is nice)"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 136143194,
+      "user_id": 58854493,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-08-18T13:50:00.984Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Jordan Cutler",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/670bb162-5a63-4fd2-8253-f98c28d446a7_1168x1168.jpeg",
+      "handle": "jordancutler",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "jordancutler",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "High Growth Engineer",
+          "id": 1504485,
+          "base_url": "https://read.highgrowthengineer.com"
+        }
+      },
+      "user_bestseller_tier": 100,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": 100,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "bestseller",
+          "tier": 100
+        },
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

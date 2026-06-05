@@ -1,0 +1,52 @@
+David J. Malan is a Harvard professor known for turning CS50 into a world-class, freely-available online course. I wanted to ask him about how he lectures since students always say that is what sets his course apart.
+
+Also, since he’s on the ground floor of CS education I wanted to know how AI was impacting students outside of the rumors I see on social media.
+
+Below are my top three takeaways to save you time.
+
+You can find the full conversation on YouTube, Spotify, or Apple Podcasts. The transcript is on Substack if you prefer to skim.
+
+
+## Brought to you by:
+
+
+Cursor3: a unified workspace for building software with agents. I used it to build tools for the podcast and shared the process in this episode’s ad read.
+
+WorkOS: makes your app Enterprise Ready with easy to use APIs to add SSO, SCIM, RBAC, and more in just a few lines of code
+
+
+## Takeaways from the conversation:
+
+
+1) How he lectures well - I was most curious about this since most professors don’t teach in a way that gets students excited like David does. He attributes his success to two main factors.
+
+First, he makes sure to design a “memorable moment” in each lecture. This is usually some fun, visual exercise that gives students a unique moment to anchor their memory to. His classic example is ripping a phone book in half to demonstrate binary search. People often say to him years later that they still remember those moments and the concept he was teaching.
+
+Second, he brings as much energy as possible often motivated by insecurity. He said that one of his worst fears is being in front of a bored audience. He also feels he owes it to the students to represent the subject in a way that makes them want to learn.
+
+2) AI’s downstream impact on enrollments and cheating - Less students are enrolling in computer science. Part of it is fear, but a stronger motive is that companies just don’t come to hire from Harvard like they used to. David said they just don’t seem to be hiring as many junior engineers as before.
+
+The more interesting part to me though was how AI is impacting cheating. He said although cheating has stayed consistent at 5-10% of the student body each semester, what has changed is how hard it is to prosecute cheaters. When people cheat now using AI, they get answers that are difficult to attribute to a source. That makes it harder to hand a smoking gun to the adminstrative board.
+
+3) Why learn C in 2026 and the most challenging concept to learn - C is such an old language at this point so some people critique why you’d need to learn that today. His argument was that C is low-level so you can learn how the computer works without being too low-level like assembly code.
+
+Also, since it is such a small language it forces students to reimplement basic data structures which is a great learning exercise.
+
+He taught so many years of the same introductory courses so I asked him what concept gave people the most trouble. He answered immediately that it was pointers. If you understand pointers well you should feel proud!
+
+We talked about a bunch of other topics too but these are the three I figured would be most interesting.
+
+As I experiment with ad reads, two things I’m sure of are:
+
+  - Only place an ad after value is delivered, say ~30 minutes of content before an ad is shown
+
+Only place an ad after value is delivered, say ~30 minutes of content before an ad is shown
+
+  - Keep ads brief, ideally <1min
+
+Keep ads brief, ideally <1min
+
+One thing I’m not sure of though is if people prefer ads to be placed all clumped together or spaced out. People who listen to podcasts, please vote below so I can get a sense of what you prefer:
+
+As always, thanks for reading!
+Ryan Peterman

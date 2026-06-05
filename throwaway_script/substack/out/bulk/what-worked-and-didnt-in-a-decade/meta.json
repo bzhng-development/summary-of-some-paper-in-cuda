@@ -1,0 +1,426 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/what-worked-and-didnt-in-a-decade",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 154052732,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2025-01-03T14:03:19.638Z",
+  "updated_at": "2025-01-03T19:24:00.279Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "what-worked-and-didnt-in-a-decade",
+  "social_title": null,
+  "subtitle": "Making Mistakes, Iterating, Current Process",
+  "teaser_post_eligible": true,
+  "title": "What Worked (and Didn’t) in a Decade of Goal Setting",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 12,
+  "reactions": {
+    "❤": 109
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "ex-meta-staff-eng-and-yc-startup",
+  "next_post_slug": "everything-i-know-about-shipping",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/2d078bf3-4cfe-436f-9b93-9d1d45e3c2aa_1456x1048.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 154052732,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Making Mistakes, Iterating, Current Process",
+  "body_html": "<p>I’ve set goals every 6 months for the last 10 years. Doing this has given me a lot of energy and helped me focus on what matters. I’ve refined the process through years of making mistakes and iterating. Here’s what I’ve learned.</p><h3>Writing is Thinking</h3><p>Writing out my goals is a big part of what has worked for me. It helps me structure and clarify my thoughts. Also, the writing is useful for reference throughout the half.</p><p>I’ve tried a bunch of stuff, but the most impactful thought exercises I keep revisiting for goal setting are:</p><ol><li><p><strong>Retrospection</strong> - I got a lot of value out of writing about what went well and what didn’t over the previous 6 months. The value mostly comes from considering what didn’t go well and thinking about how to do better the next time (this writing is a product of those reflections).</p></li><li><p><strong>Where do I want to be</strong> - I break my life down into a few categories that are important to me (career, relationships, health, and hobbies). I review each category and think about how I’m doing in each. Then, I consider what it’d take to be completely satisfied in that area. This serves as the basis for my goal setting.</p></li></ol><p>I do this every 6 months because yearly isn’t frequent enough. Life priorities can often change a lot in a year.</p><h3>What They Don’t Tell You About SMART Goals</h3><p>The most common advice for goal setting is to <a href=\"https://en.wikipedia.org/wiki/SMART_criteria\">set “SMART” goals</a>. This is solid advice that you can read about somewhere else. When I put them into practice though, I learned a few things:</p><ol><li><p><strong>Don’t set too many goals </strong>- 3 to 5 goals are enough. Life is more complex than can be captured in just a few goals, so it’s tempting to want to set a ton of them. The problem is you dilute your focus and add a lot of overhead if you do that. And since your top goals are often exponentially more important than others, you’re doing more work for not much additional benefit if you don’t cut down your list. I keep a little list for items that don’t make the cut I don’t want to forget. </p></li><li><p><strong>Output metrics are better</strong> - When you set measurable goals, you can use input or output metrics. Output metrics measure results, while input metrics measure what you do to achieve results. For example, if I wanted to get stronger, I could track how many times I gym per week (input metric) or how much weight I can lift (output metric). Output metrics are better, if possible, since they are more motivating and aligned with outcomes.</p></li><li><p><strong>Achieving the goal isn’t what matters </strong>- What matters is that you’re going in the right direction with your best effort. I learned this at Meta since we often set P50 goals (50% chance of success), which are purposefully ambitious. I try to set similar goals and don’t sweat it if I miss them as long as I make good progress.</p></li></ol><h3>What Worked and Didn’t Work</h3><p>How you achieve your goals depends on the specifics of the goal. Rather than giving you a prescriptive framework, I thought it’d be more helpful to share what worked and didn’t that you could pick and choose from.</p><h4>What worked:</h4><ol><li><p><strong>Shared goals with friends</strong> - This is such a powerful tool since you won’t want to let your friends down and they’ll check in with you. The best incentive structure I found was to set a shared goal with someone else with the following structure:</p><ol><li><p>If we both achieve the goal =&gt; celebrate together somewhere</p></li><li><p>If only one person achieves the goal =&gt; the person who didn’t achieve it pays the person who did</p></li><li><p>If both fail the goal =&gt; both people pay money towards something</p></li></ol><p>You don’t need to use money it’s just an example. The important part is you set up incentives so that you’re both rooting for each other and have skin in the game.</p></li><li><p><strong>Habits are powerful </strong>- the strongest I’ve ever been was when I built the habit of working out right when I woke up. I had the most success learning Mandarin when I had a weekly lesson. Habits are a powerful tool. For many goals, consistency is key and habits are the best way to achieve that consistency.</p></li><li><p><strong>Reflecting on progress</strong> - I check in on my goals once every two weeks or so. All I do is go over which goals are on track and which aren’t. There was one half where I didn’t do this, and forgot about a few of my goals. It’s also a helpful tool to pace yourself and adjust throughout the half.</p></li></ol><h4>What didn’t work:</h4><ol><li><p><strong>Measuring everything - </strong>As an engineer, it’s easy to try and measure every single thing you want to improve. The issue is that measurement doesn’t come for free. It adds a lot of overhead and is sometimes impossible. If your system is too complex, it becomes less effective.</p></li><li><p><strong>Promising myself a reward </strong>- I thought it’d be motivating to promise myself something if I achieved my goals. Although I enjoyed the rewards, I never thought about it while working towards my goals (it never motivated me).</p></li></ol><div><hr></div><p>Knowing yourself is an important part of coming up with a system that works for you. I hope there was something useful in these notes that I learned through trial and error.</p><p>Although what works for each person is different, one common point I’d recommend is that you should write out your thoughts. The process of writing where you want to be and why will give you a lot of clarity on your life’s direction.</p><p>As always, you can find more of my content here:</p><ul><li><p><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">LinkedIn</a></p></li><li><p><a href=\"https://twitter.com/ryanlpeterman\">Twitter</a></p></li><li><p><a href=\"https://www.threads.net/@ryanlpeterman\">Threads</a></p></li><li><p><a href=\"https://www.youtube.com/@RyanLPeterman\">Youtube</a></p></li></ul><p>Thanks for reading,<br>Ryan Peterman</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 96,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "I’ve set goals every 6 months for the last 10 years. Doing this has given me a lot of energy and helped me focus on what matters. I’ve refined the process through years of making mistakes and iterating. Here’s what I’ve learned.",
+  "wordcount": 988,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        68,
+        84,
+        196
+      ],
+      "population": 4331
+    },
+    "DarkVibrant": {
+      "rgb": [
+        31.802439024390253,
+        40.426829268292664,
+        100.79756097560976
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        148,
+        156,
+        220
+      ],
+      "population": 1
+    },
+    "Muted": {
+      "rgb": [
+        102,
+        103,
+        128
+      ],
+      "population": 130
+    },
+    "DarkMuted": {
+      "rgb": [
+        84,
+        84,
+        84
+      ],
+      "population": 2
+    },
+    "LightMuted": {
+      "rgb": [
+        37.71126760563378,
+        46.330985915492924,
+        115.2887323943662
+      ],
+      "population": 0
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 109,
+  "comment_count": 19,
+  "child_comment_count": 9,
+  "audio_items": [
+    {
+      "post_id": 154052732,
+      "voice_id": "en-US-OnyxTurboMultilingualNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/154052732/tts/c8eec1ef-421e-4abd-b16c-395c49b3253e/en-US-OnyxTurboMultilingualNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 84369390,
+      "body": "Thank for sharing, Ryan.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Thank for sharing, Ryan."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 154052732,
+      "user_id": 29427412,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2025-01-04T07:44:50.588Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Oscar",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/f30697b3-c1e5-4901-b422-8ba69e6f610a_707x707.jpeg",
+      "handle": "oscar328190",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "oscar328190",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 84280542,
+      "body": "Would love to read some real life examples of the goals you had in the last decade :)",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Would love to read some real life examples of the goals you had in the last decade :)"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 154052732,
+      "user_id": 121956618,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2025-01-03T18:07:20.050Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Anton Zaides",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/e37a1acd-c9a1-4968-b60d-907005004d84_1728x1728.jpeg",
+      "handle": "antonzaides",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "antonzaides",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "unsubscribed",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Manager.dev",
+          "id": 1804629,
+          "base_url": "https://zaidesanton.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 3,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "2 replies by Ryan Peterman and others"
+    }
+  ]
+}

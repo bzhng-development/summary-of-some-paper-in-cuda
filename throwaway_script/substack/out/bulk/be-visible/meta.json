@@ -1,0 +1,448 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/be-visible",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 136841776,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-09-08T13:01:14.157Z",
+  "updated_at": "2024-01-21T00:20:30.390Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "be-visible",
+  "social_title": null,
+  "subtitle": "Small changes can make a big difference",
+  "teaser_post_eligible": true,
+  "title": "Be Visible",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 7,
+  "reactions": {
+    "❤": 115
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "faang-career-ladder-staff-l6-vs-senior",
+  "next_post_slug": "finding-next-level-scope",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!zEg6!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbbc7d1c2-b443-4ae9-a80a-5dc439c41c24_2770x1234.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "This week I’m sharing a unanimous learning that came from a “Journey to Staff Engineer” panel I was part of. It is a small change that can have a big impact on your career. Here’s the article; enjoy!",
+  "body_html": "<p>👋<em> Hi, this is&nbsp;<a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a>&nbsp;with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 16,000 readers this week </em>🙏<em> </em>🎉</p><p><em>This week I’m sharing a key takeaway from the “Journey to Staff Engineer” panel I was part of. It is a small change that can have a big impact on your career. Here’s the article; enjoy!</em></p><div><hr></div><p>Earlier this week, I was part of a panel with four other Staff+ Engineering Creators talking about growth to Staff Engineer (L6). Our paths to Staff were different so there was great variety in our answers. However, there was one question that we all answered the same. We agreed that relationships and visibility of our work were critical parts of our career growth. Here’s why visibility matters and how to market your work.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!zEg6!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbbc7d1c2-b443-4ae9-a80a-5dc439c41c24_2770x1234.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!zEg6!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbbc7d1c2-b443-4ae9-a80a-5dc439c41c24_2770x1234.png 424w, https://substackcdn.com/image/fetch/$s_!zEg6!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbbc7d1c2-b443-4ae9-a80a-5dc439c41c24_2770x1234.png 848w, https://substackcdn.com/image/fetch/$s_!zEg6!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbbc7d1c2-b443-4ae9-a80a-5dc439c41c24_2770x1234.png 1272w, https://substackcdn.com/image/fetch/$s_!zEg6!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbbc7d1c2-b443-4ae9-a80a-5dc439c41c24_2770x1234.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!zEg6!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbbc7d1c2-b443-4ae9-a80a-5dc439c41c24_2770x1234.png\" width=\"1456\" height=\"649\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/bbc7d1c2-b443-4ae9-a80a-5dc439c41c24_2770x1234.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:649,&quot;width&quot;:1456,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:2552905,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!zEg6!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbbc7d1c2-b443-4ae9-a80a-5dc439c41c24_2770x1234.png 424w, https://substackcdn.com/image/fetch/$s_!zEg6!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbbc7d1c2-b443-4ae9-a80a-5dc439c41c24_2770x1234.png 848w, https://substackcdn.com/image/fetch/$s_!zEg6!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbbc7d1c2-b443-4ae9-a80a-5dc439c41c24_2770x1234.png 1272w, https://substackcdn.com/image/fetch/$s_!zEg6!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbbc7d1c2-b443-4ae9-a80a-5dc439c41c24_2770x1234.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">Staff Eng Panel  w/ <a href=\"https://www.linkedin.com/in/rpandey1234/\">Rahul</a>, <a href=\"https://www.linkedin.com/in/eczachly/\">Zach</a>, <a href=\"https://www.linkedin.com/in/lmckeeman/\">Lee</a>, and <a href=\"https://www.linkedin.com/in/carly-taylor-data/\">Carly</a> (<a href=\"https://www.jointaro.com/event/the-journey-to-staff-engineer-in-big-tech-panel-discussion/\">full recording link here</a>)</figcaption></figure></div><h3>The World Isn’t Ideal</h3><p>Promotions are decided by people. To get promoted, your work needs to be both impactful and known by the right people. Imagine how smooth a promotion would be if everyone on the committee already thought your work was at the next level.</p><p>In a perfect world, you’d do impactful work and that would be enough. However, in reality, <strong>your work can’t be recognized unless people know about it</strong>. Communicating the results of your work will help you get the recognition you deserve.</p><h3>How To Market Your Work</h3><p>When you have results to share, create a short write-up that explains the problem you solved and the impact it had. Aim to keep it short and emphasize the main takeaways up front. Here’s a sample format I use for my write-ups:</p><ul><li><p><strong>Tl;dr</strong>: one-liner explaining the launch and calling out the most impactful result</p></li><li><p><strong>Context</strong>: a few sentences explaining the problem &amp; solution</p></li><li><p><strong>Results</strong>: bullet points of the detailed benefits of this launch (e.g. top metric movements, user benefits, cost savings, etc)</p></li><li><p><strong>Next Steps:</strong> briefly explain the rollout timeline and follow-up work</p></li><li><p><strong>Tags</strong>: mention all relevant managers and tech leads (<strong>it is better to overcommunicate</strong>)</p></li></ul><p>Once you have this write-up, send it somewhere public (e.g. public Slack channel, email with all relevant folks, public Workplace group) so it’s easy for everyone to see and look back on. Not only does this help you get more recognition, but it also helps your team establish a change log. </p><p>You can also <strong>save the tl;dr, context and results</strong> away in a “brag journal”<strong>. </strong>Your manager will thank you for documenting your work when performance reviews come along.</p><p>Some people worry this might seem like unnecessary self-promotion. But it’s not about overselling — it’s about showcasing your genuine achievements that also helps your team. </p><div><hr></div><p>It’s no coincidence that every person on the Staff Engineer Q&amp;A panel emphasized the importance of being visible. You’re missing out if you don’t take that extra step to communicate the results of your work. It doesn’t take that much time and can make a big difference in recognition. So next time you launch something, don’t do it quietly; share it!</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 16000+ software engineers from companies like Google, Meta, and Amazon who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 16,000 readers this week 🙏 🎉",
+  "wordcount": 527,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "5a4683e9-1121-4159-b2d7-6ca77779173f",
+      "publication_id": 1340878,
+      "name": "Career",
+      "slug": "career",
+      "hidden": false
+    },
+    {
+      "id": "7944911a-7d9b-49e5-a951-df44d652b086",
+      "publication_id": 1340878,
+      "name": "Soft Skills",
+      "slug": "soft-skills",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        196,
+        92,
+        68
+      ],
+      "population": 1
+    },
+    "DarkVibrant": {
+      "rgb": [
+        172,
+        68,
+        44
+      ],
+      "population": 1
+    },
+    "LightVibrant": {
+      "rgb": [
+        245,
+        209,
+        190
+      ],
+      "population": 166
+    },
+    "Muted": {
+      "rgb": [
+        153,
+        104,
+        90
+      ],
+      "population": 243
+    },
+    "DarkMuted": {
+      "rgb": [
+        88,
+        56,
+        44
+      ],
+      "population": 368
+    },
+    "LightMuted": {
+      "rgb": [
+        213,
+        183,
+        168
+      ],
+      "population": 160
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 115,
+  "comment_count": 17,
+  "child_comment_count": 9,
+  "audio_items": [
+    {
+      "post_id": 136841776,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/136841776/tts/72160784-b546-4868-8bf5-bce1af840d49/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 39756586,
+      "body": "Such truth in this advice, Ryan! Crazy enough, this was the first thing I wrote about on Substack (\"Make yourself known at work\"). \n\nI love the template you shared. I've done ad-hoc formats but I think yours covers all the bases 😎",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Such truth in this advice, Ryan! Crazy enough, this was the first thing I wrote about on Substack (\"Make yourself known at work\")."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I love the template you shared. I've done ad-hoc formats but I think yours covers all the bases 😎"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 136841776,
+      "user_id": 58854493,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-09-08T13:13:09.778Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Jordan Cutler",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/670bb162-5a63-4fd2-8253-f98c28d446a7_1168x1168.jpeg",
+      "handle": "jordancutler",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 5
+      },
+      "reaction_count": 5,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "jordancutler",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "High Growth Engineer",
+          "id": 1504485,
+          "base_url": "https://read.highgrowthengineer.com"
+        }
+      },
+      "user_bestseller_tier": 100,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": 100,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "bestseller",
+          "tier": 100
+        },
+        "subscriber": null
+      },
+      "score": 10,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "2 replies by Ryan Peterman and others"
+    },
+    {
+      "id": 40670491,
+      "body": "Every time I see someone talk about writing a brag doc their face says \"I talk from experience\". I think we all have to feel the pain of collecting our undocumented achievements to realize its importance 😅",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Every time I see someone talk about writing a brag doc their face says \"I talk from experience\". I think we all have to feel the pain of collecting our undocumented achievements to realize its importance 😅"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 136841776,
+      "user_id": 170998285,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-09-25T20:54:00.295Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Fran Soto",
+      "photo_url": "https://substackcdn.com/image/fetch/$s_!XWMk!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F10f90fdb-11ac-48b4-8f51-6a59e07763d2_1149x1149.png",
+      "handle": "fransotodev",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "fransotodev",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Strategize Your Career",
+          "id": 1974191,
+          "base_url": "https://strategizeyourcareer.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    }
+  ]
+}

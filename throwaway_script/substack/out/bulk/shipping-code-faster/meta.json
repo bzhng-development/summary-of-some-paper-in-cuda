@@ -1,0 +1,427 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/shipping-code-faster",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 143228048,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-04-05T13:03:00.524Z",
+  "updated_at": "2024-04-05T13:05:16.894Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "shipping-code-faster",
+  "social_title": null,
+  "subtitle": "Tips for Writing, Testing, and Getting Code Reviewed",
+  "teaser_post_eligible": true,
+  "title": "Shipping Code Faster",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 8,
+  "reactions": {
+    "❤": 133
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "the-tech-leads-playbook",
+  "next_post_slug": "the-best-manager-ive-had",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/17881a70-713f-4f44-a719-f8e3dee38275_1956x1224.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 143228048,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Tips for Writing, Testing, and Getting Code Reviewed",
+  "body_html": "<p>👋<em> Hi, this is&nbsp;<a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a>&nbsp;with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 56,000 readers this week </em>🙏<em> </em>🎉</p><p><em>This week I’m writing about the fundamentals of shipping code faster. Hope it is helpful; enjoy!</em></p><div><hr></div><p>Getting code out fast is a fundamental skill that you’ll build on for your whole career. It’s especially important early on since promotion from Junior (IC3) to Mid-Level (IC4) comes from completing larger tasks without guidance.</p><p>I was landing an average of five commits a day when I was promoted to Mid-level. Here’s what I learned from that which helped me write code faster.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!27LN!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa960cacc-0845-4839-ad90-4a1fd228965e_220x220.gif\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!27LN!,w_424,c_limit,f_webp,q_auto:good,fl_lossy/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa960cacc-0845-4839-ad90-4a1fd228965e_220x220.gif 424w, https://substackcdn.com/image/fetch/$s_!27LN!,w_848,c_limit,f_webp,q_auto:good,fl_lossy/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa960cacc-0845-4839-ad90-4a1fd228965e_220x220.gif 848w, https://substackcdn.com/image/fetch/$s_!27LN!,w_1272,c_limit,f_webp,q_auto:good,fl_lossy/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa960cacc-0845-4839-ad90-4a1fd228965e_220x220.gif 1272w, https://substackcdn.com/image/fetch/$s_!27LN!,w_1456,c_limit,f_webp,q_auto:good,fl_lossy/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa960cacc-0845-4839-ad90-4a1fd228965e_220x220.gif 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!27LN!,w_1456,c_limit,f_auto,q_auto:good,fl_lossy/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa960cacc-0845-4839-ad90-4a1fd228965e_220x220.gif\" width=\"418\" height=\"418\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/a960cacc-0845-4839-ad90-4a1fd228965e_220x220.gif&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:220,&quot;width&quot;:220,&quot;resizeWidth&quot;:418,&quot;bytes&quot;:null,&quot;alt&quot;:&quot;Cat Typing Gif GIFs | Tenor&quot;,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"Cat Typing Gif GIFs | Tenor\" title=\"Cat Typing Gif GIFs | Tenor\" srcset=\"https://substackcdn.com/image/fetch/$s_!27LN!,w_424,c_limit,f_auto,q_auto:good,fl_lossy/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa960cacc-0845-4839-ad90-4a1fd228965e_220x220.gif 424w, https://substackcdn.com/image/fetch/$s_!27LN!,w_848,c_limit,f_auto,q_auto:good,fl_lossy/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa960cacc-0845-4839-ad90-4a1fd228965e_220x220.gif 848w, https://substackcdn.com/image/fetch/$s_!27LN!,w_1272,c_limit,f_auto,q_auto:good,fl_lossy/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa960cacc-0845-4839-ad90-4a1fd228965e_220x220.gif 1272w, https://substackcdn.com/image/fetch/$s_!27LN!,w_1456,c_limit,f_auto,q_auto:good,fl_lossy/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa960cacc-0845-4839-ad90-4a1fd228965e_220x220.gif 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div></div></div></a><figcaption class=\"image-caption\">Typing speed is actually not that important for shipping code fast</figcaption></figure></div><h3>Lifecycle of a Commit</h3><p>To optimize your workflow, it’s important to understand the stages your code goes through before it lands in prod. Here are the steps in order:</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!Q_u6!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0d447880-fc16-4b18-aa2a-341e34d88515_816x120.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!Q_u6!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0d447880-fc16-4b18-aa2a-341e34d88515_816x120.png 424w, https://substackcdn.com/image/fetch/$s_!Q_u6!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0d447880-fc16-4b18-aa2a-341e34d88515_816x120.png 848w, https://substackcdn.com/image/fetch/$s_!Q_u6!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0d447880-fc16-4b18-aa2a-341e34d88515_816x120.png 1272w, https://substackcdn.com/image/fetch/$s_!Q_u6!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0d447880-fc16-4b18-aa2a-341e34d88515_816x120.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!Q_u6!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0d447880-fc16-4b18-aa2a-341e34d88515_816x120.png\" width=\"552\" height=\"81.17647058823529\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/0d447880-fc16-4b18-aa2a-341e34d88515_816x120.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:120,&quot;width&quot;:816,&quot;resizeWidth&quot;:552,&quot;bytes&quot;:14071,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!Q_u6!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0d447880-fc16-4b18-aa2a-341e34d88515_816x120.png 424w, https://substackcdn.com/image/fetch/$s_!Q_u6!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0d447880-fc16-4b18-aa2a-341e34d88515_816x120.png 848w, https://substackcdn.com/image/fetch/$s_!Q_u6!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0d447880-fc16-4b18-aa2a-341e34d88515_816x120.png 1272w, https://substackcdn.com/image/fetch/$s_!Q_u6!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0d447880-fc16-4b18-aa2a-341e34d88515_816x120.png 1456w\" sizes=\"100vw\"></picture><div></div></div></a></figure></div><ol><li><p><strong>Design / Planning</strong> - Figuring out what change to make and where</p></li><li><p><strong>Coding</strong> - Writing code that builds and has the intended effect</p></li><li><p><strong>Testing</strong> - Confirming that the code does what is expected and stays that way</p></li><li><p><strong>Code Review</strong> - Having your peers review the code to confirm style and correctness</p></li><li><p><strong>Deploy</strong> - Getting the code into the next release and rolling it out</p></li></ol><h3>Optimizing Your Workflow</h3><p>If you want to write code faster, you should debug where you’re spending the most time. <strong>It can vary a lot depending on your experience in the codebase you’re working in.</strong></p><p>If you’re newer to the codebase, then figuring out where to make changes and writing the code will take most of your time. In this case, here’s a few things you can do to get faster:</p><ul><li><p><strong>Understand the high-level flow</strong> - You should know what the system does and where each request flows. Save code pointers to each entry point so you can trace your way through the code when needed.</p></li><li><p><strong>Learn how to trace code</strong> - In most text editors there are key bindings you should know that will help you traverse code faster. At a minimum, you should know how to search for arbitrary text and how to find function definitions (usually <strong>cmd + click</strong>).</p></li><li><p><strong>Consider pair programming </strong>- There are so many little things you can pick up from someone experienced. When they unblock you, don’t just remember the answer. Think about how you can unblock yourself next time a similar issue comes up.</p></li></ul><p>Once you’re familiar with the codebase and dev environment, you’ll notice that more of your time will be spent in testing and review. </p><p>To get faster at testing your code:</p><ul><li><p><strong>Use <a href=\"https://www.optimizely.com/optimization-glossary/feature-flags/#:~:text=Feature%20flags%20(also%20known%20as,the%20full%20lifecycle%20of%20features.\">feature flags</a></strong> - You can land all your code changes behind gated code paths. Then when the feature is ready, you can verify everything all at once by turning the flag on for a small population and monitoring.</p></li><li><p><strong>Batch your testing</strong> - If you’re making many code changes in a similar area, stack all the changes then run tests covering the entire stack all at once. For a stack of N commits, you only need to pay the cost of testing once.</p></li><li><p><strong>Test via automation</strong> - If there isn’t a quick test suite or automated script you can run, consider building something. This should save you (and the team) a lot of time if it’s a common code path.</p></li><li><p><strong>Reuse test plans</strong> - One trick I’ve learned over the years is you can look at the <a href=\"https://git-scm.com/docs/git-blame\">“git blame”</a> to find old test plans. You can use those as a starting point for testing your change.</p></li></ul><p><strong>Time spent testing your code should be proportional to how risky the change is.</strong> The bigger the cost when the code breaks, the more time you need to spend to make sure it doesn’t. That’s one of the reasons why feature flags save you time; they reduce risk.</p><p>To get your code reviewed faster:</p><ul><li><p><strong><a href=\"https://www.developing.dev/p/why-write-small-diffs\">Write smaller diffs</a></strong><a href=\"https://www.developing.dev/p/why-write-small-diffs\"> </a>- The smaller your diffs are, the more willing people are to review them. I’ll even add “[easy]” to the title for my shortest diffs to advertise this.</p></li><li><p><strong>Reduce the number of iterations</strong> - You want your code to be approved the first time it's reviewed. Preempt any potential feedback or questions.</p></li><li><p><strong>Guide the reviewer</strong> - Point out which parts to scrutinize and provide relevant context via comments.</p></li></ul><div><hr></div><p>Improve one thing each time you land code and you’ll become much faster over time. <strong>You should be able to land code changes within the same day that you start working on them</strong>. The only piece not fully in your control is code review. If you aren’t getting code reviewed within a day of publishing changes, consider discussing how to change that with your team.</p><p>If you found this useful, <strong>please share it with a friend and consider subscribing if you haven’t already.</strong></p><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 56000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 56,000 readers this week 🙏 🎉",
+  "wordcount": 815,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "a0c5c2f9-bc81-4a70-991e-b807fa48fa1a",
+      "publication_id": 1340878,
+      "name": "To Mid-level",
+      "slug": "to-mid-level",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        127.5,
+        127.5,
+        127.5
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        66.3,
+        66.3,
+        66.3
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        188.7,
+        188.7,
+        188.7
+      ],
+      "population": 0
+    },
+    "Muted": {
+      "rgb": [
+        132,
+        132,
+        132
+      ],
+      "population": 7
+    },
+    "DarkMuted": {
+      "rgb": [
+        88,
+        88,
+        88
+      ],
+      "population": 5
+    },
+    "LightMuted": {
+      "rgb": [
+        188,
+        188,
+        188
+      ],
+      "population": 44
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 133,
+  "comment_count": 3,
+  "child_comment_count": 2,
+  "audio_items": [
+    {
+      "post_id": 143228048,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/143228048/tts/3a6b574b-f768-4e90-90b3-0df19c08806b/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 54051875,
+      "body": "Nice point, we usually do these in pre-push hooks.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Nice point, we usually do these in pre-push hooks."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 143228048,
+      "user_id": 58855475,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-04-16T12:11:41.177Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Nikos Linakis",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5340cf39-8f9a-45b7-8eb4-ed2609178112_96x96.jpeg",
+      "handle": "linakis",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "linakis",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 53403977,
+      "body": "Nice one! More articles on setting up pre commit hooks, test run before pushing, linter rules would be great and useful to many reader :)",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Nice one! More articles on setting up pre commit hooks, test run before pushing, linter rules would be great and useful to many reader :)"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 143228048,
+      "user_id": 102058777,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-04-07T17:46:43.346Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Balaji Senthilkumar",
+      "photo_url": null,
+      "handle": "balajisenthilkumar513343",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "balajisenthilkumar513343",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+Last week, I interviewed a friend who got to Staff (IC6) at Google by 28 in an unusual way. Getting promoted that quickly is impressive already but that wasn’t what I found surprising.
+
+He told me that he worked less than 40 hours a week on average even with that career trajectory. Here are the two skills he shared that helped him do that:
+
+1) Understanding what results his org cared about most and what work would drive the biggest impact
+
+He told me he turned down work that he knew wouldn’t be impactful enough. That way, he could focus on projects that were worth his time. Each project kept the door open for promotion even though he didn’t have too much on his plate.
+
+We all have the same amount of time. You can only get so much done if you grind with all your waking hours. So, the only way to have Staff+ impact is to be picky about what you work on.
+
+I learned this important lesson as a mid-level (IC4) engineer. I stopped blindly taking on any work that people gave me. I had enough conversations with my manager about senior (IC5) expectations to know that small features wouldn’t be impactful enough for promotion.
+
+I learned to assess the impact of everything that came my way before committing. If you want to develop this understanding, you can build it by discussing potential projects with your manager or tech leads (more on this topic here).
+
+Also, you can reference some of my past writing to get a better sense of FAANG expectations at each level:
+
+  - Junior (IC3) vs Mid-level (IC4)
+
+Junior (IC3) vs Mid-level (IC4)
+
+  - Mid-level (IC4) vs Senior (IC5)
+
+Mid-level (IC4) vs Senior (IC5)
+
+  - Senior (IC5) vs Staff (IC6)
+
+Senior (IC5) vs Staff (IC6)
+
+2) The soft skills to say “no” without causing thrash
+
+When work comes your way that isn’t the best use of time, you can’t just drop it without explaining yourself. Otherwise, you’ll cause people problems.
+
+The best way to say no is to overcommunicate. Explain that you have something else on your plate that is more urgent or impactful. Your manager will be happy to hear you won’t take on a small task because you’re landing something more impactful.
+
+Of course, you can’t say no to everything that doesn’t help your career. Otherwise, you’d be a terrible team player, which will bite you long term. You’ll need to evaluate this on a case-by-case basis.
+
+A few years ago, a mentor told me a story about a Distinguished engineer (IC9) that he worked with. This engineer was so selfish with his time that he was the only person in the org to negotiate his way out of oncall and didn’t answer most people who asked him questions. This left a bad taste in my mentor’s mouth.
+
+There are two sides to this and it doesn’t mean the IC9 was wrong. It does show that there is a tradeoff in some cases. I would evaluate case-by-case but still lean toward protecting your time though.
+
+If you don’t protect your time, you can’t get promoted no matter how much you work.
+
+Working as hard as you can is not the best way to have more impact by itself. You need to be selective with what you work on. If you do both, your career will grow much faster.
+
+I recorded the full interview but I haven’t had time to edit the footage yet. It’ll take a while since my time is so limited. Working full-time and writing takes almost all my time. On top of that I am starting a side project that I visited China for last week. Excited to share more about it with you soon!
+
+If you liked this post, consider sharing it with a friend. As always, you can find more of my stuff here:
+
+  - LinkedIn
+
+LinkedIn
+
+  - Twitter
+
+Twitter
+
+  - Threads
+
+Threads
+
+  - Youtube
+
+Youtube
+
+Thanks for reading,
+Ryan Peterman

@@ -1,0 +1,21 @@
+<sup>Source: <https://www.developing.dev/p/how-some-engineers-always-lead></sup>
+
+Here are the takeaways from this Ryan Peterman newsletter on how to maintain workstream leadership as an up-and-coming engineer:
+
+**Being Proactive**
+
+Senior engineers only step in to fill leadership gaps. If you leave none, there’s no need for others to provide guidance. The best way to ensure there are no gaps is to think as if you own the entire workstream. This mindset pushes you toward two primary responsibilities. First, **drive direction setting**: get the right people together, lead meetings to discuss plans, get alignment, and communicate the plan. Second, **drive execution**: do what it takes to achieve the plans. Ryan is explicit that in some cases this means you don’t even write code — "it doesn’t matter who does the work, what matters is that the workstream moves forward." There can be multiple leaders on a project, so you don’t need to compete with others. Simply be proactive and own the workstream’s success.
+
+**Example: Mid-Level (L4) to Senior (L5)**
+
+When Ryan was a Mid-Level (L4) engineer growing toward Senior (L5), a tech lead on his team found a problem that required partnership with another team but didn’t have the bandwidth to execute. Ryan volunteered to help. From day one, he was proactive — he drove all the meetings, led planning, and put together the design with minimal guidance from his tech lead. He didn’t have all the answers since he didn’t know the other team’s codebase. What mattered was "the leadership role I played in putting everything together." After a few months, his tech lead told him he no longer needed to attend meetings since Ryan had everything under control. He continued to lead in that area for the next few halves, and it became a major contributor to his promotion.
+
+**Being Visible**
+
+Ryan connects this to his earlier advice about marketing your work, but applies it for a different reason: if you communicate about your workstream, you will become the go-to person for it. Write down and share the plans, progress, and results. In practice, there are plenty of opportunities to do this because "most engineers dread this work." Their dread is your opportunity — if you fill that gap, you become a natural leader for the workstream. Ryan quotes Marc Andreessen, who recently captured this approach perfectly: **"One of the ways you find the up-and-comers at a tech company is by seeing who wrote down the plan."** Andreessen adds that it doesn’t mean they came up with everything or had all the ideas, "but it means they're actually able to organize their thoughts — and have the energy, motivation, and skill to communicate it in a written form."
+
+Ryan notes that these senior behaviors — strong initiative without leaving leadership gaps, combined with frequent written communication — meant he never had to battle over owning a workstream. Junior engineers sometimes worry about senior engineers taking over and consider hiding their work until it's near launch. Ryan calls this "the opposite of what you should do since collaboration increases your impact."
+
+---
+
+Ryan’s playbook is a closed loop: **being proactive** eliminates the leadership vacuum that invites senior intervention, while **being visible** through writing crystallizes your role as the go-to person. The **“who wrote down the plan” heuristic** isn’t just about documentation — it’s the external signal that you’ve done the underlying direction-setting and execution-driving work. Together, they form a self-reinforcing dynamic where you don’t need to compete for ownership because you’ve already made yourself the gravitational center of the workstream.

@@ -1,0 +1,333 @@
+Fiona Fung currently supports the Claude Code team at Anthropic and was previously a Senior Director at Meta. She grew quickly through the ranks at Microsoft and Meta before joining Anthropic. I interviewed her about what she learned along the way.
+
+Check out the episode wherever you get your podcasts: YouTube, Spotify, Apple Podcasts.
+
+
+## Timestamps
+
+
+00:38 - Impact vs team health
+
+03:04 - Managing managers for the first time
+
+05:31 - Advice on mentoring others
+
+06:55 - What you should use 1 on 1s for
+
+07:56 - Leaving Microsoft for Facebook
+
+10:59 - Microsoft vs Facebook culture
+
+12:01 - Why dogfooding is important
+
+21:25 - Joining Anthropic
+
+27:23 - Feedback that changed her career
+
+28:43 - Advice for younger self
+
+
+## Transcript
+
+
+
+## 00:00:38 — Impact vs team health
+
+
+Ryan:
+
+[00:00:39] Let’s say there’s some project that’s going to be really impactful, but team health is going to take a hit or vice versa. How do you make those calls?
+
+Fiona:
+
+[00:00:49] Oh, that’s a really good one. We had quite a few of these in the Facebook Marketplace days. Recognizing when a moment is really such that it’s almost existential.
+
+[00:01:02] So Facebook Marketplace, I definitely remember we had a couple of lockdowns or war rooms where it really became, wow, we really needed to focus. That’s one thing I like about lockdowns or wars. It allows the team to focus on what we were really set out to do and making sure we’re doing that really well.
+
+[00:01:22] But it does come at a cost to team morale. My advice is really to have those deliberate trade-off discussions with the team and leadership. Looking back, that’s probably one thing I wish I’d done better at, but in the early Marketplace days in some of those war rooms, I wish we were also more realistic.
+
+[00:01:41] We took a very aggressive growth goal; I forgot if we called it lockdown or war room because we changed the team names after a while, but we weren’t going to exit until we hit a certain growth number. Looking back, I think that could have been managed better, and that war actually went on for a really long time.
+
+[00:02:04] If I had a time machine to do it all over, I probably would have taken a look at that and been much more realistic about how long that was going to take. Discuss the morale and team health, and be very upfront with the team about how long we think it’s going to take.
+
+Ryan:
+
+[00:02:25] When I think of a war room, I think of everyone in a big room for maybe a week for a lunch or something like that. How long was that work?
+
+Fiona:
+
+[00:02:34] Oh my gosh. It felt like at least two months. We took a growth goal.
+
+[00:02:39] At the time, we thought maybe it was a couple of fixes we had to do. There were so many lessons learned. I still remember in that war room, we launched 75 experiments at one time. There was a room in Menlo Park and a room in Seattle.
+
+[00:02:57] No one knew going into it how long it was going to take. That was definitely a lesson learned.
+
+
+## 00:03:04 — Managing managers for the first time
+
+
+Ryan:
+
+[00:03:04] At some point in your career at Microsoft, you became a manager of managers. I’m curious about the big pitfall you experienced or the growing pain when you went from a frontline manager to someone who’s managing others.
+
+Fiona:
+
+[00:03:21] It kind of goes back to that partnership. I will share my story. The first time I supported managers or became a manager of managers was with two different managers. One was a manager for the TypeScript team, and they are brilliant engineers, still probably some of the best compiler engineers I’ve ever worked with.
+
+[00:03:40] I remember right in the beginning, I said, “Hey, we were always collaborating as a partnership. What are the things you’re really strong at? What are the things I’m good at, and how do we divide and conquer?” That’s one unique aspect of supporting managers.
+
+[00:03:56] They also have additional skill sets that are not just individual contributor skill sets but also management skill sets. It’s an opportunity to figure out how you both can complement each other and help each other where it’s most needed.
+
+[00:04:19] The other important aspect is building that trust but verify muscle. As managers, we have a lot of responsibilities leading teams, but making sure that we don’t lose touch with a project is crucial.
+
+[00:04:41] Finding that right balance comes from experience, but also encouraging transparent conversations with those you support. One thing I ask for is to have fast feedback with each other and to be super transparent about what’s going well and what’s not going well.
+
+[00:05:03] That meme of the dog holding the coffee cup in a room on fire, “This is fine,” is my nightmare. I remember once I was supporting someone, and I asked, “How are things going?” They said, “Oh, it’s fine.” I thought, “Oh my gosh, I’m not doing fine.” If we can discuss things that need help, that’s how we can solve issues for the team versus the “this is fine” dog meme.
+
+
+## 00:05:31 — Advice on mentoring others
+
+
+Ryan:
+
+[00:05:32] You mentioned to be a good manager, you should enjoy growing or mentoring others. Do you have any tips on how to mentor others?
+
+Fiona:
+
+[00:05:42] I would start with a real explicit conversation with your mentee about what they’re looking for in the relationship. For example, after three months of mentoring, what does success look like to them?
+
+[00:05:52] Or after six months, what does it look like? This ensures effective use of time for both of you. Another tip is there’s a difference between mentoring and coaching, and it’s important to have that explicit conversation to see what the other person is looking for.
+
+[00:06:08] In mentoring, you’re listening and trying to provide helpful advice. In coaching, you’re acting as a mirror for the other person to help them discover the answers within themselves. Thinking about those two different modes can help.
+
+Ryan:
+
+[00:06:23] That’s one thing I was curious about: how much of it do you feel should be driven by the mentee versus the mentor?
+
+Fiona:
+
+[00:06:31] Honestly, the most effective mentoring relationships come from the goal being set by the mentee. The mentor can help with life experiences or advice on different resources. For those looking for a mentoring relationship, I would say set explicit goals for what you’re looking to receive from it.
+
+
+## 00:06:55 — What you should use 1 on 1s for
+
+
+Ryan:
+
+[00:06:55] If you were to give advice to individual contributors on what’s the best thing you can do in one-on-ones, what would that advice be?
+
+Fiona:
+
+[00:07:04] I would say save status reporting for some asynchronous form. Here at Anthropic, it could be a Slack message or a one-on-one document that is a living document between both of us for any updates.
+
+[00:07:22] Save the actual one-on-one time for conversations you want to have, whether you’re curious about learning something new or think it’s a good opportunity to dig deeper into your work with your manager. Save the one-on-one time for those live conversations, and anything that’s status reporting can be handled through asynchronous communication.
+
+Ryan:
+
+[00:07:48] I hear that a lot, but I still think a lot of people do status reports in one-on-ones.
+
+
+## 00:07:56 - Leaving Microsoft for Facebook
+
+
+Ryan:
+
+[00:07:56] Going into working at Facebook at the time, what’s the story behind you leaving Microsoft and joining Facebook?
+
+Fiona:
+
+[00:08:04] So, definitely I’ve had a lot of friends that were really enjoying Facebook, and they’re great engineers, but there was always something I really wanted to finish at Microsoft.
+
+[00:08:16] So, whether it was visuals to editor or debugger. The last project I was working on was JavaScript and TypeScript, so I really cared about being there with the team to get TypeScript 1.0 out the door. But then I got a ping from Facebook in late 2014 from actually who ended up being my first manager at Facebook. We worked together on Visual Studio, and he’s like, “Hey, I’m noticing people buying and selling products on Facebook groups, and we’re thinking of building a product around it.” I’m in one of those groups. It was an amazing experience the first time I made meaningful new connections.
+
+[00:08:52] ‘Cause in those days, Facebook for me was more about reconnecting with high school friends or coworkers. I never created any new connections. But I told him I really wanted to be with a team to help finish TypeScript 1.0. But that was one big draw to Facebook. It was just this dream of enabling something totally different from dev tools, but the dream of enabling commerce on Facebook.
+
+[00:09:11] I really believed in three things, starting with C to C commerce. I’m very mission-driven. In those days, I was passionate about enabling this style of commerce. Number one, we’re very fortunate in tech; we can afford most things new and probably deliver it in six hours. Twenty-four hours is not even fast enough. Most of the world doesn’t like that. A difference of $5 or $10 can be the difference of can I afford it or can I not?
+
+[00:09:48] Most folks can’t afford things new, or they may not be able to afford things new. Buying them used would be a way to afford that. The second was being an environmentalist at heart. I feel like there are all these goods in the world. It’d be great if I could help work on a platform that enables those goods to get their second, third, or fourth life. The last one is just supporting small businesses. I really love local small businesses. I feel like they’re the lifeblood of any community. So having a platform that enables someone to kickstart a business without first having to get a brick-and-mortar store, I was really passionate about.
+
+[00:10:21] That was one big draw to join Facebook in 2015. The other was, by this point, I was at Microsoft for eleven and a half years, and I felt I had become reasonably proficient as a Microsoft engineer in the Microsoft stack. But I realized if you take me outside of that bubble, there were so many things I didn’t know. Part of it too was wanting to learn to be an effective engineer when I’m not within the safe cocoon of the Microsoft ecosystem.
+
+
+## 00:10:59 — Microsoft vs Facebook culture
+
+
+Ryan:
+
+[00:10:59] After you got to Facebook and experienced the culture for a bit, what are the things that stood out to you that were different between Microsoft and Facebook?
+
+Fiona:
+
+[00:11:10] There were things that were definitely similar, like working with really great people who are really passionate about what they’re doing. Definitely speed came to mind. Facebook Marketplace just operated. We were doing weekly updates at the time with the first version. It was actually on facebook.com.
+
+[00:11:29] I remember there were weekly updates. I remember going, “Oh my gosh, a sprint lasts a week.” Usually a sprint for me was like four weeks at Visual Studio. Back then, I thought that was already a short time compared to where it started. So definitely speed. Facebook also felt much smaller to me back then, especially coming from Microsoft.
+
+[00:11:46] There used to be this poster on the wall that said nothing at Facebook is somebody else’s problem, and I really loved that culture. No matter your role, if there was a problem, everybody leaned in to help. That was something I really loved and appreciated.
+
+
+## 00:12:01 — Why dogfooding is important
+
+
+Ryan:
+
+[00:12:01] When you eventually left Meta, I saw that you wrote this badge post, and hundreds of people were saying the reasons why they enjoyed working with you. I noticed several patterns of things that you had done where many people were saying, “Oh, I really like that particular part of working with you.” I’d love to go on each of these and kind of ask you your thoughts on them.
+
+[00:12:24] The first one is on dogfooding. A lot of people were saying they really appreciated you being a great partner and reporting problems in the product and using the products. I’m curious, why do you do dogfooding as much as you do, and why is it important?
+
+Fiona:
+
+[00:12:42] Oh, I love it; it’s one of my favorite topics. My first job out of college was using Visual Studio to build Visual Studio. I’m really grateful that I got to experience that, and I think that’s where I learned, “Oh wow, I’m going to use a product every day that I’m building.” So that’s where that initially came from, and I feel it really gave not only empathy for what our users are going through, but it really gives you a good pulse of the product.
+
+[00:13:08] Plus it was easy on Visual Studio because you’re using Visual Studio to build Visual Studio. I carried that over to Facebook Marketplace. I remember our first test launch was in the Seattle area and also Hawaii. I remembered I would have a pile of things that usually we would have donated. My husband was getting so annoyed, like, “Why do we sell this? Post up.” I’m like, “No, I need good inventory for me to sell on Facebook Marketplace.” It was super rewarding not only in terms of using the product and gaining insights but also just inspiration from meeting users of Facebook Marketplace and seeing that what you do makes a difference.
+
+[00:13:44] So I think that just kind of carried throughout. When I was on VR, it was a lot of dogfooding our VR Quest devices. I remember when we were first starting up Ray-Ban Stories, which became Ray-Ban Meta, it was actually during COVID, so it was a lot of dogfooding devices from home. As a manager, you don’t get to code every day or nearly as often as one would like. But dogfooding the product enables you to experience what it is that your team is working on. I like to think of it as my maker time. For example, in my last role working on the VR product with Horizon OS, anytime I was able to help debug some hard-to-reproduce issue, that was my maker time, and I felt it was my little way to contribute to the quality of the product. Plus, I don’t know why, but the way my house is built, I was always able to reproduce certain floor height bugs, and I was really happy to be able to get those logs.
+
+Ryan:
+
+[00:14:46] I notice something different too when a manager or a leader dogfoods; it kind of adds some urgency to the bugs as well. There might be something that everyone kind of knows about but gets lost. But then, when you or Baz or someone says, “Hey, this thing’s broken. I can’t use this,” everyone treats it as a severity issue. People are fixing it, so it feels like engineering leaders can focus people on what matters.
+
+Fiona:
+
+[00:15:16] That’s also the thing I get the most feedback on. Anytime I join a new team, including Instagram, I would get outreach from engineering saying, “It’s awesome that you’re using our product and you care about what we do.” I also think as leaders, it’s a great way to build relationships and rapport with your overall team.
+
+Ryan:
+
+[00:15:37] Do you have any tips on how to dogfood given you’re so prolific?
+
+Fiona:
+
+[00:15:42] By the way, I love that on Facebook, we still have this Meta product feedback group. I’m still posting on that, so thanks in advance Meta for responding to my feedback post. I would say find a way to integrate it into your life that brings you joy. I’m super excited because I’m using Claude Code to build Claude Code. It’s the first time I’ve been able to ship production software in a really long time, and I forget how much fun it is to work on code, ship it, and see customer feedback.
+
+[00:16:12] It’s kind of easy again because it’s part of my day job. For example, when I was working on VR, I thought about what I really enjoy in life and found a way to incorporate that into VR. One thing I love to use the VR headsets for is working out. I love the Supernatural experience. But the other is the opposite of the spectrum: I love to watch movies and knit while I’m wearing the VR headset. Those are just things that I enjoy and bring me joy, so it makes dogfooding even more enjoyable and less of a chore.
+
+[00:16:47] I think when it becomes a chore, that’s when you’re like, “Oh, this is...” You always want to try to keep it fun and engaging. I would say to leaders too, another effective way to dogfood is to do product sessions with your team. In my last team in VR, we would do every Friday. My PM partner Carmen, my design partner Andres, and I would hold these leadership dogfooding sessions for any feature that we thought was about ready to ship. We would put on the headset and give really fast feedback. Incorporating dogfooding that way also allows you to give quick feedback to your team as well.
+
+Ryan:
+
+[00:17:28] Another thing that I saw, like dozens of people saying, is there were a lot of PMs saying they really enjoyed working with you, or directors of PM or various other PMs. I’m curious, what’s your tip as an engineering leader on how to work well with product management?
+
+Fiona:
+
+[00:17:47] Ooh. I would say, oh my gosh.
+
+[00:17:50] I was really fortunate at Meta to work with so many amazing PMs. Really starting initially to go, hey, overall as our group, right, like as a leadership group, what are we really setting out to do? And where do we each bring the strengths? Because there’s always gonna be more work than people. And so with product, like, with my PM partners, being upfront going, okay, I got this.
+
+[00:18:13] And you got that. That whole divide and conquer was great. I think all the PMs I’ve worked with also appreciated that I did use the product a lot. So a lot of our one-on-ones would also be just riffing on product discussions, and so I think that also really resonated with my PM partners.
+
+Ryan:
+
+[00:18:29] So another value of dogfooding. I also saw just generally a lot of people calling out, I’ve seen a lot of badge posts at this point, but an unusual amount of people calling out kindness in the culture of the organizations that you build. And I also saw that you wrote about kindness as well.
+
+[00:18:49] I’m curious your thoughts on kindness in engineering organizations and the value of it.
+
+Fiona:
+
+[00:18:54] Oh, I love it. Yeah. I think my last bullet in my badge post was in a world where you can be anything, be kind. It probably comes from, I remember during COVID, I was working on AR and VR operating systems.
+
+[00:19:09] We were trying to ship Quest 2 during COVID. We were incubating Ray-Ban Stories and getting ready to ship that too. Everybody, especially when you work with devices and you don’t have an office or a lab that you can get to as easily, or you can’t have firmware engineers next to software engineers next to electrical engineers to debug, everybody really did so much to make those products happen. But with COVID, everybody was also going through a lot at home. So I think that was when I really, and I remember personally for me, where it really struck home was, for me, one-on-ones are really important. I always want to try to make them.
+
+[00:19:50] My grandmother was living in Canada in an assisted living facility. Because of COVID, I couldn’t travel to visit her. No one could go into the nursing facilities during that time. The only way to have time with loved ones in that nursing home was FaceTime, but they were also super strapped on nurses and helpers.
+
+[00:20:11] There were very few slots that you could get a FaceTime slot where someone can go in with an iPad, and you never knew when it would happen. I remembered, my aunt messaged me an hour before to go, okay, we got a FaceTime slot with grandma, but it was gonna be with one of the one-on-ones I was supporting.
+
+[00:20:29] I felt really bad to say, hey, I’m so sorry last minute. I knew we were gonna discuss all these important things too because we were both looking forward to it. But I said, my grandma, I get this FaceTime slot with her. Is it okay for us to cancel? I remember him saying, oh yeah, sure, no problem. For him, he probably didn’t even think of that as an act of kindness.
+
+[00:20:49] But for me, it had such amazing impact, more than he would’ve known because I was really struggling with, do I chat with grandma or, ‘cause I never want to cancel a one-on-one. So that was kind of when it started. It comes from everybody’s probably going through a lot in their lives.
+
+[00:21:06] We never know what somebody is going through. And work, we’re all trying to do our best and trying to do epic things, which are not gonna be easy. So, yeah, always thinking about in a world where you can be anything, be kind, just ‘cause we’re all going through things that none of us have an idea about.
+
+
+## 00:21:25 — Joining Anthropic
+
+
+Ryan:
+
+[00:21:26] Transitioning to your experience at Anthropic, I’m curious what excited you about Anthropic over all the other options and why you joined?
+
+Fiona:
+
+[00:21:35] Oh, so I was, as you could tell, I’m still a big VR fan, so I actually really loved working at Meta on VR, on Horizon OS, and I wasn’t even looking for a new adventure.
+
+[00:21:49] The only option would’ve been to join Anthropic or stay working on VR. I was really happy working with amazing people on a product I’m really passionate about, so I feel very lucky about that. Internally, I was also using DevMate underneath, I think it was a Sonnet model to build some tools to help out at work.
+
+[00:22:10] I saw firsthand how this is just transformative. At first, you might hear about it on the news, but until you experience it, it’s not like a future thing, AI is already here. It’s already changing how we work. I was always very passionate about the space, but it was still hard for me to say farewell to Meta. The more and more people I talked with at Anthropic, I was really drawn to how mission-oriented everyone was.
+
+[00:22:36] That actually reminded me of one reason why I joined Facebook and Facebook Marketplace back in 2015. Being in an environment where everybody is so mission-aligned and really all in to make sure we can build AI that benefits humanity with safety first, I was just really impressed with that mission-orientedness, and it really appealed to me. I love working on teams where everyone’s mission-driven and has a one-team mentality.
+
+[00:23:04] That was probably the biggest draw for why I said farewell to Meta and joined Anthropic.
+
+Ryan:
+
+[00:23:13] When you started at Facebook, it was very mission-driven. Did the culture change over time when you were at Facebook or Meta?
+
+Fiona:
+
+[00:23:23] I think over time, the culture definitely changed. By the way, I think culture does change ‘cause it’s a living, breathing thing.
+
+[00:23:30] I used to give these Facebook boot camp talks and I said, remember culture’s not just a poster on a wall. It’s through your actions. It makes sense that as Facebook grew, the culture changed. I would say in terms of the mission drivenness, there were still folks that were very passionate about what they did. For example, everybody on VR really wanted to make VR successful, so that theme was still there, and I think it’s always important to go back to, hey, what are you passionate about?
+
+[00:23:59] I remembered I started feeling this way around 2017. A lot of boot campers would ask me when I would take the Facebook Seattle shuttle, hey, I’m a boot camper. Can I chat with you? Get some advice. I’m looking for which team to join, and a lot of it was just, which team do you think I can have the most impact? I remember saying, hey, but what are you passionate about? You joined to do something ‘cause there’s something you’re passionate about or some mission you believe in. That’s why I think it’s always important to think about, yeah, what is that passion or what is the mission?
+
+Ryan:
+
+[00:24:36] If you could have both, it’s a no-brainer, like a team where there’s impact and there’s passion. But if you had to make the trade-off, like one versus the other, and you’re advising someone who’s joining a company, what would you say? How to navigate that? A less impactful role, but you’re really passionate, or extremely impactful, but you’re like, I don’t really want to?
+
+Fiona:
+
+[00:24:59] Actually, I would say have that honest conversation with yourself.
+
+[00:25:04] With one-on-ones, I like to, anytime I’m supporting someone new, I mention I like to ask them, hey, what do you look for in a manager partnership? What’s worked well? What hasn’t worked well? Another tool I use is then I ask, hey, what’s important to you? What’s motivating to you and why?
+
+[00:25:20] There’s no right answers or wrong answers, but I use that to learn what is important to someone because it’s different for everyone. For a person, it might be, I really want an impact, or I really want to learn, or I really want to work with great people. Just making sure you’re sharing that with your manager so that you’re not guessing what’s important to the other person when it may or may not be important.
+
+Ryan:
+
+[00:25:45] So you’ve been onboarding at Anthropic for two months at this point. I’m curious, is there any interesting insights in your onboarding or things that really stand out to you?
+
+Fiona:
+
+[00:25:54] Ooh, definitely. I talked so much about mission. Before I joined, everybody that I met in the interview loops were great.
+
+[00:26:03] You do wonder, wow, is everybody truly this mission-driven or is it just a tagline? Starting from day one onboarding, you see being mission-driven to build AI that benefits all of humanity with safety first is this big responsibility that’s really on top of mind for everyone. That was really, it definitely was.
+
+[00:26:23] Okay, yeah, this is a core part of the culture and DNA and not just a slogan. That definitely stood out. I would say joining Claude Code, the speed, I mean, I thought I remembered Marketplace days where I felt we moved really fast, but Claude Code, it could be a time warp or maybe it just feels even faster.
+
+[00:26:49] The speed of iteration, and we’re really fortunate on Claude Code because Anthropic, everybody at Claude Code, we have a really high amount of feedback. That loop of, I have an idea, let me build, let me launch internally, okay, let me get feedback from end users, okay, now let’s launch to public and continue with the feedback. That rapid iteration loop has really impressed me, and it’s definitely something that’s top of mind for me as we grow our team to keep up that agility and speed.
+
+
+## 00:27:23 — Feedback that changed her career
+
+
+Ryan:
+
+[00:27:23] Coming to the end of the interview, I want to ask you a few career reflections.
+
+[00:27:28] Was there ever a time where you received feedback and it really changed your career, and if so, what was the feedback?
+
+Fiona:
+
+[00:27:36] I would say actually one of the most pivotal feedback I ever received was feedback on receiving feedback. So we’re engineers, we like to set breakpoints and debug. Earlier on at Meta, when someone would give feedback, I definitely wanted to get better.
+
+Let me ask more questions so I could debug the situation, replay the situation, and figure out how I can improve. Someone gave me really good feedback of, when someone cares enough to come to you for constructive feedback, it’s already uncomfortable enough. Make sure that that first session, you’re just in read-only mode just to learn and listen.
+
+You may have questions, but save them for another day because it’s already uncomfortable for that person. You don’t want anyone to ever feel like they have to justify the feedback, so just pay attention. Give yourself the space, pay attention, listen. Even if you have questions, hold them until the next day. Give yourself time to sit with the feedback and reflect. That’s been some of the best advice because that really changed my approach to how to give and receive feedback.
+
+
+## 00:28:43 — Advice for younger self
+
+
+Ryan:
+
+[00:28:44] And then last question is if you could go back to when you just entered the industry and give yourself some advice, what would you say?
+
+Fiona:
+
+[00:28:52] I’m gonna say enjoy the ride. Michael Abrash used to say, these are the good old days. So I would say, enjoy the ride and these are the good old days because you’ll look back and everything happened so fast. Sometimes you don’t look back and really enjoy the moment as you’re living it.
+
+Ryan:
+
+[00:29:08] Awesome. Well, thank you so much for your time, Fiona. I really appreciate it.
+
+Fiona:
+
+[00:29:11] Thanks for coming by. It’s awesome catching up again.

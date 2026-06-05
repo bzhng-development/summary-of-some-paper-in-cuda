@@ -1,0 +1,441 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/the-best-manager-ive-had",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 143488393,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-04-12T13:03:18.927Z",
+  "updated_at": "2024-04-12T13:05:51.849Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "the-best-manager-ive-had",
+  "social_title": null,
+  "subtitle": "Learn What To Look For",
+  "teaser_post_eligible": true,
+  "title": "The Best Manager I've Had",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 9,
+  "reactions": {
+    "❤": 125
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "shipping-code-faster",
+  "next_post_slug": "time-in-role-gatekeeping",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/d9bc15b7-b96e-4124-80a3-13ed72916896_3024x3273.jpeg",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 143488393,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Learn What To Look For",
+  "body_html": "<p>👋<em> Hi, this is&nbsp;<a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a>&nbsp;with this week’s newsletter. I write about software engineering, big tech/startups and career growth.</em></p><p><em>This week I’m sharing some stories from my experience about the best manager I’ve had. Hope it is helpful; enjoy!</em></p><div><hr></div><p>When I was picking a team to join for the first time, many people told me my manager was the most important person to vet. It makes sense, but I remember not knowing what to look for in a manager back then.</p><p>Now after having eight different managers, I’ve been lucky to have one that was exceptional. To give you some ideas of what makes a great manager, I’ll share my personal experience about what made my best manager stand out.</p><h3>Transparent Communication</h3><p>The trait I find most important is that he was transparent with me. This has a lot of benefits but is especially important for career growth conversations. If your manager doesn’t talk about your progress to the next level, it makes it difficult for you to plan out your path.</p><p>I had a friend who never had a clear picture of what he needed to do to get to Senior (IC5) at Meta. He was strung along for years without clear guidance until he called it quits. I’ve never had that experience since my manager made it clear where I stood.</p><p>Transparency is also critical for learning. Your manager should share feedback with you to help you grow. Also, if your manager shares feedback early and often, it is much less uncomfortable.</p><h3>Technical Competency</h3><p>Another important trait that stands out from my best manager is his technical competency; he knows what is going on. This has a lot of downstream benefits:</p><ol><li><p><strong>Better judgment</strong> - This comes up in many conversations about the team’s direction or ongoing work. What he says is on point in discussions with engineers.<br></p></li><li><p><strong>Better representation</strong> - Understanding engineering helps him speak about the work during performance reviews. Engineers doing challenging work in less understood domains still get the ratings they deserve.</p></li></ol><p>There are also some team health benefits because the engineers respect him more than if he didn’t know what was going on.</p><h3>Holding a High Bar</h3><p>I remember one of my first halves with the team, I was frustrated because I got a lower rating than I expected. I compared my work to some peers on a different team who got higher ratings than I did.</p><p>Now I realize that my manager was right. My work deserved the rating I got. I’ve seen time and time again that my manager doesn’t give people more credit than they deserve.</p><p><strong>This increases the team’s talent density over time.</strong> This is because everyone focuses on doing work that has more impact because that is what is rewarded. The bar is high but fair, which keeps high performers motivated and helps them grow.</p><h3>Doesn’t Oversell</h3><p>My best manager never oversells anything. This makes him more credible, which increases his influence.</p><p>If your manager has credibility like this, then they will succeed more often when they advocate for you. At another company I worked at, I had the opposite happen which made engineers resentful because promotions kept failing to land.</p><h3>Focuses on What Matters</h3><p>My best manager always focuses on what matters. I can think of many cases where politics or processes were slowing engineers on the team down. At large companies, it’s easy for this to happen silently if you don’t fight it.</p><p>My manager always recommended that we focus on making the technology better and improving the user experience. If process or politics got in the way he’d often shield us from these things to help us focus on engineering.</p><div><hr></div><p>Great managers can make a world of difference. I am lucky to have had a great manager and will always appreciate the opportunities he gave me.</p><p>If you’re looking at a new team, try to ask people on the team you’re joining about your potential manager. Engineers are usually transparent about their experience which is helpful signal.</p><p>If you found this useful, <strong>please share it with a friend and consider subscribing if you haven’t already.</strong></p><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 56000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth.",
+  "wordcount": 714,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "a6522e0b-303a-4867-a27c-03ff246cc20a",
+      "publication_id": 1340878,
+      "name": "Manager",
+      "slug": "manager",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        200,
+        158,
+        5
+      ],
+      "population": 51
+    },
+    "DarkVibrant": {
+      "rgb": [
+        112,
+        96,
+        13
+      ],
+      "population": 489
+    },
+    "LightVibrant": {
+      "rgb": [
+        236,
+        193,
+        141
+      ],
+      "population": 48
+    },
+    "Muted": {
+      "rgb": [
+        178,
+        138,
+        86
+      ],
+      "population": 274
+    },
+    "DarkMuted": {
+      "rgb": [
+        52,
+        68,
+        52
+      ],
+      "population": 1
+    },
+    "LightMuted": {
+      "rgb": [
+        210,
+        193,
+        170
+      ],
+      "population": 532
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 125,
+  "comment_count": 11,
+  "child_comment_count": 6,
+  "audio_items": [
+    {
+      "post_id": 143488393,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/143488393/tts/4792be59-fb44-4ded-92ac-3b23ae519fdb/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 53882688,
+      "body": "Kouzes and Posner (2010) asked employees to describe the best and worst managers they ever had. With regard to the best, people said Integrity, good judgment, competent in their job, and the ability to explain why a team is doing what it is doing and why it matters (vision). Sounds like your previous manager checked all the boxes.  I'd add one more to this list based on my experience - having a 'bring you along' manager who not only sets high-standards and pushes you to reach them, but is the one standing behind you doing the pushing, or standing over you lending a hand to pull you up when you fall down.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Kouzes and Posner (2010) asked employees to describe the best and worst managers they ever had. With regard to the best, people said Integrity, good judgment, competent in their job, and the ability to explain why a team is doing what it is doing and why it matters (vision). Sounds like your previous manager checked all the boxes. I'd add one more to this list based on my experience - having a 'bring you along' manager who not only sets high-standards and pushes you to reach them, but is the one standing behind you doing the pushing, or standing over you lending a hand to pull you up when you fall down."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 143488393,
+      "user_id": 2744888,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-04-14T03:54:07.391Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "David C Morris",
+      "photo_url": "https://bucketeer-e05bbc84-baa3-437e-9518-adb32be77984.s3.amazonaws.com/public/images/e42f7d6e-d3d8-40f5-a1c5-f51810dd1ed9_3024x4032.jpeg",
+      "handle": "leadfromthehip",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "leadfromthehip",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Lead from the Hip",
+          "id": 938506,
+          "base_url": "https://leadfromthehip.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 7,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 53924728,
+      "body": "Hi Ryan, great article.\nJust wanted to understand your perspective over how to choose a great manager? As you mentioned, it’s quite important to have a good manager but the base of it gets decided on what team and company you get to join. A lot of young engineers like myself, fail to access thing. Any tips on what to ask and access while choosing your manager, team and company. Thanks in advance!",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hi Ryan, great article."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Just wanted to understand your perspective over how to choose a great manager? As you mentioned, it’s quite important to have a good manager but the base of it gets decided on what team and company you get to join. A lot of young engineers like myself, fail to access thing. Any tips on what to ask and access while choosing your manager, team and company. Thanks in advance!"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 143488393,
+      "user_id": 9947937,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-04-14T19:10:53.176Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Shivani Mehta",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/44d69b3d-0f22-4df8-b287-bf11962c5c58_144x144.png",
+      "handle": "shivanimehta246817",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "shivanimehta246817",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

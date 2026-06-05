@@ -1,0 +1,457 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/judgment",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 147471626,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-08-09T13:00:38.885Z",
+  "updated_at": "2024-08-09T13:01:17.200Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "judgment",
+  "social_title": null,
+  "subtitle": "Business understanding & influencing direction",
+  "teaser_post_eligible": true,
+  "title": "Judgment",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 8,
+  "reactions": {
+    "❤": 73
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "how-to-get-promoted-without-getting",
+  "next_post_slug": "tech-lead-manager-tlm-roles",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/db48932d-63af-4eb6-b83e-602914581a25_1668x1062.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 147471626,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Business understanding & influencing direction",
+  "body_html": "<p>Having good judgment isn’t taught in school yet is one of the most critical skills for promotion to Senior and higher levels.</p><p>This skill was a large part of my Senior and Staff promotions at Meta.</p><p>Not only will it guide you to more senior levels, but also it’ll give you more control over what you work on. This skill extends to any business you work on (even outside of big tech).</p><p>Let’s go over what I mean by “judgment” and how I’d recommend developing it based on my experience.</p><h3>Understanding Judgment</h3><p>Judgment is having an accurate sense of what is important for the success of the business. Everything we do should benefit the business so it’s obvious that this is important. Yet I see a lot of engineers lacking this thinking.</p><p>Two ways to develop your judgment:</p><p><strong>1) Understand the business and your org’s place in its success</strong> - Easiest way to get this information is to discuss it with your manager and/or tech lead. They can teach you what metrics &amp; initiatives matter most and why. Another place to find this information is in your team’s strategy docs. They are your org’s best writing about what is planned and why.</p><p>It’s also important to know your org’s specific role in the company’s success. Different teams have impact in different ways. Here are a few high-level examples from an ads business like Google:</p><ol><li><p>Ads team - drives revenue for the company</p></li><li><p>Growth team - drives new user adoption and retention</p></li><li><p>Infra team - drives faster dev velocity &amp; capacity cost savings</p></li><li><p>Product team - drives increased user engagement</p></li></ol><p>Just because a team doesn’t directly contribute to revenue doesn’t mean that it isn’t critical to the business’s success. Context matters.</p><p><strong>2) Learn by doing</strong> - The main way I improved my judgment is by writing strategy and direction docs (<a href=\"https://docs.google.com/document/d/1CAvwd6IaaThBWU_MiYKgtt3S7h8psAdNNkbKeYExR0k/edit\">sample template I use</a>). By writing out the strategy and having to defend it as I built alignment, I learned a lot about what matters most. Feedback from others who have a good sense of what is impactful helped hone my judgment.</p><h3>Exercising Judgment</h3><blockquote><p>Steve Jobs: “It doesn't make sense to hire smart people and tell them what to do; <strong>we hire smart people so they can tell us what to do.</strong>”</p></blockquote><p>Having good judgment isn’t useful by itself. You need to exercise it to make sure you and your team are going in the right direction.&nbsp;</p><p>This means that you don’t just do what you’re told. You should think about the business value of what you work on. <strong>As you grow into more senior roles, this thinking should extend past yourself. You should care that what your team works on is impactful.</strong></p><p>If that isn’t true, you should speak up and influence the team’s direction. Doing this well is beneficial for everyone. Your manager doesn’t want you to complete tasks for the sake of doing work. Your manager wants you and the team to have as much impact on the business as possible. The work is just an implementation detail.</p><p>Since <a href=\"https://www.developing.dev/p/how-to-get-promoted-without-getting\">promotions are a byproduct of your impact</a>, you can imagine how this skill got me promoted to both Senior and Staff.  For both promotions, I found initiatives outside of my team’s current roadmap and proved that they’d be beneficial for the business:</p><ul><li><p><a href=\"https://www.developing.dev/p/speedrunning-guide-mid-level-l4-senior\">Senior Promo</a> - Started an initiative on video ads even though my team was only focused on non-ads video.</p></li><li><p><a href=\"https://www.developing.dev/p/speedrunning-guide-senior-l5-staff\">Staff Promo</a> - Started an initiative optimizing compute capacity even though it wasn’t something our team cared about at first.</p></li></ul><div><hr></div><p>Aside from helping with career growth, the most compelling reason I enjoy exercising my judgment is it helps me pick work that I find most exciting and fulfilling. <strong>If you know what is impactful and can convince others, you can influence your organization to let you prioritize that work.</strong></p><p>I hope this was helpful. If you liked the content, you can find more of my stuff here:</p><ul><li><p><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">LinkedIn</a></p></li><li><p><a href=\"https://twitter.com/ryanlpeterman\">Twitter</a></p></li><li><p><a href=\"https://www.threads.net/@ryanlpeterman\">Threads</a></p></li></ul><p>Thanks for reading,<br>Ryan Peterman</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 70000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p></p>",
+  "truncated_body_text": "Having good judgment isn’t taught in school yet is one of the most critical skills for promotion to Senior and higher levels.",
+  "wordcount": 687,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "3ef0124c-3ef3-40c1-b4d8-de1f82d7695c",
+      "publication_id": 1340878,
+      "name": "To Senior",
+      "slug": "to-senior",
+      "hidden": false
+    },
+    {
+      "id": "f4df2d6e-046e-448c-b0bf-6dd4ae5a5a6a",
+      "publication_id": 1340878,
+      "name": "To Staff",
+      "slug": "to-staff",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        72.85714285714282,
+        182.14285714285717,
+        97.14285714285705
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        37.88571428571427,
+        94.71428571428574,
+        50.51428571428568
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        240,
+        249,
+        242
+      ],
+      "population": 271
+    },
+    "Muted": {
+      "rgb": [
+        124,
+        132,
+        124
+      ],
+      "population": 2
+    },
+    "DarkMuted": {
+      "rgb": [
+        70,
+        70,
+        70
+      ],
+      "population": 47
+    },
+    "LightMuted": {
+      "rgb": [
+        184,
+        188,
+        184
+      ],
+      "population": 94
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 73,
+  "comment_count": 6,
+  "child_comment_count": 4,
+  "audio_items": [
+    {
+      "post_id": 147471626,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/147471626/tts/9cb434fb-5fbe-41d3-8c12-ab4388a20b7e/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 64935009,
+      "body": "Is anyone here not a software engineer? I feel like these posts are useful for any career. For instance, I used the direction document weeks ago (from his templates article) to outline the strategy for our small poetry press. It’s a completely different world, but the document was incredibly useful.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Is anyone here not a software engineer? I feel like these posts are useful for any career. For instance, I used the direction document weeks ago (from his templates article) to outline the strategy for our small poetry press. It’s a completely different world, but the document was incredibly useful."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 147471626,
+      "user_id": 241282274,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-08-09T16:21:58.426Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Sam Mas",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/49f0b867-2dbe-40df-bec6-64c0fbbf6d4b_3371x3371.jpeg",
+      "handle": "sammaswriting",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 3
+      },
+      "reaction_count": 3,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "sammaswriting",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "unsubscribed",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Surrounded: How our environment shapes our thinking",
+          "id": 5888189,
+          "base_url": "https://readsurrounded.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 4,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    },
+    {
+      "id": 65689062,
+      "body": "You mentioned this briefly, but I think it should be emphasized more that using data to influence decisions is key. As an engineer, the more you can bring facts and hard numbers to back up your judgement, the more you will be taken seriously.\n\nThanks for the post!",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "You mentioned this briefly, but I think it should be emphasized more that using data to influence decisions is key. As an engineer, the more you can bring facts and hard numbers to back up your judgement, the more you will be taken seriously."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Thanks for the post!"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 147471626,
+      "user_id": 35017541,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-08-16T16:19:24.226Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Andrew",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/33d19269-0d0d-48f8-a742-ba55e4fc1a32_250x250.jpeg",
+      "handle": "werdnagreb",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "werdnagreb",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Andrew",
+          "id": 6787995,
+          "base_url": "https://werdnagreb.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 2,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    }
+  ]
+}

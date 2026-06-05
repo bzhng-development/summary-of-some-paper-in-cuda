@@ -60,13 +60,14 @@ ORGS: list[tuple[str, str, re.Pattern]] = [
     # ---- Western LLM labs ----
     ("OpenAI", "OpenAI", re.compile(r"\bopenai\b", re.IGNORECASE)),
     ("Anthropic", "Anthropic", re.compile(r"\banthropic\b", re.IGNORECASE)),
-    ("Meta / FAIR", "Meta AI OR FAIR",
-     re.compile(r"\b(meta\s+ai|meta\s+platforms|fair\s+labs?|fair$|facebook\s+ai|meta\s+research)\b", re.IGNORECASE)),
+    (
+        "Meta / FAIR",
+        "Meta AI OR FAIR",
+        re.compile(r"\b(meta\s+ai|meta\s+platforms|fair\s+labs?|fair$|facebook\s+ai|meta\s+research)\b", re.IGNORECASE),
+    ),
     ("DeepMind", "DeepMind", re.compile(r"\b(deepmind|google\s+deepmind)\b", re.IGNORECASE)),
-    ("Microsoft Research", "Microsoft Research",
-     re.compile(r"\b(microsoft\s+(research|ai)|msr\b)\b", re.IGNORECASE)),
-    ("Google Research", "Google Research",
-     re.compile(r"\bgoogle\s+(research|ai|brain)\b", re.IGNORECASE)),
+    ("Microsoft Research", "Microsoft Research", re.compile(r"\b(microsoft\s+(research|ai)|msr\b)\b", re.IGNORECASE)),
+    ("Google Research", "Google Research", re.compile(r"\bgoogle\s+(research|ai|brain)\b", re.IGNORECASE)),
     ("NVIDIA", "NVIDIA", re.compile(r"\bnvidia\b", re.IGNORECASE)),
     ("Apple", "Apple", re.compile(r"\bapple(\s+inc|\s+ai|\s+ml)?\b", re.IGNORECASE)),
     ("IBM Research", "IBM Research", re.compile(r"\bibm\s+(research|ai)\b", re.IGNORECASE)),
@@ -74,128 +75,101 @@ ORGS: list[tuple[str, str, re.Pattern]] = [
     ("Mistral", "Mistral AI", re.compile(r"\bmistral\s*ai\b", re.IGNORECASE)),
     ("Cohere", "Cohere", re.compile(r"\bcohere\b", re.IGNORECASE)),
     ("AI21", "AI21 Labs", re.compile(r"\bai21\b", re.IGNORECASE)),
-    ("Snowflake", "Snowflake AI",
-     re.compile(r"\bsnowflake(\s+(ai|inc|research))?\b", re.IGNORECASE)),
+    ("Snowflake", "Snowflake AI", re.compile(r"\bsnowflake(\s+(ai|inc|research))?\b", re.IGNORECASE)),
     ("Together AI", "Together AI", re.compile(r"\btogether\s+ai\b", re.IGNORECASE)),
     ("Stability AI", "Stability AI", re.compile(r"\bstability\s+ai\b", re.IGNORECASE)),
     ("Adobe", "Adobe Research", re.compile(r"\badobe\b", re.IGNORECASE)),
-    ("Amazon", "Amazon Science",
-     re.compile(r"\bamazon\b", re.IGNORECASE)),
+    ("Amazon", "Amazon Science", re.compile(r"\bamazon\b", re.IGNORECASE)),
     ("Inflection", "Inflection AI", re.compile(r"\binflection\s+ai\b", re.IGNORECASE)),
-
     # ---- Chinese / Asian LLM labs ----
-    ("Qwen / Alibaba", "Qwen OR Tongyi OR Alibaba",
-     re.compile(r"\b(qwen|tongyi|alibaba\s+(damo|cloud|group|inc))\b", re.IGNORECASE)),
+    (
+        "Qwen / Alibaba",
+        "Qwen OR Tongyi OR Alibaba",
+        re.compile(r"\b(qwen|tongyi|alibaba\s+(damo|cloud|group|inc))\b", re.IGNORECASE),
+    ),
     ("DeepSeek", "DeepSeek", re.compile(r"\bdeepseek\b", re.IGNORECASE)),
-    ("ByteDance", "ByteDance OR Doubao OR Seed",
-     re.compile(r"\b(bytedance|seed\s+team|doubao)\b", re.IGNORECASE)),
-    ("Tencent / Hunyuan", "Tencent OR Hunyuan",
-     re.compile(r"\b(tencent|hunyuan|wechat\s+ai)\b", re.IGNORECASE)),
-    ("Moonshot / Kimi", "Moonshot AI OR Kimi",
-     re.compile(r"\b(moonshot|kimi)\b", re.IGNORECASE)),
-    ("Zhipu / GLM", "Zhipu OR Z.ai OR GLM",
-     re.compile(r"\b(zhipu|z\.ai|chatglm)\b", re.IGNORECASE)),
+    ("ByteDance", "ByteDance OR Doubao OR Seed", re.compile(r"\b(bytedance|seed\s+team|doubao)\b", re.IGNORECASE)),
+    ("Tencent / Hunyuan", "Tencent OR Hunyuan", re.compile(r"\b(tencent|hunyuan|wechat\s+ai)\b", re.IGNORECASE)),
+    ("Moonshot / Kimi", "Moonshot AI OR Kimi", re.compile(r"\b(moonshot|kimi)\b", re.IGNORECASE)),
+    ("Zhipu / GLM", "Zhipu OR Z.ai OR GLM", re.compile(r"\b(zhipu|z\.ai|chatglm)\b", re.IGNORECASE)),
     ("MiniMax", "MiniMax AI", re.compile(r"\bminimax\s+(ai|inc)\b", re.IGNORECASE)),
-    ("01.AI", "01.AI OR Yi model",
-     re.compile(r"\b(01[\.\-]?ai|01\.AI|lingyi)\b", re.IGNORECASE)),
+    ("01.AI", "01.AI OR Yi model", re.compile(r"\b(01[\.\-]?ai|01\.AI|lingyi)\b", re.IGNORECASE)),
     ("StepFun", "StepFun", re.compile(r"\bstepfun\b", re.IGNORECASE)),
-    ("Baichuan", "Baichuan",
-     re.compile(r"\bbaichuan(\s+inc)?\b", re.IGNORECASE)),
-    ("LongCat / Meituan", "LongCat OR Meituan",
-     re.compile(r"\b(longcat|meituan)\b", re.IGNORECASE)),
-    ("Baidu Research", "Baidu Research",
-     re.compile(r"\bbaidu\b", re.IGNORECASE)),
-    ("Alibaba DAMO", "DAMO Academy",
-     re.compile(r"\b(damo\s+academy|alibaba\s+damo)\b", re.IGNORECASE)),
-    ("Huawei Noah's Ark", "Huawei Noah",
-     re.compile(r"\bhuawei\s+(noah|technologies)\b", re.IGNORECASE)),
-    ("InternLM / Shanghai AI Lab", "Shanghai AI Laboratory OR InternLM",
-     re.compile(r"\b(shanghai\s+ai\s+lab(oratory)?|internlm)\b", re.IGNORECASE)),
+    ("Baichuan", "Baichuan", re.compile(r"\bbaichuan(\s+inc)?\b", re.IGNORECASE)),
+    ("LongCat / Meituan", "LongCat OR Meituan", re.compile(r"\b(longcat|meituan)\b", re.IGNORECASE)),
+    ("Baidu Research", "Baidu Research", re.compile(r"\bbaidu\b", re.IGNORECASE)),
+    ("Alibaba DAMO", "DAMO Academy", re.compile(r"\b(damo\s+academy|alibaba\s+damo)\b", re.IGNORECASE)),
+    ("Huawei Noah's Ark", "Huawei Noah", re.compile(r"\bhuawei\s+(noah|technologies)\b", re.IGNORECASE)),
+    (
+        "InternLM / Shanghai AI Lab",
+        "Shanghai AI Laboratory OR InternLM",
+        re.compile(r"\b(shanghai\s+ai\s+lab(oratory)?|internlm)\b", re.IGNORECASE),
+    ),
     ("THUDM", "THUDM", re.compile(r"\b(thudm|tsinghua\s+keg)\b", re.IGNORECASE)),
     ("THUNLP", "THUNLP", re.compile(r"\b(thunlp|tsinghua\s+(nlp|natural))\b", re.IGNORECASE)),
     ("OpenBMB", "OpenBMB", re.compile(r"\bopenbmb\b", re.IGNORECASE)),
-    ("KAIST AI", "KAIST AI",
-     re.compile(r"\bkaist(\s+(ai|kim\s+jaechul))?\b", re.IGNORECASE)),
-    ("LG / EXAONE", "LG AI Research OR EXAONE",
-     re.compile(r"\blg\s+ai\s+research\b|\bexaone\b", re.IGNORECASE)),
+    ("KAIST AI", "KAIST AI", re.compile(r"\bkaist(\s+(ai|kim\s+jaechul))?\b", re.IGNORECASE)),
+    ("LG / EXAONE", "LG AI Research OR EXAONE", re.compile(r"\blg\s+ai\s+research\b|\bexaone\b", re.IGNORECASE)),
     ("Kakao Brain", "Kakao Brain", re.compile(r"\bkakao\s+brain\b", re.IGNORECASE)),
-    ("NAVER", "NAVER Clova",
-     re.compile(r"\bnaver(\s+(ai|clova|labs?))\b", re.IGNORECASE)),
-    ("Rakuten RIT", "Rakuten Institute",
-     re.compile(r"\brakuten(\s+institute\s+of\s+technology)?\b", re.IGNORECASE)),
-    ("Sony", "Sony AI OR Sony Research",
-     re.compile(r"\bsony\s+(ai|research|computer)\b", re.IGNORECASE)),
-
+    ("NAVER", "NAVER Clova", re.compile(r"\bnaver(\s+(ai|clova|labs?))\b", re.IGNORECASE)),
+    ("Rakuten RIT", "Rakuten Institute", re.compile(r"\brakuten(\s+institute\s+of\s+technology)?\b", re.IGNORECASE)),
+    ("Sony", "Sony AI OR Sony Research", re.compile(r"\bsony\s+(ai|research|computer)\b", re.IGNORECASE)),
     # ---- Research nonprofits ----
-    ("AllenAI / Ai2", "Allen Institute for AI OR Ai2",
-     re.compile(r"\b(allen\s+institute\s+for\s+ai|ai2|allenai)\b", re.IGNORECASE)),
+    (
+        "AllenAI / Ai2",
+        "Allen Institute for AI OR Ai2",
+        re.compile(r"\b(allen\s+institute\s+for\s+ai|ai2|allenai)\b", re.IGNORECASE),
+    ),
     ("EleutherAI", "EleutherAI", re.compile(r"\beleutherai\b", re.IGNORECASE)),
     ("LAION", "LAION", re.compile(r"\blaion\b", re.IGNORECASE)),
-    ("Hugging Face", "Hugging Face",
-     re.compile(r"\bhugging\s*face\b", re.IGNORECASE)),
-
+    ("Hugging Face", "Hugging Face", re.compile(r"\bhugging\s*face\b", re.IGNORECASE)),
     # ---- Big Tech eng/research blogs ----
-    ("LinkedIn", "LinkedIn",
-     re.compile(r"\blinkedin(\s+(corp|corporation|ai|engineering|inc))?\b", re.IGNORECASE)),
-    ("Snap", "Snap Research OR Snap Inc",
-     re.compile(r"\bsnap(\s+(inc|research))?\b", re.IGNORECASE)),
-    ("Pinterest", "Pinterest",
-     re.compile(r"\bpinterest(\s+(inc|engineering))?\b", re.IGNORECASE)),
-    ("Netflix", "Netflix",
-     re.compile(r"\bnetflix(\s+(inc|research))?\b", re.IGNORECASE)),
-    ("Spotify", "Spotify",
-     re.compile(r"\bspotify(\s+(research|inc))?\b", re.IGNORECASE)),
-    ("TikTok", "TikTok Research",
-     re.compile(r"\btiktok(\s+(research|inc))?\b", re.IGNORECASE)),
-    ("Airbnb", "Airbnb",
-     re.compile(r"\bairbnb(\s+(inc|engineering))?\b", re.IGNORECASE)),
-    ("Uber", "Uber AI OR Uber Research",
-     re.compile(r"\buber\s+(ai|research|engineering|technologies)\b", re.IGNORECASE)),
-    ("Lyft", "Lyft",
-     re.compile(r"\blyft(\s+(inc|engineering))?\b", re.IGNORECASE)),
-    ("DoorDash", "DoorDash",
-     re.compile(r"\bdoordash(\s+(inc|engineering))?\b", re.IGNORECASE)),
-    ("Instacart", "Instacart",
-     re.compile(r"\binstacart\b", re.IGNORECASE)),
+    ("LinkedIn", "LinkedIn", re.compile(r"\blinkedin(\s+(corp|corporation|ai|engineering|inc))?\b", re.IGNORECASE)),
+    ("Snap", "Snap Research OR Snap Inc", re.compile(r"\bsnap(\s+(inc|research))?\b", re.IGNORECASE)),
+    ("Pinterest", "Pinterest", re.compile(r"\bpinterest(\s+(inc|engineering))?\b", re.IGNORECASE)),
+    ("Netflix", "Netflix", re.compile(r"\bnetflix(\s+(inc|research))?\b", re.IGNORECASE)),
+    ("Spotify", "Spotify", re.compile(r"\bspotify(\s+(research|inc))?\b", re.IGNORECASE)),
+    ("TikTok", "TikTok Research", re.compile(r"\btiktok(\s+(research|inc))?\b", re.IGNORECASE)),
+    ("Airbnb", "Airbnb", re.compile(r"\bairbnb(\s+(inc|engineering))?\b", re.IGNORECASE)),
+    (
+        "Uber",
+        "Uber AI OR Uber Research",
+        re.compile(r"\buber\s+(ai|research|engineering|technologies)\b", re.IGNORECASE),
+    ),
+    ("Lyft", "Lyft", re.compile(r"\blyft(\s+(inc|engineering))?\b", re.IGNORECASE)),
+    ("DoorDash", "DoorDash", re.compile(r"\bdoordash(\s+(inc|engineering))?\b", re.IGNORECASE)),
+    ("Instacart", "Instacart", re.compile(r"\binstacart\b", re.IGNORECASE)),
     ("Zillow", "Zillow", re.compile(r"\bzillow\b", re.IGNORECASE)),
     ("eBay", "eBay Research", re.compile(r"\bebay\b", re.IGNORECASE)),
-    ("Zoom", "Zoom Video Communications",
-     re.compile(r"\bzoom\s+(video|communications)\b", re.IGNORECASE)),
+    ("Zoom", "Zoom Video Communications", re.compile(r"\bzoom\s+(video|communications)\b", re.IGNORECASE)),
     ("PayPal", "PayPal", re.compile(r"\bpaypal\b", re.IGNORECASE)),
-    ("Stripe", "Stripe",
-     re.compile(r"\bstripe(\s+(inc|engineering))?\b", re.IGNORECASE)),
+    ("Stripe", "Stripe", re.compile(r"\bstripe(\s+(inc|engineering))?\b", re.IGNORECASE)),
     ("Stitch Fix", "Stitch Fix", re.compile(r"\bstitch\s+fix\b", re.IGNORECASE)),
-    ("X / Twitter", "Twitter OR X Corp",
-     re.compile(r"\b(twitter|x\s+corp(oration)?)\b", re.IGNORECASE)),
+    ("X / Twitter", "Twitter OR X Corp", re.compile(r"\b(twitter|x\s+corp(oration)?)\b", re.IGNORECASE)),
     ("Dropbox", "Dropbox", re.compile(r"\bdropbox\b", re.IGNORECASE)),
-    ("Mozilla", "Mozilla Research",
-     re.compile(r"\bmozilla(\s+(research|foundation))?\b", re.IGNORECASE)),
+    ("Mozilla", "Mozilla Research", re.compile(r"\bmozilla(\s+(research|foundation))?\b", re.IGNORECASE)),
     ("Roblox", "Roblox", re.compile(r"\broblox\b", re.IGNORECASE)),
     ("Yandex", "Yandex Research", re.compile(r"\byandex\b", re.IGNORECASE)),
-    ("Bloomberg AI", "Bloomberg AI",
-     re.compile(r"\bbloomberg(\s+ai|\s+lp)\b", re.IGNORECASE)),
-    ("GitHub", "GitHub Research",
-     re.compile(r"\bgithub(\s+(inc|research))\b", re.IGNORECASE)),
-    ("Slack", "Slack engineering",
-     re.compile(r"\bslack(\s+(inc|technologies))\b", re.IGNORECASE)),
-
+    ("Bloomberg AI", "Bloomberg AI", re.compile(r"\bbloomberg(\s+ai|\s+lp)\b", re.IGNORECASE)),
+    ("GitHub", "GitHub Research", re.compile(r"\bgithub(\s+(inc|research))\b", re.IGNORECASE)),
+    ("Slack", "Slack engineering", re.compile(r"\bslack(\s+(inc|technologies))\b", re.IGNORECASE)),
     # ---- Universities (sanity benchmarks — we expect lots) ----
-    ("Stanford NLP", "Stanford NLP",
-     re.compile(r"\bstanford(\s+(university|nlp|ai|sail))\b", re.IGNORECASE)),
-    ("Berkeley BAIR", "Berkeley AI Research",
-     re.compile(r"\b(uc\s+berkeley|bair|berkeley\s+ai)\b", re.IGNORECASE)),
-    ("CMU LTI", "Carnegie Mellon LTI",
-     re.compile(r"\b(carnegie\s+mellon|cmu)\b", re.IGNORECASE)),
-    ("UW NLP", "University of Washington NLP",
-     re.compile(r"\b(university\s+of\s+washington|uw\s+nlp)\b", re.IGNORECASE)),
-    ("MIT", "MIT CSAIL OR MIT EECS",
-     re.compile(r"\b(massachusetts\s+institute\s+of\s+technology|mit\s+(csail|eecs))\b", re.IGNORECASE)),
-    ("Princeton", "Princeton University",
-     re.compile(r"\bprinceton\s+university\b", re.IGNORECASE)),
-    ("NYU", "New York University",
-     re.compile(r"\b(new\s+york\s+university|nyu)\b", re.IGNORECASE)),
-    ("Tsinghua University", "Tsinghua University",
-     re.compile(r"\btsinghua\s+university\b", re.IGNORECASE)),
+    ("Stanford NLP", "Stanford NLP", re.compile(r"\bstanford(\s+(university|nlp|ai|sail))\b", re.IGNORECASE)),
+    ("Berkeley BAIR", "Berkeley AI Research", re.compile(r"\b(uc\s+berkeley|bair|berkeley\s+ai)\b", re.IGNORECASE)),
+    ("CMU LTI", "Carnegie Mellon LTI", re.compile(r"\b(carnegie\s+mellon|cmu)\b", re.IGNORECASE)),
+    (
+        "UW NLP",
+        "University of Washington NLP",
+        re.compile(r"\b(university\s+of\s+washington|uw\s+nlp)\b", re.IGNORECASE),
+    ),
+    (
+        "MIT",
+        "MIT CSAIL OR MIT EECS",
+        re.compile(r"\b(massachusetts\s+institute\s+of\s+technology|mit\s+(csail|eecs))\b", re.IGNORECASE),
+    ),
+    ("Princeton", "Princeton University", re.compile(r"\bprinceton\s+university\b", re.IGNORECASE)),
+    ("NYU", "New York University", re.compile(r"\b(new\s+york\s+university|nyu)\b", re.IGNORECASE)),
+    ("Tsinghua University", "Tsinghua University", re.compile(r"\btsinghua\s+university\b", re.IGNORECASE)),
 ]
 
 
@@ -233,7 +207,8 @@ def search_bulk(query: str, year: str, token: str | None) -> dict | None:
             _throttle()
             continue
         if r.status_code in (502, 503, 504):
-            time.sleep(5); continue
+            time.sleep(5)
+            continue
         logger.warning(f"  HTTP {r.status_code}: {r.text[:200]}")
         return None
     return None
@@ -255,8 +230,8 @@ def affil_matches(authors: list, pat: re.Pattern) -> list[str]:
     title/abstract for the org regex.
     """
     hits = []
-    for a in (authors or []):
-        for aff in (a.get("affiliations") or []):
+    for a in authors or []:
+        for aff in a.get("affiliations") or []:
             if pat.search(aff or ""):
                 hits.append(aff)
     return hits
@@ -274,15 +249,23 @@ def trust_text_match(title: str, abstract: str, authors: list, pat: re.Pattern) 
             hits.append(f"{src_name}:{m.group(0)}")
     # Even if title/abstract don't mention, an author named after the org
     # (rare — happens for "DeepSeek-AI" listed as author) is a strong signal.
-    for a in (authors or []):
+    for a in authors or []:
         if pat.search(a.get("name") or ""):
             hits.append(f"author:{a.get('name')}")
     return hits
 
 
-def scrape_org(label: str, query: str, pat: re.Pattern, year: str,
-               year_min: int, year_max: int,
-               in_neon: set[str], out_fh, max_pages: int = 10) -> tuple[int, int]:
+def scrape_org(
+    label: str,
+    query: str,
+    pat: re.Pattern,
+    year: str,
+    year_min: int,
+    year_max: int,
+    in_neon: set[str],
+    out_fh,
+    max_pages: int = 10,
+) -> tuple[int, int]:
     """Returns (kept, total_seen). Streams matching records to out_fh."""
     token = None
     seen_arxiv: set[str] = set()
@@ -341,12 +324,11 @@ def scrape_org(label: str, query: str, pat: re.Pattern, year: str,
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--output", type=Path, default=Path("local_data/s2_company_scrape.jsonl"))
-    ap.add_argument("--year-range", type=str, default="2025-2026",
-                    help="S2 year filter (e.g. '2025-2026' or '2020-2024').")
-    ap.add_argument("--max-pages", type=int, default=10,
-                    help="Pages of 1000 per org per call.")
-    ap.add_argument("--orgs", type=str, default=None,
-                    help="Comma-separated subset of org labels to scrape.")
+    ap.add_argument(
+        "--year-range", type=str, default="2025-2026", help="S2 year filter (e.g. '2025-2026' or '2020-2024')."
+    )
+    ap.add_argument("--max-pages", type=int, default=10, help="Pages of 1000 per org per call.")
+    ap.add_argument("--orgs", type=str, default=None, help="Comma-separated subset of org labels to scrape.")
     args = ap.parse_args()
 
     year_min, year_max = map(int, args.year_range.split("-"))
@@ -370,10 +352,9 @@ def main() -> int:
             if org_filter and label not in org_filter:
                 continue
             logger.info(f"[{i + 1}/{len(ORGS)}] {label} (query={query!r})")
-            kept, total = scrape_org(label, query, pat, args.year_range,
-                                     year_min, year_max, in_neon, out_fh,
-                                     max_pages=args.max_pages)
-            new = kept - sum(1 for ln in out_fh.__class__.__name__ if False)  # noop
+            kept, total = scrape_org(
+                label, query, pat, args.year_range, year_min, year_max, in_neon, out_fh, max_pages=args.max_pages
+            )
             summary.append((label, kept, total))
             grand_new += kept
             logger.info(f"  -> verified={kept} of {total} total seen")

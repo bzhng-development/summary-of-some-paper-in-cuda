@@ -1,0 +1,467 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/a-new-era-of-writing-code",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 148987055,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-09-20T13:03:14.823Z",
+  "updated_at": "2025-07-29T14:07:42.293Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "a-new-era-of-writing-code",
+  "social_title": null,
+  "subtitle": "LLMs & Cursor",
+  "teaser_post_eligible": true,
+  "title": "A New Era of Writing Code",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 19,
+  "reactions": {
+    "❤": 183
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "unlearning-leetcode",
+  "next_post_slug": "staffing-your-projects",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/ce2bb981-bd95-4bac-ae9f-65024bd1bc3f_1280x720.jpeg",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 148987055,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "LLMs & Cursor",
+  "body_html": "<p>Large language models (LLM) will change how software engineers write code forever.</p><p>Last weekend, I built a side project using <a href=\"https://www.cursor.com/\">Cursor, an LLM-based IDE,</a> without writing a single line of code myself (I am not sponsored). The project took me a weekend when it otherwise would’ve taken at least a week.</p><p>Although LLMs aren’t perfect (I’ll explain where they don’t work later), they do the unsatisfying, repetitive parts of programming well.</p><h3>New Behaviors</h3><p>An interesting thing happens when you can write the code for a full feature with one command. It becomes more efficient to throw away code and retry with a tweaked prompt. Debugging the broken code is much slower than prompt engineering.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!NOjn!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9620bc90-357f-480e-ba6c-88d7d3cc23f8_605x197.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!NOjn!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9620bc90-357f-480e-ba6c-88d7d3cc23f8_605x197.png 424w, https://substackcdn.com/image/fetch/$s_!NOjn!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9620bc90-357f-480e-ba6c-88d7d3cc23f8_605x197.png 848w, https://substackcdn.com/image/fetch/$s_!NOjn!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9620bc90-357f-480e-ba6c-88d7d3cc23f8_605x197.png 1272w, https://substackcdn.com/image/fetch/$s_!NOjn!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9620bc90-357f-480e-ba6c-88d7d3cc23f8_605x197.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!NOjn!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9620bc90-357f-480e-ba6c-88d7d3cc23f8_605x197.png\" width=\"605\" height=\"197\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/9620bc90-357f-480e-ba6c-88d7d3cc23f8_605x197.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:197,&quot;width&quot;:605,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:55735,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!NOjn!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9620bc90-357f-480e-ba6c-88d7d3cc23f8_605x197.png 424w, https://substackcdn.com/image/fetch/$s_!NOjn!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9620bc90-357f-480e-ba6c-88d7d3cc23f8_605x197.png 848w, https://substackcdn.com/image/fetch/$s_!NOjn!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9620bc90-357f-480e-ba6c-88d7d3cc23f8_605x197.png 1272w, https://substackcdn.com/image/fetch/$s_!NOjn!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9620bc90-357f-480e-ba6c-88d7d3cc23f8_605x197.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div></div></div></a><figcaption class=\"image-caption\">Typical dev flow: Throwing away changes until one works</figcaption></figure></div><p>This has its pros and cons. I get things done way faster, but also have much less understanding of the code. This burned me a few times since I accepted code that made sense in a silo but was clowny when I zoomed out. For instance, I had two competing data models for the same concept at one point. If I had written the code myself, I would have avoided such an obvious design mistake.</p><p>Also, LLMs make print statement debugging better than using debuggers. I used to prefer debuggers since they make it faster to inspect arbitrary program state. However, you don’t need to type out print statements manually anymore.</p><p>LLMs make it easy to inject quality print statements everywhere with a single prompt. This helps you run and inspect your program much faster. And when you’re done, you can clean all the print statements up just as easily.</p><h3>Goodbye Google</h3><p>LLM responses are better than Google’s most of the time. They give more targeted answers so you don’t need to read tutorials or Stack Overflow answers. There was only a handful of times when I needed Google. Here are two examples:</p><ul><li><p><strong>Niche Answer</strong> - I wanted my Chrome extension to draw over the current page without changing its DOM. LLMs kept giving me obvious answers that injected components into the DOM. Google got me a better answer that did what I wanted.</p></li><li><p><strong>Weird Bug</strong> - If you create an OpenAI API key without registering a credit card, the API fails with a 429 response code (too many requests). The LLM kept giving me solutions to cache and rate limit my code, which made sense but didn’t work. A quick <a href=\"https://stackoverflow.com/questions/75041580/openai-api-giving-error-429-too-many-requests\">Google search showed it was about not having a credit card on file</a>. </p></li></ul><h3>Know Your LLM</h3><p>You need to know how to query LLMs to get the most out of them. After playing around for a day or two, you develop a sense of what works and what doesn’t. Here are a few examples from my experience:</p><ul><li><p>Good at:</p><ul><li><p><strong>Small, focused changes</strong> - Almost perfect if it was a small algorithm, regardless of how complex. I wouldn’t be surprised if they are super-human at Leetcode.</p></li><li><p><strong>Basic UI</strong> - So thankful for this. My side project looks good (although simple) without me having to tweak much CSS.</p></li><li><p><strong>Transpiling</strong> - A few hours into the project, I realized I wanted types. I converted all my vanilla Javascript into Typescript in just a minute or two.</p></li></ul></li><li><p>Bad at:</p><ul><li><p><strong>Changes outside the code</strong> - It was unreliable when setting up my environment or guaranteeing references across my project directory. </p></li><li><p><strong>Open-ended features </strong>- The more ambiguity the feature had, the more likely the prompt would fail. I needed to give it specific bulleted instructions the bigger the feature was.</p></li></ul></li></ul><p>My default LLM of choice was “claude-3.5-sonnet”. It runs fast and works most of the time. When Claude had trouble, I would try the most capable model I knew (OpenAI’s O1-preview model). In many cases, that would work, although it is slow (takes a few minutes) and expensive ($0.40 per request). If that failed, then I’d break down the feature into well-scoped tasks.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!DEhr!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffbcd0607-bbca-4c9c-af1d-d1ae0f2271fe_945x510.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!DEhr!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffbcd0607-bbca-4c9c-af1d-d1ae0f2271fe_945x510.png 424w, https://substackcdn.com/image/fetch/$s_!DEhr!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffbcd0607-bbca-4c9c-af1d-d1ae0f2271fe_945x510.png 848w, https://substackcdn.com/image/fetch/$s_!DEhr!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffbcd0607-bbca-4c9c-af1d-d1ae0f2271fe_945x510.png 1272w, https://substackcdn.com/image/fetch/$s_!DEhr!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffbcd0607-bbca-4c9c-af1d-d1ae0f2271fe_945x510.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!DEhr!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffbcd0607-bbca-4c9c-af1d-d1ae0f2271fe_945x510.png\" width=\"945\" height=\"510\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/fbcd0607-bbca-4c9c-af1d-d1ae0f2271fe_945x510.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:510,&quot;width&quot;:945,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:85057,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!DEhr!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffbcd0607-bbca-4c9c-af1d-d1ae0f2271fe_945x510.png 424w, https://substackcdn.com/image/fetch/$s_!DEhr!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffbcd0607-bbca-4c9c-af1d-d1ae0f2271fe_945x510.png 848w, https://substackcdn.com/image/fetch/$s_!DEhr!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffbcd0607-bbca-4c9c-af1d-d1ae0f2271fe_945x510.png 1272w, https://substackcdn.com/image/fetch/$s_!DEhr!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffbcd0607-bbca-4c9c-af1d-d1ae0f2271fe_945x510.png 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">Looks like I used “Claude-3.5” 373 times and “O1-preview” 46 times over the weekend</figcaption></figure></div><p>Hopefully, LLM tooling will one day automatically pick the model based on the task's difficulty. Until then, it’s good to understand what each model can do to balance quality and cost by hand.</p><h3>What Is Important Now</h3><p>Even though LLM-based development was faster, there were still many limitations that I had to work around. The skills that help with dealing with those limitations are:</p><ol><li><p><strong>High-level planning and design </strong>- Details and well-scoped algorithm changes are easy for LLMs. Planning out your feature roadmap and technical design matters more since LLMs don’t do this well yet.</p></li><li><p><strong>Debugging</strong> - There were times that I could dump my errors into the LLM and it would figure out the issue. But there were many times when it had trouble with even obvious errors (e.g. deleted critical code or changed function names).</p></li></ol><p>Also, I was building a simple, full-stack app. There are many online examples in LLM training data, and full-stack boilerplate code is unambiguous. This would have been much less effective for cutting-edge, proprietary code in many parts of the industry. </p><div><hr></div><p>LLM-based code generation is a powerful tool that can replace the need to write simple, well-scoped code. That doesn’t mean AI is taking our jobs. Play around with it for a while and you’ll see that it is still far from that.</p><p>I’m optimistic that these tools will improve our lives though. It feels powerful to program in English. I can express myself with much less time and effort.</p><p>This reminds me of the satisfaction I felt as my career grew. Doing higher-leverage work is much more fun than dealing with frustrating implementation details like compiler errors and missing semicolons. It frees you to do interesting, creative work.</p><p>If you liked this post, consider sharing it with a friend. As always, you can find more of my stuff here:</p><ul><li><p><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">LinkedIn</a></p></li><li><p><a href=\"https://twitter.com/ryanlpeterman\">Twitter</a></p></li><li><p><a href=\"https://www.threads.net/@ryanlpeterman\">Threads</a></p></li></ul><p>Thanks for reading,<br>Ryan Peterman</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 78,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "Large language models (LLM) will change how software engineers write code forever.",
+  "wordcount": 976,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "bbec9c1f-66ea-461d-baa6-2a8acc4d8aa9",
+      "publication_id": 1340878,
+      "name": "Blog",
+      "slug": "blog",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        52.499999999999986,
+        107.5,
+        202.50000000000003
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        21,
+        43,
+        81
+      ],
+      "population": 353
+    },
+    "LightVibrant": {
+      "rgb": [
+        149.7,
+        178.3,
+        227.7
+      ],
+      "population": 0
+    },
+    "Muted": {
+      "rgb": [
+        132,
+        140,
+        164
+      ],
+      "population": 3
+    },
+    "DarkMuted": {
+      "rgb": [
+        52,
+        68,
+        100
+      ],
+      "population": 1
+    },
+    "LightMuted": {
+      "rgb": [
+        184,
+        187,
+        192
+      ],
+      "population": 36
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 183,
+  "comment_count": 22,
+  "child_comment_count": 10,
+  "audio_items": [
+    {
+      "post_id": 148987055,
+      "voice_id": "en-US-AlloyTurboMultilingualNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/148987055/tts/c6ad62eb-d0d6-42b6-83bc-05a2b0d314a4/en-US-AlloyTurboMultilingualNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 69688651,
+      "body": "Agree. I also found claude 3.5 sonnet amazing for making my writing clearer",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Agree. I also found claude 3.5 sonnet amazing for making my writing clearer"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 148987055,
+      "user_id": 75058955,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-09-20T13:16:56.470Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Karthik Subramanian",
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fbucketeer-e05bbc84-baa3-437e-9518-adb32be77984.s3.amazonaws.com%2Fpublic%2Fimages%2Fdc9ac7c3-312c-485c-bbe3-fc422f1d1b40_144x144.png",
+      "handle": "karthiksubramanian",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 5
+      },
+      "reaction_count": 5,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "karthiksubramanian",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Karthik’s Newsletter",
+          "id": 838715,
+          "base_url": "https://karthiksubramanian.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 10,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 69862809,
+      "body": "Thank you for your thoughtful take on this, Ryan! I really appreciate the hype-free, honest, non-sponsored look at these tools from an experienced engineer that I trust.\n\nI tried it for a small personal project after reading this post. ~75-85% of the time it will make great suggestions and let me blow through accepting them and making a bunch of edits to my code. The other 15-25% of the time it gives me irredeemably bad suggestions, or straight-up hallucinated nonsense. On balance, that's still a huge time-saver, since so much of web development is just mundane repetitive boilerplate.\n\nOverall, would keep using, especially in the context of small side projects where I don't care about my code being hoovered up into the cloud.\n\nThanks again for the write-up and the push to check this out!",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Thank you for your thoughtful take on this, Ryan! I really appreciate the hype-free, honest, non-sponsored look at these tools from an experienced engineer that I trust."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I tried it for a small personal project after reading this post. ~75-85% of the time it will make great suggestions and let me blow through accepting them and making a bunch of edits to my code. The other 15-25% of the time it gives me irredeemably bad suggestions, or straight-up hallucinated nonsense. On balance, that's still a huge time-saver, since so much of web development is just mundane repetitive boilerplate."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Overall, would keep using, especially in the context of small side projects where I don't care about my code being hoovered up into the cloud."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Thanks again for the write-up and the push to check this out!"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 148987055,
+      "user_id": 13587201,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-09-21T22:53:31.776Z",
+      "edited_at": "2024-09-21T22:54:07.339Z",
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Mike Chen",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/4fb090e7-8758-44cb-b30b-5764adc23365_400x400.jpeg",
+      "handle": "genericmikechen",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "genericmikechen",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 5,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 5,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 7,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

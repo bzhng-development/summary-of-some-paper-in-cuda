@@ -1,0 +1,22 @@
+I received the first critical feedback of my career after my first promotion. Even though I was having more impact on my projects, my manager told me that I needed to change something or else we would have a serious problem.
+
+Career growth for junior engineers comes from completing larger features. But, writing more code makes it easier to break things. Here’s two ways to move fast without breaking anything.
+
+I got my first promotion through sheer volume of work. I shipped larger features by averaging ~5 code changes a day. I could’ve gotten promoted with less output if I had discussed expectations for the next level with my manager (which I will address in a future post). But that wasn’t the main thing slowing my growth.
+
+The main issue was that I sometimes broke things because I was making so many changes. I addressed my manager’s warning by coming up with ways to move fast without breaking anything. There are two main tactics which worked well for me:
+
+  - Batching test plans - I spent a lot of time testing every code change I made. To make testing faster, I created large stacks of commits that were all loosely related on the same code path. I then ran tests covering the entire stack all at once. For a stack of 10 commits, I only paid the cost of testing once while making sure nothing broke.
+
+Batching test plans - I spent a lot of time testing every code change I made. To make testing faster, I created large stacks of commits that were all loosely related on the same code path. I then ran tests covering the entire stack all at once. For a stack of 10 commits, I only paid the cost of testing once while making sure nothing broke.
+
+  - Gating all changes - I used feature flags on every code change I made so that users couldn’t access code paths while I worked on them. That way I could land code as fast as I wanted without worrying about breaking anything. Then when I was ready to release the code, I would verify everything all at once by turning on the flag for a small population while monitoring it.
+
+Gating all changes - I used feature flags on every code change I made so that users couldn’t access code paths while I worked on them. That way I could land code as fast as I wanted without worrying about breaking anything. Then when I was ready to release the code, I would verify everything all at once by turning on the flag for a small population while monitoring it.
+
+Look for ways to optimize your workflow to become more productive. In this case, I saved a ton of time on testing by batching and gating features. Code review is another major bottleneck that can slow you down as I discussed in this Twitter thread:
+
+Now it’s your turn: aside from testing and code review, are there any other major bottlenecks in your workflow that slow you down?
+
+Thanks for reading,
+Ryan Peterman

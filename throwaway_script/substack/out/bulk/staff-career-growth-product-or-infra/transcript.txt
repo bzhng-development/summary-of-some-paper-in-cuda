@@ -1,0 +1,50 @@
+There are a lot of factors that go into picking the right team. Choosing based on what type of work you enjoy is important, but what about career growth? Let’s discuss how choosing a product vs infrastructure team will affect your Staff+ career growth.
+
+
+## What’s the Difference?
+
+
+Product teams build new user experiences. Engineers on these teams collaborate with product managers and designers to decide what to build and how it should look. These teams are often paced by product launch deadlines. Product engineers should be passionate about creating end-user value.
+
+Infrastructure teams work on the underlying APIs and systems that product teams use. These teams are often engineering driven. Engineers on these teams should be passionate about the availability, efficiency and performance of the systems they build.
+
+You can become a Senior Engineer on most teams in both product and infra. The differences emerge when you look at Staff+ Engineer growth.
+
+
+## Growing to Staff+
+
+
+Staff+ promotion comes from completing projects of “Staff+ scope”. The industry quantifies this in a few ways:
+
+  - Workstream size - Number of engineers involved and duration of roadmap
+
+Workstream size - Number of engineers involved and duration of roadmap
+
+  - Complexity - Solving problems that the level below can’t
+
+Complexity - Solving problems that the level below can’t
+
+  - Impact - Wins should span multiple teams and achieve a significant portion of their goals
+
+Impact - Wins should span multiple teams and achieve a significant portion of their goals
+
+Infrastructure teams generally have more opportunity for projects that fit these criteria. This is because complexity and impact at this scale are more common.
+
+Infrastructure work requires expertise in areas of high technical complexity (e.g. operating systems, storage systems, distributed systems, etc). They are difficult enough that engineers without this expertise cannot solve many of the problems that come up. This provides opportunity to solve problems that many engineers at the level below can’t.
+
+There is also more opportunity to have impact spanning a significant portion of several teams’ goals. Infrastructure engineers build components used by many teams at the company. This allows their work to have leveraged impact since one change benefits all the downstream teams. This leveraged impact often fits the criteria needed to promote to the Staff+ level.
+
+Now that’s not to say you can’t become Staff+ engineer on a product team. The common path is through leading a large enough workstream. The problem is that there are limited spots for a leadership role of this scope. There is much less opportunity to grow through your technical skills like you can in the infra domain.
+
+
+## What About Engineering Management?
+
+
+Career growth for managers is often proportional to the number of recursive reports they have. This might change now that the industry is focusing on efficiency, but I don’t see this going away entirely. It also matters how tenured and impactful your reports are, but for simplicity, we’ll just focus on the number of reports.
+
+Product organizations tend to have a lot more engineers. This is because of the inherent tree structure in how we build software. Infrastructure teams require fewer engineers since their components are reused, while product teams build unique, less reusable features. Since there are more engineers to manage, there tends to be more opportunity for engineering manager career growth in product organizations.
+
+While these general trends hold, there are exceptions. You should consider each career decision case by case. Mentorship is one of the best tools I know to help you make informed choices and is a key reason why I write this newsletter. Apart from choosing product vs. infrastructure, what other factors are important when deciding to join a team? Feel free to comment below, I’d love to discuss.
+
+Thanks for reading,
+Ryan Peterman

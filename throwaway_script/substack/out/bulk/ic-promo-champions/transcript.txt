@@ -1,0 +1,54 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering and career growth. Thank you for your readership, we hit 67,000 readers this week 🙏 🎉
+
+This week, I’m sharing what role champions play in your promotion. “Champions” in this context are higher-level engineers who support your promotion during calibrations. At some companies, they are also called “Sponsors”.
+
+If you find the post helpful, please share it with your friends and coworkers. Enjoy!
+
+When I was just promoted to Staff, my manager told me that I had a few people to thank. I was appreciative but didn’t know what role they played in my promotion.
+
+Now, I realize that having “champions” can make a big difference in your promotion (especially at higher levels).
+
+It’s not something that people talk about, so I didn’t learn it until later in my career. Here’s what you should know that will help you derisk your promotions.
+
+
+## Their Role in Your Promotion
+
+
+In a past article, I laid out how the promotion process works at most tech companies. If your manager believes you’re near promotion, they will put together a packet using your organization’s template. In it, there is often a section for “champion quotes”.
+
+To fill in this section, your manager will ask higher-level ICs who have context on your work if they are supportive of your promotion. Their ask will look like this:
+
+> Your manager: “Are you supportive of Ryan’s promotion to IC6? If so, could you share a 2-3 sentence statement of your support for his promotion?”
+
+Your manager: “Are you supportive of Ryan’s promotion to IC6? If so, could you share a 2-3 sentence statement of your support for his promotion?”
+
+The more relevant and senior that champion is, the more credible that quote will be in backing up your promotion.
+
+Aside from the quotes, champions can also have a lot of influence during calibrations. If people ask questions about your work, they would be the first to speak up and provide context. This helps but don’t think it’ll cause a promotion to happen that shouldn’t. If your packet is on the fence though, their input can give your work the credibility it needs to go through.
+
+The most common way I see this playing out is senior ICs backing up the technical difficulty and implementation quality of the work. Managers aren’t close enough to the work to have a strong opinion, so they usually defer to the senior ICs on that.
+
+
+## What Should You Do?
+
+
+I didn’t know this when I was going up for promotion. I was lucky to work with high-level engineers by chance, so champions were easy for my manager to find. You don’t need to leave it to chance though. Here are a few things you can do to derisk:
+
+  - Seek out projects with higher-level engineers - If you do excellent work with higher-level engineers, you will learn a ton and earn yourself some champions.
+
+Seek out projects with higher-level engineers - If you do excellent work with higher-level engineers, you will learn a ton and earn yourself some champions.
+
+  - Find a mentor who is at the next level - If you have trouble finding someone, you can ask your manager to help pair you.
+
+Find a mentor who is at the next level - If you have trouble finding someone, you can ask your manager to help pair you.
+
+  - Share who your champions are with your manager - This will help your manager when they write your promotion packet. The more context your manager has, the smoother the process will be.
+
+Share who your champions are with your manager - This will help your manager when they write your promotion packet. The more context your manager has, the smoother the process will be.
+
+Many people don’t know this and still get promoted to Staff, so you don’t need to focus too much on this. It is just something to be mindful of and plan for with your manager. Champions’ influence on your promotion is another good reason to work with engineers who are stronger than you are.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already.
+
+Thanks for reading,
+Ryan Peterman

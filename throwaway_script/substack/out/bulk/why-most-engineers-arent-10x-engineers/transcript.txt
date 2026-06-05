@@ -1,0 +1,24 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups, and career growth. Thank you for your readership, we hit 42,000 readers this week 🙏 🎉
+
+This week, I’m sharing a brief note on why most engineers aren’t “10x”. If you find the post helpful, please share it with your friends and coworkers. Enjoy!
+
+There are two simple reasons most engineers aren’t “10x engineers”:
+
+  - No domain expertise - 10x engineers have a deep understanding of a specific area that lets them solve problems that few others can.
+
+No domain expertise - 10x engineers have a deep understanding of a specific area that lets them solve problems that few others can.
+
+  - No influence - Not all 10x engineers have impact just through code. Some lead major initiatives and influence large groups of engineers to build what matters most.
+
+No influence - Not all 10x engineers have impact just through code. Some lead major initiatives and influence large groups of engineers to build what matters most.
+
+Leading large initiatives (2) is “permissioned”. Everyone is chasing these positions, but someone has to give it to you. You’ll need to earn trust by building a track record to get one of these. See “how to receive scope” for examples of this.
+
+Building domain expertise (1) has the advantage of being “permissionless” and therefore fully in your control (although hard).
+
+The best way to develop your expertise is through curiosity. Some of the strongest engineers I know chase problems further than anyone else because they are curious to understand the root cause.
+
+Let your curiosity guide your learning. It’s one of the best ways to develop domain expertise that will help you solve problems that few others can.
+
+Thanks for reading,
+Ryan Peterman

@@ -13,6 +13,7 @@ Per-section checkpoint files:
   {output}.s{n}.jsonl              (single-rank / merged)
   {output}.s{n}.rank{r}.jsonl      (per-rank, DP mode)
 """
+
 from __future__ import annotations
 
 import argparse
@@ -179,7 +180,9 @@ def write_section_ckpt(papers: list[dict[str, Any]], out_path: Path, section: in
             txt = p["sections"].get(section, "")
             if not txt:
                 continue
-            fh.write(json.dumps({"arxiv_id": p["arxiv_id"], "section": section, "text": txt}, ensure_ascii=False) + "\n")
+            fh.write(
+                json.dumps({"arxiv_id": p["arxiv_id"], "section": section, "text": txt}, ensure_ascii=False) + "\n"
+            )
     return path
 
 
@@ -189,11 +192,17 @@ def write_pitch_ckpt(papers: list[dict[str, Any]], out_path: Path, rank: int | N
         for p in papers:
             if not (p.get("_title") or p.get("_pitch_text")):
                 continue
-            fh.write(json.dumps({
-                "arxiv_id": p["arxiv_id"],
-                "title": p.get("_title", ""),
-                "pitch": p.get("_pitch_text", ""),
-            }, ensure_ascii=False) + "\n")
+            fh.write(
+                json.dumps(
+                    {
+                        "arxiv_id": p["arxiv_id"],
+                        "title": p.get("_title", ""),
+                        "pitch": p.get("_pitch_text", ""),
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
     return path
 
 
@@ -203,10 +212,16 @@ def write_cat_ckpt(papers: list[dict[str, Any]], out_path: Path, rank: int | Non
         for p in papers:
             if not p.get("_category"):
                 continue
-            fh.write(json.dumps({
-                "arxiv_id": p["arxiv_id"],
-                "category": p["_category"],
-            }, ensure_ascii=False) + "\n")
+            fh.write(
+                json.dumps(
+                    {
+                        "arxiv_id": p["arxiv_id"],
+                        "category": p["_category"],
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
     return path
 
 
@@ -288,17 +303,12 @@ def run_offline_worker(args, rank: int | None) -> None:
     if load_cat_ckpts_into(papers, out_path):
         print(f"[resume rank={rank}] cat: loaded cached outputs")
 
-    needed_per_section = {
-        n: [p for p in papers if not p["sections"].get(n)]
-        for n in (s.number for s in SECTION_SPECS)
-    }
+    needed_per_section = {n: [p for p in papers if not p["sections"].get(n)] for n in (s.number for s in SECTION_SPECS)}
     pitch_todo = [p for p in papers if not p.get("_pitch_text")]
     cat_todo = [p for p in papers if not p.get("_category")]
 
     nothing_to_do = (
-        all(len(v) == 0 for v in needed_per_section.values())
-        and len(pitch_todo) == 0
-        and len(cat_todo) == 0
+        all(len(v) == 0 for v in needed_per_section.values()) and len(pitch_todo) == 0 and len(cat_todo) == 0
     )
     if nothing_to_do:
         print(f"[rank={rank}] all cached, nothing to do")
@@ -321,7 +331,9 @@ def run_offline_worker(args, rank: int | None) -> None:
         os.environ["VLLM_DP_MASTER_PORT"] = "29500"
 
     # ---- LLM init ----
-    print(f"[init rank={rank}] loading DeepSeek-V4-Pro (tp={args.tp_size}, dp={args.dp_size}, max_len={args.max_model_len})")
+    print(
+        f"[init rank={rank}] loading DeepSeek-V4-Pro (tp={args.tp_size}, dp={args.dp_size}, max_len={args.max_model_len})"
+    )
     llm_kwargs: dict[str, Any] = dict(
         model="deepseek-ai/DeepSeek-V4-Pro",
         trust_remote_code=True,
@@ -373,7 +385,9 @@ def run_offline_worker(args, rank: int | None) -> None:
         for p, out in zip(todo, outputs):
             p["sections"][n] = strip_think(out.outputs[0].text)
         path = write_section_ckpt(papers, out_path, n, rank)
-        print(f"[section {n} rank={rank}] batch of {len(todo)} in {dt:.1f}s ({dt / max(1, len(todo)):.2f}s/paper) -> {path.name}")
+        print(
+            f"[section {n} rank={rank}] batch of {len(todo)} in {dt:.1f}s ({dt / max(1, len(todo)):.2f}s/paper) -> {path.name}"
+        )
 
     # ---- Pitch (structured output, no thinking to avoid JSON pollution) ----
     no_think = {"thinking": False}
@@ -393,7 +407,12 @@ def run_offline_worker(args, rank: int | None) -> None:
         messages_batch = [
             [
                 {"role": "system", "content": pitch_system},
-                {"role": "user", "content": f"<paper>\n{p['paper_text'][:5000]}\n</paper>\n\nPaper Analysis (for context):\n" + "\n\n".join(p['sections'][m] for m in sorted(p['sections']))[:3000] + "..."},
+                {
+                    "role": "user",
+                    "content": f"<paper>\n{p['paper_text'][:5000]}\n</paper>\n\nPaper Analysis (for context):\n"
+                    + "\n\n".join(p["sections"][m] for m in sorted(p["sections"]))[:3000]
+                    + "...",
+                },
             ]
             for p in pitch_todo
         ]
@@ -428,11 +447,14 @@ def run_offline_worker(args, rank: int | None) -> None:
         messages_batch = [
             [
                 {"role": "system", "content": cat_system},
-                {"role": "user", "content": (
-                    f"Title: {p.get('_title', p.get('title', ''))}\n\n"
-                    f"Pitch: {p.get('_pitch_text', '')}\n\n"
-                    f"Full Summary:\n" + "\n\n".join(p['sections'][m] for m in sorted(p['sections']))
-                )},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Title: {p.get('_title', p.get('title', ''))}\n\n"
+                        f"Pitch: {p.get('_pitch_text', '')}\n\n"
+                        f"Full Summary:\n" + "\n\n".join(p["sections"][m] for m in sorted(p["sections"]))
+                    ),
+                },
             ]
             for p in cat_todo
         ]
@@ -529,6 +551,7 @@ async def online_batch(
     the full gather() finishes -- so a crash mid-section preserves what was done.
     """
     sem = asyncio.Semaphore(concurrency)
+
     async def one(i, messages):
         async with sem:
             kwargs = dict(model=model, messages=messages, **sampling_kwargs)
@@ -539,6 +562,7 @@ async def online_batch(
             if stream_appender is not None:
                 await stream_appender(i, text)
             return text
+
     return await asyncio.gather(*[one(i, m) for i, m in enumerate(messages_batch)])
 
 
@@ -558,10 +582,7 @@ def run_online(args) -> None:
     load_pitch_ckpts_into(papers, out_path)
     load_cat_ckpts_into(papers, out_path)
 
-    needed_per_section = {
-        n: [p for p in papers if not p["sections"].get(n)]
-        for n in (s.number for s in SECTION_SPECS)
-    }
+    needed_per_section = {n: [p for p in papers if not p["sections"].get(n)] for n in (s.number for s in SECTION_SPECS)}
     pitch_todo = [p for p in papers if not p.get("_pitch_text")]
     cat_todo = [p for p in papers if not p.get("_category")]
 
@@ -575,7 +596,9 @@ def run_online(args) -> None:
         chat_kwargs = {"chat_template_kwargs": {"thinking": True, "reasoning_effort": args.thinking}}
 
     sampling_kwargs_section = dict(temperature=1.0, top_p=1.0, extra_body=chat_kwargs)
-    sampling_kwargs_structured = dict(temperature=1.0, top_p=1.0, extra_body={"chat_template_kwargs": {"thinking": False}})
+    sampling_kwargs_structured = dict(
+        temperature=1.0, top_p=1.0, extra_body={"chat_template_kwargs": {"thinking": False}}
+    )
 
     only_cat = getattr(args, "only_cat", False)
     max_section = getattr(args, "max_section", 0)
@@ -617,6 +640,7 @@ def run_online(args) -> None:
             stream_fh = ckpt.open("a", encoding="utf-8")
             stream_ids = [p["arxiv_id"] for p in todo]
             stream_done = [0]
+
             async def appender(i: int, text: str, _n=n):
                 rec = {"arxiv_id": stream_ids[i], "section": _n, "text": text}
                 async with stream_lock:
@@ -625,9 +649,12 @@ def run_online(args) -> None:
                     stream_done[0] += 1
                     if stream_done[0] % 25 == 0 or stream_done[0] == len(stream_ids):
                         print(f"[online section {_n}] streamed {stream_done[0]}/{len(stream_ids)}", flush=True)
+
             t0 = time.time()
             try:
-                outs = await online_batch(client, args.model, messages_batch, sampling_kwargs_section, None, stream_appender=appender)
+                outs = await online_batch(
+                    client, args.model, messages_batch, sampling_kwargs_section, None, stream_appender=appender
+                )
             finally:
                 stream_fh.close()
             dt = time.time() - t0
@@ -644,11 +671,19 @@ def run_online(args) -> None:
             messages_batch = [
                 [
                     {"role": "system", "content": pitch_system},
-                    {"role": "user", "content": f"<paper>\n{p['paper_text'][:5000]}\n</paper>\n\n" + "\n\n".join(p['sections'][m] for m in sorted(p['sections']))[:3000] + "..."},
+                    {
+                        "role": "user",
+                        "content": f"<paper>\n{p['paper_text'][:5000]}\n</paper>\n\n"
+                        + "\n\n".join(p["sections"][m] for m in sorted(p["sections"]))[:3000]
+                        + "...",
+                    },
                 ]
                 for p in pitch_todo
             ]
-            response_format = {"type": "json_schema", "json_schema": {"name": "pitch_output", "schema": PitchOutput.model_json_schema()}}
+            response_format = {
+                "type": "json_schema",
+                "json_schema": {"name": "pitch_output", "schema": PitchOutput.model_json_schema()},
+            }
             outs = await online_batch(client, args.model, messages_batch, sampling_kwargs_structured, response_format)
             for p, raw in zip(pitch_todo, outs):
                 try:
@@ -665,11 +700,18 @@ def run_online(args) -> None:
             messages_batch = [
                 [
                     {"role": "system", "content": cat_system},
-                    {"role": "user", "content": f"Title: {p.get('_title', '')}\nPitch: {p.get('_pitch_text', '')}\n\nFull Summary:\n" + "\n\n".join(p['sections'][m] for m in sorted(p['sections']))},
+                    {
+                        "role": "user",
+                        "content": f"Title: {p.get('_title', '')}\nPitch: {p.get('_pitch_text', '')}\n\nFull Summary:\n"
+                        + "\n\n".join(p["sections"][m] for m in sorted(p["sections"])),
+                    },
                 ]
                 for p in cat_todo
             ]
-            response_format = {"type": "json_schema", "json_schema": {"name": "category_output", "schema": CategoryOutput.model_json_schema()}}
+            response_format = {
+                "type": "json_schema",
+                "json_schema": {"name": "category_output", "schema": CategoryOutput.model_json_schema()},
+            }
             outs = await online_batch(client, args.model, messages_batch, sampling_kwargs_structured, response_format)
             for p, raw in zip(cat_todo, outs):
                 try:
@@ -687,7 +729,7 @@ def run_online(args) -> None:
         assemble_and_write(papers, out_path)
         print(f"[online done] wrote {len(papers)} records to {out_path}")
     elif skip_assemble:
-        print(f"[online done] sections written, skipped pitch/cat/assemble per flags")
+        print("[online done] sections written, skipped pitch/cat/assemble per flags")
     else:
         print(f"[online done] --only-cat: wrote cat ckpt to {out_path.with_suffix('.cat.jsonl').name}")
 
@@ -716,23 +758,26 @@ def main() -> None:
         "--only-cat",
         action="store_true",
         help="Skip section iteration AND pitch phase; run ONLY category classification. "
-             "Useful when sections are already done (cached) and you just want to (re)classify.",
+        "Useful when sections are already done (cached) and you just want to (re)classify.",
     )
     ap.add_argument(
         "--max-section",
         type=int,
         default=0,
         help="If >0, run sections 1..N only and skip later sections. e.g. 4 = run s1-s4 "
-             "and skip s5/s6/s7. Combined with --skip-pitch and --skip-cat for a partial "
-             "regen that saves ~50%% GPU time vs the full 7-section pipeline.",
+        "and skip s5/s6/s7. Combined with --skip-pitch and --skip-cat for a partial "
+        "regen that saves ~50%% GPU time vs the full 7-section pipeline.",
     )
-    ap.add_argument("--skip-pitch", action="store_true",
-                    help="Skip the pitch generation phase (one-sentence intro per paper).")
-    ap.add_argument("--skip-cat", action="store_true",
-                    help="Skip the category classification phase.")
-    ap.add_argument("--skip-assemble", action="store_true",
-                    help="Skip the final assemble-into-summary phase. Useful for partial "
-                         "runs where you only want the per-section .jsonl outputs.")
+    ap.add_argument(
+        "--skip-pitch", action="store_true", help="Skip the pitch generation phase (one-sentence intro per paper)."
+    )
+    ap.add_argument("--skip-cat", action="store_true", help="Skip the category classification phase.")
+    ap.add_argument(
+        "--skip-assemble",
+        action="store_true",
+        help="Skip the final assemble-into-summary phase. Useful for partial "
+        "runs where you only want the per-section .jsonl outputs.",
+    )
     args = ap.parse_args()
 
     if args.mode == "online":

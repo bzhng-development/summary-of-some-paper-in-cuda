@@ -1,0 +1,8 @@
+# direnv config for local/remote dev. Copy to .envrc (gitignored), then `direnv allow`.
+# Loads secrets from a gitignored .env so they never enter git.
+#
+#   cp .env.example .env   # fill in real values (rotate the old Exa key)
+#   cp .envrc.example .envrc
+#   direnv allow
+
+dotenv_if_exists .env

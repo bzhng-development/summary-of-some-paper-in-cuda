@@ -1,0 +1,474 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/how-some-engineers-always-lead",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 137911205,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-10-13T13:02:45.044Z",
+  "updated_at": "2024-01-08T06:16:47.096Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "how-some-engineers-always-lead",
+  "social_title": null,
+  "subtitle": "",
+  "teaser_post_eligible": true,
+  "title": "How Some Engineers Always Lead",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 6,
+  "reactions": {
+    "❤": 89
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "setting-up-cross-team-workstreams",
+  "next_post_slug": "3-important-software-eng-skills-nobody",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!XdCK!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fc6889b6a-de00-441a-8564-c8c51fe2d674_450x350.jpeg",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Junior engineers worry about senior engineers taking over on projects they want to lead. Some even think of hiding their work until it’s near launch. However, this is the opposite of what you should do since collaboration increases your impact. Here are two ways that some engineers always lead.",
+  "body_html": "<p>👋<em> Hi, this is&nbsp;<a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a>&nbsp;with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 23,000 readers this week </em>🙏<em> </em>🎉</p><p><em>This week I’m tackling a question about how to maintain workstream leadership as an up-and-coming engineer. Hope it is helpful; enjoy!</em></p><div><hr></div><blockquote><p><strong>Q: As an L4/L5, how did you maintain leadership of a cross-team workstream?</strong></p></blockquote><p>Junior engineers worry about senior engineers taking over on projects they want to lead. Some even think of hiding their work until it’s near launch. However, <strong>this is the opposite of what you should do</strong> since collaboration increases your impact. Here are two ways that some engineers always lead.</p><h3>Being Proactive</h3><p>Senior engineers only step in where there are leadership gaps. If you leave none, then there’s no need for others to provide guidance. </p><p>The best way to make sure there are no gaps is to think as if you own the entire workstream. This mindset will incentivize you to:</p><ul><li><p><strong>Drive Direction Setting</strong> - Get the right people together, lead meetings to discuss plans, get alignment, and communicate the plan.</p></li><li><p><strong>Drive Execution</strong> - Do what it takes to achieve the plans. In some cases you don’t even write code. It doesn’t matter who does the work, what matters is that the workstream moves forward.</p></li></ul><p>There can be multiple leaders, so you don’t need to compete with others. Be proactive and own the workstream’s success.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!XdCK!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fc6889b6a-de00-441a-8564-c8c51fe2d674_450x350.jpeg\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!XdCK!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fc6889b6a-de00-441a-8564-c8c51fe2d674_450x350.jpeg 424w, https://substackcdn.com/image/fetch/$s_!XdCK!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fc6889b6a-de00-441a-8564-c8c51fe2d674_450x350.jpeg 848w, https://substackcdn.com/image/fetch/$s_!XdCK!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fc6889b6a-de00-441a-8564-c8c51fe2d674_450x350.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!XdCK!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fc6889b6a-de00-441a-8564-c8c51fe2d674_450x350.jpeg 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!XdCK!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fc6889b6a-de00-441a-8564-c8c51fe2d674_450x350.jpeg\" width=\"448\" height=\"348.44444444444446\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/c6889b6a-de00-441a-8564-c8c51fe2d674_450x350.jpeg&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:350,&quot;width&quot;:450,&quot;resizeWidth&quot;:448,&quot;bytes&quot;:null,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!XdCK!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fc6889b6a-de00-441a-8564-c8c51fe2d674_450x350.jpeg 424w, https://substackcdn.com/image/fetch/$s_!XdCK!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fc6889b6a-de00-441a-8564-c8c51fe2d674_450x350.jpeg 848w, https://substackcdn.com/image/fetch/$s_!XdCK!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fc6889b6a-de00-441a-8564-c8c51fe2d674_450x350.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!XdCK!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fc6889b6a-de00-441a-8564-c8c51fe2d674_450x350.jpeg 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">Don’t wait for guidance on what to do, take initiative at every point</figcaption></figure></div><h3>Example: Mid-Level (L4) → Senior (L5)</h3><p>When I was a Mid-Level (L4) engineer growing to Senior (L5), a tech lead on my team found a problem that needed partnership with another team. He didn’t have the bandwidth to do the execution so I volunteered to help.</p><p><strong>From day one, I was proactive. I drove all the meetings, led planning and put together the design with minimal guidance from my tech lead</strong>. I didn’t have all the answers since I didn’t know the other team’s codebase. What mattered was the leadership role I played in putting everything together.</p><p>After a few months, my tech lead told me he no longer needed to attend meetings since I had everything under control. I <a href=\"https://about.instagram.com/blog/engineering/making-instagram-video-ads-performant\">continued to lead in this area</a> for the next few halves, which was a major contributor to my promotion.</p><h3>Being Visible</h3><p>I already talked about <a href=\"https://www.developing.dev/p/be-visible\">being visible</a> to market your work. The same idea applies here but for a different reason. If you communicate about your workstream, you will become the go-to person for it.</p><p>Write down and share the plans, progress, and results. In practice, there are plenty of opportunities to do this because most engineers dread this work. Their dread is your opportunity. If you fill that gap, you’ll become a natural leader for the workstream.</p><p>In a recent interview, <a href=\"https://x.com/david_perell/status/1709569520749134043?s=20\">Marc Andreessen</a> (a16z’s founder) perfectly summarizes this approach: “<strong>One of the ways you find the up-and-comers at a tech company is by seeing who wrote down the plan.</strong></p><p><strong>That doesn't mean they came up with everything and it doesn't mean they had all the ideas</strong>, but it means they're actually able to organize their thoughts — and have the energy, motivation, and skill to communicate it in a written form.” </p><div><hr></div><p>These senior behaviors made it so I’ve never had to battle over owning a workstream. <strong>If you have strong initiative and don’t leave any leadership gaps, there isn’t any need for others to come in.</strong> Not to mention that you’ll become the go-to person for the workstream if you write about it often.</p><p>Hope this was helpful and if you have feedback about how I can make the content better, <a href=\"https://forms.gle/TDAiBbh8UAxgXgjS6\">please share it here</a> 🙏</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 23000+ software engineers from companies like Google, Meta, and Amazon who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p><p></p>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 23,000 readers this week 🙏 🎉",
+  "wordcount": 631,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "3ef0124c-3ef3-40c1-b4d8-de1f82d7695c",
+      "publication_id": 1340878,
+      "name": "To Senior",
+      "slug": "to-senior",
+      "hidden": false
+    },
+    {
+      "id": "5a4683e9-1121-4159-b2d7-6ca77779173f",
+      "publication_id": 1340878,
+      "name": "Career",
+      "slug": "career",
+      "hidden": false
+    },
+    {
+      "id": "874981f8-464b-461c-9d3e-1d42147927a0",
+      "publication_id": 1340878,
+      "name": "Communication",
+      "slug": "communication",
+      "hidden": false
+    },
+    {
+      "id": "afc2c6a9-1c64-47eb-a0d0-537aece0aeec",
+      "publication_id": 1340878,
+      "name": "Tech Lead",
+      "slug": "tech-lead",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        204,
+        116,
+        84
+      ],
+      "population": 1
+    },
+    "DarkVibrant": {
+      "rgb": [
+        40,
+        80,
+        36
+      ],
+      "population": 578
+    },
+    "LightVibrant": {
+      "rgb": [
+        249,
+        206,
+        177
+      ],
+      "population": 613
+    },
+    "Muted": {
+      "rgb": [
+        160,
+        158,
+        81
+      ],
+      "population": 190
+    },
+    "DarkMuted": {
+      "rgb": [
+        57,
+        98,
+        67
+      ],
+      "population": 80
+    },
+    "LightMuted": {
+      "rgb": [
+        198,
+        191,
+        171
+      ],
+      "population": 598
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 89,
+  "comment_count": 10,
+  "child_comment_count": 6,
+  "audio_items": [
+    {
+      "post_id": 137911205,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/137911205/tts/5a49eb01-189b-4f5c-9141-45f9c20fd25f/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 41799547,
+      "body": "Totally get it! People often miss this, but it's a game-changer. We tend to focus only on improving technical skills and forget about this essential quality. Balancing both? That's the secret sauce to moving up the career ladder faster!",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Totally get it! People often miss this, but it's a game-changer. We tend to focus only on improving technical skills and forget about this essential quality. Balancing both? That's the secret sauce to moving up the career ladder faster!"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 137911205,
+      "user_id": 105144555,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-10-13T17:00:34.744Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Omsai Jadhav",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/844644ad-7ea7-4ea3-b72e-108398c2689a_1124x1125.jpeg",
+      "handle": "takeitfromtechlead",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "takeitfromtechlead",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Take It From TechLead",
+          "id": 2075505,
+          "base_url": "https://takeitfromtechlead.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 7,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    },
+    {
+      "id": 42089153,
+      "body": "\"Ownership mindset\" - adopt it and you excel. \n\nI totally agree with you on \"Senior engineers only step in where there are leadership gaps. If you leave none, then there’s no need for others to provide guidance.\"  \n\n\"Junior engineers worry about senior engineers taking over on projects they want to lead.\"\nSimple way for Juniors to handle this is to talk to their seniors about what they want to get out of the project and how they expect the support. Seniors can be transparent about how they would support. Communication is the key here instead of grudging silently.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "\"Ownership mindset\" - adopt it and you excel."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I totally agree with you on \"Senior engineers only step in where there are leadership gaps. If you leave none, then there’s no need for others to provide guidance.\""
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "\"Junior engineers worry about senior engineers taking over on projects they want to lead.\""
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Simple way for Juniors to handle this is to talk to their seniors about what they want to get out of the project and how they expect the support. Seniors can be transparent about how they would support. Communication is the key here instead of grudging silently."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 137911205,
+      "user_id": 167123667,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-10-18T20:09:56.955Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Raviraj Achar",
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbc74ad57-dfb8-4073-9fb9-b47354598c8b_1528x1567.jpeg",
+      "handle": "ravirajachar",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "ravirajachar",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "subscribed",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Techlead Mentor",
+          "id": 1931112,
+          "base_url": "https://newsletter.techleadmentor.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

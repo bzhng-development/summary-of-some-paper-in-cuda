@@ -1,0 +1,26 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 59,000 readers this week 🙏 🎉
+
+This week I’m sharing a brief story of how others around me helped me grow. Hope it is helpful; enjoy!
+
+It was late at night. I was sitting at the computer debugging with a cold sweat. Prod was broken but we had no idea why.
+
+We chased a bunch of theories for the cause of the breakage, but all of them led to dead ends. After a long silence in the chat, someone linked an unexpected query. It explained the breakage through a seemingly unrelated service we hadn’t considered.
+
+This expert diagnosis along with a quick fix from that same engineer single-handedly saved the day.
+
+There are so many things you pick up by working with strong engineers that you can’t learn anywhere else. Take the story from above as an example. From that incident, I learned an unintuitive relationship between services and a tool for diagnosing future incidents faster.
+
+Aside from that tribal knowledge, when you work closely with other engineers you see what actions they take and why. This helps you learn their behaviors, which are also difficult to learn anywhere else.
+
+Of course, working with strong engineers will teach you a lot, but that isn’t enough by itself. It is much better if they are also responsive and hard-working.
+
+That’s something that I got lucky with. When I worked late into the night, my top teammates were right there with me discussing things in real time. I learned faster since this cut down round trip times from what could have been days down to minutes.
+
+When you find engineers like this, collaborations are a privilege. Work hard and never let these opportunities go to waste. If you do it right, you’ll learn skills fast that will serve you for the rest of your career.
+
+This post is dedicated to Haixia Shi and Runshen Zhu. They are two of the strongest engineers I’ve worked with who have taught me much of what I know. I will forever be grateful to them for the late-night collaborations and fun I had building systems together.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already.
+
+Thanks for reading,
+Ryan Peterman

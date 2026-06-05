@@ -1,0 +1,175 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 64,000 readers this week 🙏 🎉
+
+Today’s post is an engineering career story from Steve Huynh who was a Principal Engineer (L7) at Amazon. He shares his story from breaking into tech without a computer science degree all the way to his promotion to Principal Engineer (L7).
+
+If you’re new to FAANG levels, here’s a side-by-side comparison from levels.fyi that shows his journey:
+
+What sets his story apart is how he transitioned into software engineering at Amazon without a computer science degree. He also shares exactly what blocked his promotions for us to learn from.
+
+For more from Steve, I recommend you check out his free weekly newsletter, LinkedIn and YouTube.
+
+Also if you like the content, please share it with your friends and coworkers. Hope it is helpful!
+
+I was a Principal Engineer (L7) at Amazon before I quit in March of 2024. The last team I was on was the Prime Video Sports organization, which was a critical part of a streaming business that serviced hundreds of millions of customers worldwide with low-latency, high-quality live events. I was the most senior engineer for well over 400 people. I’ve launched several lines of business for Amazon, conducted over 850 technical interviews, and I have been awarded 13 software patents.
+
+You might think that I have a Computer Science degree from a prestigious school, but I don’t. In fact, I have an English degree from the University of Washington (Go Huskies!). If you’re wondering how I achieved all that given my background, you’re in the right place.
+
+After reflecting on my journey, the lesson that you can take with you is that putting in more hours at the right times can make a big difference in career progression, but doing so all of the time will lead to burnout.  Hopefully, you can learn from my experience how to better identify these opportunities in your career so you can be selective with your time.
+
+I will share my journey going from a new graduate → contractor → support engineer → software development engineer (SDE1, SDE2, and SDE3) and eventual principal engineer. I’ll focus on the bits that were critical to get to the next level. I’ll divide my journey into the following chapters:
+
+  - Liberal Arts Major to Amazon Support Engineer: Going from zero to one
+
+Liberal Arts Major to Amazon Support Engineer: Going from zero to one
+
+  - Support Engineer to Software Development Engineer: The big jump to writing software professionally
+
+Support Engineer to Software Development Engineer: The big jump to writing software professionally
+
+  - Software Development Engineer II to Software Development Engineer III (senior): Taking on more responsibility and starting to be a technical leader
+
+Software Development Engineer II to Software Development Engineer III (senior): Taking on more responsibility and starting to be a technical leader
+
+  - Software Development Engineer III to Principal Engineer: The jump to leading a technical organization with hundreds of engineers
+
+Software Development Engineer III to Principal Engineer: The jump to leading a technical organization with hundreds of engineers
+
+
+## Liberal Arts Major to Amazon Support Engineer (2005-2007)
+
+
+Near the end of my studies, I remember asking my writing professor what sort of jobs I should be targeting after graduation. He put his hand on my shoulder and said “Steve, you can’t apply to the job called writer. There is a job called waiter, though. You need to find a way to make some money to survive while you ply your craft.”
+
+This sent me into a panic because I had no interest in waiting tables or working retail. After I calmed down, I applied a skill that has served me well over my career, which is to set an aggressive target and work backward from it. To identify a target I created a Venn diagram of what skills I had, what skills were in demand, and what paid well. After this exercise, I set my target on becoming a software developer at a big tech company.
+
+I have been programming since the late eighties because both of my parents are electrical engineers and I’ve always had a computer in the house. I learned BASIC programming in early grade school, got my first C compiler when I was around 10 years old, and took the AP computer science tests in my sophomore and junior years of high school, which were in Pascal and C++, respectively. I took a couple of computer science courses in college, and I minored in math and applied math.
+
+I realized after I looked into it that I had the raw ingredients to pass a tech interview for an entry-level developer. I spent months preparing for interviews and sending my resume to every possible employer, but eventually understood that without any experience, interviews were unlikely. It was the classic chicken and egg problem. How do you get the experience to land a job without a job?
+
+I was complaining about this to an old friend over beers when he told me that they were looking for support engineers at Amazon. This position usually required some amount of technical experience, but since he could vouch for me, he could at least land me an interview. I jumped on the opportunity, even though it wasn’t a true software developer role. Because I didn’t have a degree or experience they hired me as a temporary contractor, and if it worked out I could be hired full-time. Support engineers were responsible for work adjacent to software engineers, such as builds, deployment, and operations, so I would get a lot of exposure.
+
+I saw this as my big opportunity so I went all in even though it wasn’t a software development engineer role. The wonderful thing about most companies is that there is a treasure trove of information that is available internally. Instead of just doing the work that was assigned to me, I spent extra cycles learning about the inner workings of production systems, how they break, and how to fix them.
+
+I became an expert in metrics and monitoring, and learned how to insert important work into the software development lifecycle. Because I had become an expert in the operations of features that millions of customers used every day, I was able to preempt a number of issues that would have set back big launches, such as the Kindle and Unbox Video, the precursor to Prime Video.  This work, which required a lot of extra cycles, got me a lot of positive visibility. Because I went all-in with this opportunity, instead of just doing the work that was assigned to me, I was converted to a full-time support engineer in 2007.
+
+Takeaways:
+
+  - Set aggressive targets and work backward from them. To identify targets, find the intersection between what you’re good at, where there’s high demand, and what pays well.
+
+Set aggressive targets and work backward from them. To identify targets, find the intersection between what you’re good at, where there’s high demand, and what pays well.
+
+  - Always leverage your existing network for opportunities, even if your network isn’t in tech. People can’t help if they don’t know what you’re looking for.  This is something that is especially important for new-grads stuck in the chicken-and-egg cycle of having no opportunities due to lack of experience.
+
+Always leverage your existing network for opportunities, even if your network isn’t in tech. People can’t help if they don’t know what you’re looking for.  This is something that is especially important for new-grads stuck in the chicken-and-egg cycle of having no opportunities due to lack of experience.
+
+  - Opportunities adjacent to your career targets are a good place to start if you are having issues landing your first role. Starting as a support engineer accelerated my career, even though it wasn’t the software developer role that I was targeting.
+
+Opportunities adjacent to your career targets are a good place to start if you are having issues landing your first role. Starting as a support engineer accelerated my career, even though it wasn’t the software developer role that I was targeting.
+
+
+## Support Engineer to Software Development Engineer (2007-2008)
+
+
+A little under a year after I was made a full-time employee I felt that I had outgrown my role as a support engineer. My share of oncall duties was increasing because as team members left, nobody was backfilled to replace them. The combination of putting in extra effort and increased oncall shifts was starting to burn me out. This, coupled with my deferred goal of being a software engineer, drove me to get structured and disciplined about preparing for a role change.
+
+Back then it was incredibly difficult to prepare for software engineering interviews because there were no high-quality resources on how to prepare for interviews. There were no books on tech interviews, there were no YouTube videos, and there definitely wasn’t LeetCode.
+
+So I decided that I would become a collector of coding interview questions. I scoured internal wikis, the internet, and asked everybody I knew for what they asked during interviews. I got every SDE I knew well to give me mock interviews. I insisted that they do the interviews in character so that I could get used to performing while feeling anxious and uncomfortable. Over time, I became very comfortable coding in front of a whiteboard.
+
+Once I felt ready, I contacted three teams internally to schedule interviews for an SDE role. I did this to add some redundancy, but also to give myself choices if I were to get multiple offers. Batching interviews meant that I could take a break from preparation after the batch was over, which was definitely needed because I was pushing myself hard to do my job while preparing. I got through it by telling myself that there was an end date to all of this work. I circled the day after my last interviews and scheduled a long vacation afterward. No matter what, I was going to be in Hawaii, having a tropical drink by the pool, whether I was offered a software engineering job or not. Having a specific end date helped me get through this difficult time.
+
+My preparation paid off as I passed all three interviews. I reverse-interviewed each of the teams and made sure that I spoke with engineers from each team to get a sense of whether they enjoyed their work, what the work-life balance was like, how much time they spent coding, and most importantly, how they got along with their manager. I dodged a bullet because the team I was initially most interested in had a terrible oncall load, and hadn’t delivered any new code in over a year. Another team had a manager that I didn’t click with, so I joined the Payments organization. The team was developing a new product, so I was guaranteed to be writing a lot of code. I finally realized my goal of becoming a software development engineer!
+
+Takeaways:
+
+  - It pays off to be structured and disciplined in your preparation for interviews, especially if you are working. Do as many mock interviews as you reasonably can as it is the most effective type of practice.
+
+It pays off to be structured and disciplined in your preparation for interviews, especially if you are working. Do as many mock interviews as you reasonably can as it is the most effective type of practice.
+
+  - Batch interviews to create redundancy and to give you a natural break after the batch is over. Imagine if I only targeted one interview, I would have either not received an offer and prolonged the grueling process, or been forced to accept an offer in a vacuum.
+
+Batch interviews to create redundancy and to give you a natural break after the batch is over. Imagine if I only targeted one interview, I would have either not received an offer and prolonged the grueling process, or been forced to accept an offer in a vacuum.
+
+  - Interviewing is a two-way street. Make sure to interview prospective team members as well as your new manager to ensure there is a good team fit before you accept an offer. Look for managers with long tenures on their current team, and happy team members that have nice things to say about their manager.
+
+Interviewing is a two-way street. Make sure to interview prospective team members as well as your new manager to ensure there is a good team fit before you accept an offer. Look for managers with long tenures on their current team, and happy team members that have nice things to say about their manager.
+
+
+## Mid-level to Senior SDE (2009-2012)
+
+
+By 2011 I had been an SDE for over three years, and at Amazon for over five years. I was working on a new product and on a dev team of about 8 SDEs. Amazon decided to invest heavily into this new line of business and we needed to ramp up hiring to well over 100.
+
+Interviewing at Amazon is based on volunteer time. Getting the necessary training, conducting the interview, and attending the debrief for a candidate is time that doesn’t go towards delivering on projects. There was a lot to do, and almost no time to do it.
+
+I recognized that the biggest risk to the business was not the immediate deliveries in the 0-3 month timeframe, but big projects and initiatives that were going to land in 9-12 months. The large risk to those mid-term projects was staffing an order of magnitude more engineers, and the biggest bottleneck to staffing was interviewing.
+
+It dawned on me that the largest impact I could have on the project was to help build this large team, so I decided to become an Amazon bar-raiser. A bar-raiser is a volunteer that is an expert interviewer, who leads interview debriefs and has veto power over offers. The year that I became a bar-raiser, I conducted over 150 interviews, and played an instrumental part in staffing the organization with top talent.
+
+Because we were able to hire well, the business was successful and pulled in a ton of revenue. However, because of the increased revenue, we were fielding a ton of support calls from sellers, who were local businesses. The support staff was drowning in calls and they were reaching out to the dev teams for help with payments, reporting, and other operational issues. It was getting to the point where support issues were stealing valuable dev cycles for newer capabilities. I recognized, because of my support background, that most of these issues could be resolved in a self-service manner if there was a portal for sellers similar to Amazon’s backend portal, Seller Central.
+
+I pitched the idea of a local business portal to my manager. He smiled and said that senior management already had that same idea. However, none of the senior engineers on the team wanted to pick it up because seller payments, reporting, and operational ticket tracking wasn’t considered exciting work. I volunteered to lead the project from the engineering side. The scope of this project was more aligned with senior engineer expectations, but because I had pitched the idea and other senior engineers weren’t interested, I led the project. 4 months later the backend local business portal launched. 10s of thousands of sellers were registered, operational tickets plummeted, and a bottleneck to the business was addressed.
+
+I was promoted to SDE-III (L6) in 2012 because of my prolific interviewing and the launch of the backend seller portal. Although I contributed a lot of high-quality code during this time period, it was my technical leadership, growing a team through hiring and leading a high-visibility project, that made me stand out. In both cases, I recognized a bottleneck to my team’s success and took initiative. I was not handed this work. Also, in both cases, after I identified the opportunity, I had to put in more hours because to be successful with next-level scope I had to acquire skills that I didn’t have.
+
+Takeaways:
+
+  - Being proactive is the defining characteristic for becoming a senior developer.
+
+Being proactive is the defining characteristic for becoming a senior developer.
+
+  - Senior engineers are technical leaders on top of being the primary code contributors.
+
+Senior engineers are technical leaders on top of being the primary code contributors.
+
+  - Conducting interviews is an activity that sharpens your communication skills, demonstrates active contribution to growing your team, and keeps your own interview skills from getting dull.
+
+Conducting interviews is an activity that sharpens your communication skills, demonstrates active contribution to growing your team, and keeps your own interview skills from getting dull.
+
+  - Sometimes the most impactful work isn’t the most interesting on the surface. It’s important to be open to all opportunities.
+
+Sometimes the most impactful work isn’t the most interesting on the surface. It’s important to be open to all opportunities.
+
+
+## Senior SDE to Principal Engineer (2016-2020)
+
+
+Amazon lacks a Staff and Senior Staff engineering level. The next level up is to Principal Engineer. Because of this, the Principal Engineer promotion is one of the hardest promotions at Amazon and is widely regarded as one of the most difficult promotions in big tech. I know many people that were senior engineers at Amazon who were unable to secure a promotion, left for other big tech companies, and are now L7, L8, and even L9 engineers at companies like Google and Meta.
+
+By 2016 I had been an SDE-III for 4 years and I thought I was ready for promotion. By that time I had helped kickstart multiple lines of business for Amazon, going from 0 → 1, designing, building, and launching operationally excellent systems that scaled globally to hundreds of millions of customers, worldwide. I had led many cross-functional projects with a large number of dependencies, high complexity, and thorny technical challenges. I had helped staff many teams, and when they came on board I created training materials that got them up to speed quickly. I had filed and been granted several patents, often authoring them with principal and senior principal engineers. And I acted as a mentor and advisor to the engineers within my organization.
+
+Because several middle managers left the company simultaneously, and the fact that my director didn’t want a senior engineer reporting directly to him, I was reporting to a manager who was a level below me. After about six months I finally reported to a senior manager. I was excited to have someone there to help me push my promotion through, but there was a problem. He was one of the worst managers I’ve ever had.
+
+He was a micromanager. He wasn’t technically deep. And he wasn’t a good communicator. He also constantly promised to do things but never followed through. An example of this was putting in a formal request for my promotion. Without this request, I would have to wait another 6 months to start the process. I reminded him constantly, and he promised to do it. But the date passed and he never put it in. To this day I still wonder how he got to where he was and what he’s doing.
+
+About three years later I reported to one of the best managers I’ve ever had. He wasn’t a micromanager. He was technically deep. He was a great communicator, and he always followed through. He authored my promotion document and shared a draft with me. But when I got put up for promotion, my packet was rejected for a simple reason. I had stopped doing all of the things that made me a good senior engineer and only focused on the tasks that demonstrated that I was operating at the principal level.  I needed to get back to basics.
+
+I was devastated because this was the 4th time I was put up for promotion since 2016. And to make matters worse, my manager, who I got along with, was leaving the company. But, since he was such a great manager, he made sure to properly transfer my packet to my new manager, put in a good word for me, and gave me an unexpectedly large raise on his way out that put me close to what I would be making at the next level. What a guy!
+
+I spent the next six months making sure to be the best senior developer I could be.  Now that the stars had aligned, it was time to put in the extra effort for a final push. I wrote a ton of code and authored several lower-level design documents. I put myself back on the oncall rotation. I came back to daily standup and planning meetings.
+
+When my packet was rejected for the fifth time, the feedback was simple.  It was because I had only done the senior engineer tasks, and I hadn’t adequately demonstrated any principal-level performance over the past six months. This rejection still hurt, but I knew that my next packet was going to go through because I understood exactly what the expectation was. I needed to be a great senior engineer and show that I could handle the scope as principal engineer, simultaneously. I made a plan to demonstrate both with my new manager, and I was finally promoted to principal engineer in Q1 of 2020.
+
+Takeaways:
+
+  - Your relationship with your manager is the most critical relationship at work, and especially for promotion. If it’s not great, you should strive to strengthen it. Think about moving teams or switching companies if you’ve tried for a while without success.
+
+Your relationship with your manager is the most critical relationship at work, and especially for promotion. If it’s not great, you should strive to strengthen it. Think about moving teams or switching companies if you’ve tried for a while without success.
+
+  - Getting to the next level requires exceeding expectations at your current level, as well as demonstrating that you’ll do well at the next level.  Only meeting expectations at your level or only doing next-level work isn’t sufficient.
+
+Getting to the next level requires exceeding expectations at your current level, as well as demonstrating that you’ll do well at the next level.  Only meeting expectations at your level or only doing next-level work isn’t sufficient.
+
+  - The best feedback for promotion is a prior promotion rejection. It will tell you exactly what you need to work on for the next cycle.  Focus your efforts on these items by building a specific plan so you guarantee progress closing your gaps.
+
+The best feedback for promotion is a prior promotion rejection. It will tell you exactly what you need to work on for the next cycle.  Focus your efforts on these items by building a specific plan so you guarantee progress closing your gaps.
+
+
+## Conclusion
+
+
+As you can see in my journey, growth came by assessing what was going on around me, setting aggressive targets, and choosing specific times to put in extra effort.  A lot of my success during the corporate portion of my career can be attributed to luck and circumstances, but I’d like to think that at least part of my success came from employing this simple recipe.
+
+I never did become a writer in the sense of what I wanted in college. But now that I'm a full-time content creator, I write every day, so in a sense my writing degree was a large benefit to my career.  And who knows, maybe one day I’ll set an aggressive and ambitious target to become a more traditional creative writer if the situation presents itself.  But for now, I’m happy to create content by sharing my experience to help others grow their careers.
+
+Hey Ryan here again. Thanks for reading! I hope you enjoyed Steve’s career story. We put a lot of effort into making the takeaways actionable and high-quality. If you enjoyed it, consider checking out more of Steve’s content from his newsletter, LinkedIn and YouTube.

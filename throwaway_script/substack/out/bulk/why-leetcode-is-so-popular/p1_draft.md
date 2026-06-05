@@ -1,0 +1,21 @@
+Here are the takeaways from this Ryan Peterman interview on Leetcode (exploring why Big Tech standardizes on algorithm puzzles despite the widespread frustration):
+
+**The fundamental problem Big Tech is solving**
+
+Ryan opens by reframing the conversation entirely: Leetcode isn't popular because it's the best possible interview method, but because it's the best *at-scale filtering mechanism* available. Top companies like FAANG receive "an insane volume of job applicants." Even after filtering out obviously unqualified candidates, you still have hundreds of applicants per open position. The constraint is unforgiving: find outstanding candidates without spending too much time on each one. Leetcode addresses this because, in just 45 minutes, an interviewer can "assess your ability to produce working code to solve a problem."
+
+The perceived disconnect — that Leetcode problems are "much harder than what you would do on the job" — is intentional, not a bug. With a huge pool to filter through, **false negatives are acceptable**. "False negatives (good software engineers who can't do Leetcode) aren't a problem because Big Tech companies have so many options." The system is optimized for throughput and false-positive avoidance, not for candidate experience or perfect fairness.
+
+Beyond the algorithmic solving, Ryan challenges the idea that Leetcode tests nothing relevant. Companies are gathering "many other signals" from the same 45-minute session: the ability to write clean code, to test that code thoroughly, and to communicate thinking throughout the process. The puzzle is the vehicle, but the assessment is broader.
+
+**The alternatives fare worse at scale**
+
+If companies abandoned Leetcode tomorrow, what would replace it? Ryan walks through the obvious candidates and finds each wanting. Practical interview problems — dumping a candidate into a large codebase for debugging or feature implementation — "would match the job better" but requires enormous upfront design work and process-building for every role. Work trials or reviewing candidate-built software provide "the strongest signal" but are "too time-consuming for both the candidate and the company." References from past employers are "biased and too easy to cheat" — candidates can hand over their friends' contact information, and the bar isn't consistent across companies anyway.
+
+Without an efficient filtering mechanism, Big Tech would fall back to proxies. "Maybe they would care more about your GPA, the college you attended, or the prestige of places you've worked at." This, Ryan argues, "feels less equitable than Leetcode." He's witnessed "plenty of people from non-prestigious backgrounds get into big tech because they studied Leetcode." The **meritocratic accessibility** of Leetcode — that someone who wants the job badly enough can "will their way into being good" at these puzzles — is its underappreciated upside.
+
+**The pragmatic escape hatch**
+
+Ryan's advice for those who genuinely hate Leetcode is blunt: "just don't apply to the biggest tech companies." There are plenty of smaller companies that don't use these processes. He notes a shift already underway: "smaller companies are starting to ask more practical questions, which feels like a step in the right direction." A friend of his recently interviewed at relatively large but not-quite-FAANG companies like Figma and Stripe and got many coding questions that weren't Leetcode — though the Leetcode preparation was "more than enough to succeed on these practical questions."
+
+For himself, the Leetcode investment was rational given the companies he targeted. Beyond the time commitment, the economics appealed: "We're lucky in software engineering that there are so many companies to apply to that have a similar process." Even acknowledging randomness in hiring outcomes, he felt confident he'd land something "with enough shots and the right prep." The process is a volume play on both sides — companies take many candidates through the same funnel, and candidates can spray applications across many companies that use near-identical loops. The system has "too much momentum to expect large companies to change their interview processes soon," but the ecosystem is slowly diversifying from the edges.

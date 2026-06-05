@@ -1,0 +1,430 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/scope-not-titles",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 144235229,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-05-03T13:01:41.299Z",
+  "updated_at": "2024-05-03T19:54:52.824Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "scope-not-titles",
+  "social_title": null,
+  "subtitle": "Avoiding FAANG Down-Leveling",
+  "teaser_post_eligible": true,
+  "title": "Scope, Not Titles",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 4,
+  "reactions": {
+    "❤": 99
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "an-optimized-wfh-setup",
+  "next_post_slug": "standing-on-the-shoulders-of-giants",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!JLaU!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F542d71f7-288a-47d4-ba45-2228549b2ffc_500x558.jpeg",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 144235229,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Avoiding FAANG Down-Leveling",
+  "body_html": "<p>👋<em> Hi, this is&nbsp;<a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a>&nbsp;with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 58,000 readers this week </em>🙏<em> </em>🎉</p><p><em>This week I’m sharing how to avoid down-leveling when you interview for FAANG roles. Hope it is helpful; enjoy!</em></p><div><hr></div><p>Imagine you’ve worked for 10+ years and are doing well in your current role. You consider interviewing for FAANG roles only to find that they plan to down level you.</p><p>Although there’s a compensation bump, it feels like those years of building seniority will go down the drain. This happens all the time, but it doesn’t need to if you understand how recruiters decide levels.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!JLaU!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F542d71f7-288a-47d4-ba45-2228549b2ffc_500x558.jpeg\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!JLaU!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F542d71f7-288a-47d4-ba45-2228549b2ffc_500x558.jpeg 424w, https://substackcdn.com/image/fetch/$s_!JLaU!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F542d71f7-288a-47d4-ba45-2228549b2ffc_500x558.jpeg 848w, https://substackcdn.com/image/fetch/$s_!JLaU!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F542d71f7-288a-47d4-ba45-2228549b2ffc_500x558.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!JLaU!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F542d71f7-288a-47d4-ba45-2228549b2ffc_500x558.jpeg 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!JLaU!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F542d71f7-288a-47d4-ba45-2228549b2ffc_500x558.jpeg\" width=\"410\" height=\"457.56\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/542d71f7-288a-47d4-ba45-2228549b2ffc_500x558.jpeg&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:558,&quot;width&quot;:500,&quot;resizeWidth&quot;:410,&quot;bytes&quot;:null,&quot;alt&quot;:&quot;r/ProgrammerHumor - *Cries in senior salary*&quot;,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"r/ProgrammerHumor - *Cries in senior salary*\" title=\"r/ProgrammerHumor - *Cries in senior salary*\" srcset=\"https://substackcdn.com/image/fetch/$s_!JLaU!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F542d71f7-288a-47d4-ba45-2228549b2ffc_500x558.jpeg 424w, https://substackcdn.com/image/fetch/$s_!JLaU!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F542d71f7-288a-47d4-ba45-2228549b2ffc_500x558.jpeg 848w, https://substackcdn.com/image/fetch/$s_!JLaU!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F542d71f7-288a-47d4-ba45-2228549b2ffc_500x558.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!JLaU!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F542d71f7-288a-47d4-ba45-2228549b2ffc_500x558.jpeg 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">This is common enough that <a href=\"https://www.reddit.com/r/ProgrammerHumor/comments/s0jkjd/cries_in_senior_salary/\">meme’s like this go viral on Reddit</a></figcaption></figure></div><h3>Useful, But Contrived</h3><p>Titles can give us a sense of the scope an engineer can handle. If you know someone is a Senior engineer, you can expect that they can handle more ambiguity for instance. Titles are a concise way for you to market your abilities. </p><p><strong>However, titles only mean something in the context of the company they are from.</strong> Some companies have significant title inflation which devalues their titles. For instance, engineers who work at banks can <a href=\"https://www.reddit.com/r/developersIndia/comments/11ax9t7/comment/j9unr5k/?utm_source=share&amp;utm_medium=web3x&amp;utm_name=web3xcss&amp;utm_term=1&amp;utm_content=share_button\">get the title of “Vice President” with just a few years of experience</a>. </p><p>You can use <a href=\"http://levels.fyi\">levels.fyi</a> to see how levels compare across well-known companies. The main risk of down-leveling comes from when you’re at a company that isn’t as well known (e.g. startups or outside of Silicon Valley).</p><h3>Scope Is King</h3><p>If your company (and therefore title) isn’t well-known, FAANG recruiters will make an educated guess for what level to interview you for. They will base it off your years of experience and the scope of your work. <strong>If you have plenty of years of experience, the scope of your work is what is most likely to influence their guess</strong>. They will compare it to the expectations of FAANG levels which I wrote about here:</p><ul><li><p><a href=\"https://www.developing.dev/p/faang-career-ladder-junior-l3-vs\">Mid-level (IC4) Expectations</a> </p></li><li><p><a href=\"https://www.developing.dev/p/faang-career-ladder-mid-level-l4\">Senior (IC5) Expectations</a></p></li><li><p><a href=\"https://www.developing.dev/p/faang-career-ladder-senior-l5-vs\">Staff (IC6) Expectations</a></p></li><li><p><a href=\"https://www.developing.dev/p/faang-career-ladder-staff-l6-vs-senior\">Senior Staff (IC7) Expectations</a></p></li></ul><p>You can compare the scope of your work to the expectations of these levels to see where you fit in. You might find that the work you’re doing at your company matches a level with a less senior title. In that case, I would expect a title change but that isn’t a “down level”. It’s just a change in title because companies have different names for their levels.</p><p><strong>If you want to interview for higher levels at FAANG companies, focus on growing the scope of your work at your company.</strong> Then make sure your resume communicates that larger scope<strong>.</strong> </p><p>Be clear with the recruiter on the level you’re interviewing for before taking interviews. After that, it’s in your hands to interview well enough to retain that level. This can be tough since many engineers get down-leveled during system design interviews. Avoiding this is a topic for a future article.</p><div><hr></div><p>Down-leveling comes up a lot and was also discussed at the <a href=\"https://www.developing.dev/p/staff-engineer-panel-summary\">Staff Engineer panel I spoke at a few months back</a>. The clip below from the talk provides a bit more color from other Staff Engineers if you’re curious:</p><div id=\"youtube2-fIkxvDaEP08\" class=\"youtube-wrap\" data-attrs=\"{&quot;videoId&quot;:&quot;fIkxvDaEP08&quot;,&quot;startTime&quot;:null,&quot;endTime&quot;:null}\" data-component-name=\"Youtube2ToDOM\"><div class=\"youtube-inner\"><iframe src=\"https://www.youtube-nocookie.com/embed/fIkxvDaEP08?rel=0&amp;autoplay=0&amp;showinfo=0&amp;enablejsapi=0\" frameborder=\"0\" loading=\"lazy\" gesture=\"media\" allow=\"autoplay; fullscreen\" allowautoplay=\"true\" allowfullscreen=\"true\" width=\"728\" height=\"409\"></iframe></div></div><p>If you found this useful, <strong>please share it with a friend and consider subscribing if you haven’t already.</strong></p><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 58,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 58,000 readers this week 🙏 🎉",
+  "wordcount": 564,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "7cd5908b-0158-4908-8fd8-310a2c89f323",
+      "publication_id": 1340878,
+      "name": "Compensation",
+      "slug": "compensation",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        201,
+        186,
+        68
+      ],
+      "population": 401
+    },
+    "DarkVibrant": {
+      "rgb": [
+        164,
+        78,
+        60
+      ],
+      "population": 333
+    },
+    "LightVibrant": {
+      "rgb": [
+        225,
+        207,
+        188
+      ],
+      "population": 395
+    },
+    "Muted": {
+      "rgb": [
+        178,
+        150,
+        115
+      ],
+      "population": 106
+    },
+    "DarkMuted": {
+      "rgb": [
+        36,
+        52,
+        52
+      ],
+      "population": 532
+    },
+    "LightMuted": {
+      "rgb": [
+        177,
+        197,
+        199
+      ],
+      "population": 463
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 99,
+  "comment_count": 8,
+  "child_comment_count": 5,
+  "audio_items": [
+    {
+      "post_id": 144235229,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/144235229/tts/7f4fec01-2411-41d5-a9e5-a1b7b6ebb4e5/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 55508986,
+      "body": "Thanks!",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Thanks!"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 144235229,
+      "user_id": 43739045,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-05-04T08:29:25.196Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Joseph",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/71e98fc1-87a6-482f-8794-da8d32df068b_144x144.png",
+      "handle": "joseph864926",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "joseph864926",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 78997722,
+      "body": "I know that every junior dreams of joining a FAANG and I think it is a great way to learn because you will join great engineers. But I do think you could become a great engineer too by working for great IT companies that have great products. For instance Adobe, Red Hat",
+      "body_json": {
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I know that every junior dreams of joining a FAANG and I think it is a great way to learn because you will join great engineers. But I do think you could become a great engineer too by working for great IT companies that have great products. For instance Adobe, Red Hat"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 144235229,
+      "user_id": 286336150,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-11-26T22:09:51.408Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "André Lizardo",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/33229a1f-792d-4ad6-b7b1-59bffee95fcb_1080x1080.png",
+      "handle": "alizardo",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 0
+      },
+      "reaction_count": 0,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "alizardo",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "unsubscribed",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "André Lizardo",
+          "id": 3344763,
+          "base_url": "https://www.andrelizardo.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 1,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

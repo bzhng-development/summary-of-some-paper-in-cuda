@@ -1,0 +1,40 @@
+James Cowling was the most senior engineer at Dropbox (Senior Principal) before he left to start his own company, Convex. I interviewed him recently digging into all the technical work of his career, learnings he had, and advice tailored towards the new “AI era” we’re in now.
+
+The conversation was a lot of fun and I’m glad a lot of his takes are refreshingly not “doomer” takes. Below are the top three takeaways I had from the conversation to save you time.
+
+You can find the full conversation on YouTube, Spotify, Apple Podcasts. The transcript is on Substack if you prefer to skim.
+
+
+## Brought to you by:
+
+
+WorkOS: makes your app Enterprise Ready with easy to use APIs to add SSO, SCIM, RBAC, and more in just a few lines of code
+
+
+## Takeaways from the conversation:
+
+
+1) Career advice for the AI era - His take was that software isn’t about syntax or algorithms. It’s all about conceptualizing problems and coming up with clean solutions for them. And to build that muscle takes experience. He urged that people shouldn’t stop exercising that muscle or you’ll atrophy be left behind. Use AI but also make sure you aren’t being passive in your learning.
+
+The other major point he had was that using Claude Code isn’t that hard if you are a good engineer. The value isn’t in memorizing the details and learning all the latest AI tools. The important part is building things and solving problems that matter. He said you should just ignore Twitter for the most part and focus on what actually matters.
+
+2) Fixing broken team incentives - The problem we discussed is when a team’s identity, mission and name all revolve around a system they own. What happens is these teams end up trying to protect the system rather than doing what is best for the company.
+
+The example fix James gave is when he was at Dropbox, he worked on a huge migration to move off of AWS. The resulting team was named after the system they built. He went out of his way to rename the team the “Storage team” instead.
+
+The reason this was so important is he felt that the direction of the team should be oriented around the problem they are solving for the company. Otherwise, imagine if moving back to AWS turns out to be better for the business. The team named after the existing system would have natural incentive to battle doing the right thing. He called this phenomenon “system bias”
+
+3) Simple systems are the goal - To the untrained eye, simple systems can seem obvious but actually designing simple systems is much harder than building complex ones. And the key James mentioned is that simplicity reduces operational burden. Simple systems are easier to keep running and debug when they break.
+
+I asked him for a concrete example and he shared how Dropbox managed the metadata for where files are actually stored. All they did was have a cluster of 1000 MySQL nodes that stored the block ID and its location. Many people would say it wasn’t sophisticated but all the alternative proposals would ruin observability and simplicity of querying this data.
+
+The idea of complexity being incentivized in larger tech companies frustrated him. To him, the goal is to solve the problem not to check off the box for complexity.
+
+I am really excited about some of the future guests that are coming on the show. I love the interviews with the people who have a piece of computer science history in them.
+
+Also, I’ll have some AI research folks on soon too. Many people have requested I bring them on so people can learn how to future proof their careers.
+
+Lastly, I interviewed an award-winning complexity theory professor from MIT and asked him some Leetcode questions. His optimal solution was asymptotically faster than what Leetcode says is “optimal”
+
+Thanks for reading,
+Ryan Peterman

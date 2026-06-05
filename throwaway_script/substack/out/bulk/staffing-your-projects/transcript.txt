@@ -1,0 +1,82 @@
+> “If you want to go fast, go alone. If you want to go far, go together”.
+
+“If you want to go fast, go alone. If you want to go far, go together”.
+
+Staff-level (IC6) scope is too big for a single engineer to ship by themselves. Once you find a staff-level problem, you need to influence others to join you.
+
+Engineers who are starting to grow to Staff often don’t understand how influence works. They try to get others to work on their initiatives through what I’d call “charity”. They ask for help with no compelling reason for the other person to do so.
+
+True influence starts with the other person. People will gladly join you if you can show them how working with you will get them what they want.
+
+> “The only way on earth to influence other people is to talk about what they want and show them how to get it” - Dale Carnegie
+
+“The only way on earth to influence other people is to talk about what they want and show them how to get it” - Dale Carnegie
+
+There are two groups of people in engineering that you should understand:
+
+1) Engineering managers (EM) can pivot resources on their team to your initiative. Also, if you have a compelling new direction, you can work with them to request new headcount for your workstream.
+
+What EMs want:
+
+  - High-performing team - They want their team to chase the most impactful work and have a healthy team dynamic.
+
+High-performing team - They want their team to chase the most impactful work and have a healthy team dynamic.
+
+  - Team scope growth - Managers rely on their higher-level ICs to set new direction, especially in more technical areas.
+
+Team scope growth - Managers rely on their higher-level ICs to set new direction, especially in more technical areas.
+
+In most cases, the best way to pitch your idea is to talk about its business impact. When managers are allocating people, you can think of them as investors. They want to match their people to the areas that will yield the biggest return.
+
+If your work is impactful enough, your manager can work with you to get new headcount for the team. Staff engineers are expected to work with their EM to grow the scope of their team.
+
+2) Individual contributors (IC) often have key expertise you need. Going to them directly can be more efficient than through managers. Most of the influence in my career came from going directly to ICs.
+
+What ICs want:
+
+  - Interesting work - You can attract others if your work is novel or has interesting technical challenges.
+
+Interesting work - You can attract others if your work is novel or has interesting technical challenges.
+
+  - Career advancement - If your initiative is big enough, there may be a chunk of it that can be a great growth opportunity for another engineer that you can coach.
+
+Career advancement - If your initiative is big enough, there may be a chunk of it that can be a great growth opportunity for another engineer that you can coach.
+
+  - Easier lives - Engineers are eager to solve problems that’ll get rid of an annoying workflow or repeating issue they have.
+
+Easier lives - Engineers are eager to solve problems that’ll get rid of an annoying workflow or repeating issue they have.
+
+  - Work that matters - The role your work plays in the success of the larger mission or the value it’ll have if delivered can be motivating.
+
+Work that matters - The role your work plays in the success of the larger mission or the value it’ll have if delivered can be motivating.
+
+These are generalizations. Every person is different, and that is a big part of what good people skills are about. You need to know people well to match the right part of your plan with who you're talking to.
+
+Also, it helps if you have credibility and a prior relationship. People are much more willing to hear you out in that case.
+
+You can’t ignore soft skills. If you want to do anything of consequence, you’ll need to bring other engineers along for the ride.
+
+If you’re interested in learning more about soft skills,  I’ve organized my past posts so you can study them in your spare time here.
+
+On another note: I’ve been working on a guide to help college students get FAANG internships. I want to get a sense of how relevant it is for you. Let me know in the poll below. If it isn’t I’ll find another way to share it with the younger crowd so I don’t spam you here.
+
+If you liked this post, consider sharing it with a friend. As always, you can find more of my stuff here:
+
+  - LinkedIn
+
+LinkedIn
+
+  - Twitter
+
+Twitter
+
+  - Threads
+
+Threads
+
+  - Youtube
+
+Youtube
+
+Thanks for reading,
+Ryan Peterman

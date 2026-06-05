@@ -26,8 +26,14 @@ QUERIES = [
 
 FIRST_PERSON_LI = [
     re.compile(r"\b(at|from|by)\s+linkedin\b", re.IGNORECASE),
-    re.compile(r"\blinkedin('s)?\s+(team|researchers|recommendation|search|feed|production|system|platform|engineering|deploy|home|jobs|app|members|users|API|data|graph|infrastructure|content)", re.IGNORECASE),
-    re.compile(r"\bwe\s+(deploy|present|introduce|propose|describe|launch|build|train|develop|share).{0,80}\blinkedin\b", re.IGNORECASE),
+    re.compile(
+        r"\blinkedin('s)?\s+(team|researchers|recommendation|search|feed|production|system|platform|engineering|deploy|home|jobs|app|members|users|API|data|graph|infrastructure|content)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\bwe\s+(deploy|present|introduce|propose|describe|launch|build|train|develop|share).{0,80}\blinkedin\b",
+        re.IGNORECASE,
+    ),
     re.compile(r"\bdeployed\s+(at|on|in)\s+linkedin\b", re.IGNORECASE),
     re.compile(r"\blinkedin\.com\b", re.IGNORECASE),
 ]
@@ -46,9 +52,7 @@ async def fetch_search_page(page, keyword: str, page_idx: int, size: int = 200):
     try:
         await page.goto(url, wait_until="domcontentloaded", timeout=45_000)
         await page.wait_for_selector("li.arxiv-result", timeout=15_000)
-        await page.evaluate(
-            "() => document.querySelectorAll('a.abstract-full').forEach(a => a.click())"
-        )
+        await page.evaluate("() => document.querySelectorAll('a.abstract-full').forEach(a => a.click())")
     except Exception:
         return []
     return await page.eval_on_selector_all(
@@ -102,7 +106,7 @@ async def main():
         for rec in verified:
             fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
 
-    print(f"\n=== verified LinkedIn 2026 papers ===")
+    print("\n=== verified LinkedIn 2026 papers ===")
     for rec in sorted(verified, key=lambda x: x["arxiv_id"]):
         print(f"  {rec['arxiv_id']}  {rec['title'][:90]}")
 

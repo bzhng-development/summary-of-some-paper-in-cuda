@@ -1,0 +1,268 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/the-story-behind-this-newsletter",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 102762110,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-02-17T14:00:31.612Z",
+  "updated_at": "2023-12-15T11:12:07.850Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "the-story-behind-this-newsletter",
+  "social_title": "The Story Behind this Newsletter",
+  "subtitle": "",
+  "teaser_post_eligible": true,
+  "title": "The Story Behind this Newsletter",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 0,
+  "reactions": {
+    "❤": 23
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": null,
+  "next_post_slug": "how-to-start-reviewing-code",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/845992f9-bbb0-43da-85d4-b89d64eea4a3_1024x585.jpeg",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "My career had a rough start, but I learned something that changed my trajectory forever, which helped me grow from a new grad (IC3) to a staff engineer (IC6) in 3 years. At my first job, I was responsible for maintaining a database script that my manager had written by himself without using source control. The script contained over 10,000 lines of complex queries that were interconnected. Since we didn’t use code review, the script had a lot of typos and bugs that could have been avoided. We made edits to the script directly in production, which caused frequent breakages. These breakages took a long time to recover from because we couldn’t revert without source control. I felt like I wasn’t growing as an engineer and had no idea how to grow since I was a new grad with no mentorship.",
+  "body_html": "<p>My career had a rough start, but I learned something that changed my trajectory forever, which helped me grow from a new grad (IC3) to a staff engineer (IC6) in 3 years.</p><p>At my first job, I was responsible for maintaining a database script that my manager had written by himself without using source control. The script contained over 10,000 lines of complex queries that were interconnected. Since we didn’t use code review, the script had a lot of typos and bugs that could have been avoided. We made edits to the script directly in production, which caused frequent breakages. These breakages took a long time to recover from because we couldn’t revert without source control. I felt like I wasn’t growing as an engineer and had no idea how to grow since I was a new grad with no mentorship.</p><p>After eight months, I decided to accept an offer to work at Facebook. I ended up on a team where I was lucky enough to have incredible mentors who taught me industry best practices. Thanks to their guidance, I became a staff engineer faster than expected.</p><div class=\"twitter-embed\" data-attrs=\"{&quot;url&quot;:&quot;https://twitter.com/ryanlpeterman/status/1496948697795465218&quot;,&quot;full_text&quot;:&quot;Made it to Staff Software Engineer 🎉🎉🎉 \\n\\nHuge thanks to Lukas Camra, Laurent Charignon, and Ang Li for their mentorship over the years, I couldn't have done it without them!&quot;,&quot;username&quot;:&quot;ryanlpeterman&quot;,&quot;name&quot;:&quot;Ryan Peterman&quot;,&quot;profile_image_url&quot;:&quot;&quot;,&quot;date&quot;:&quot;Thu Feb 24 20:42:36 +0000 2022&quot;,&quot;photos&quot;:[],&quot;quoted_tweet&quot;:{},&quot;reply_count&quot;:0,&quot;retweet_count&quot;:1,&quot;like_count&quot;:118,&quot;impression_count&quot;:0,&quot;expanded_url&quot;:{},&quot;video_url&quot;:null,&quot;belowTheFold&quot;:true}\" data-component-name=\"Twitter2ToDOM\"></div><p>Mentorship made a huge difference in my career trajectory. I’m grateful and want to help close the gaps for engineers that don’t have dedicated mentorship at work. I’ll share what helped me grow as fast as I did through this newsletter so you can benefit.</p><p>Every post from this newsletter will have no fluff and will be readable in less than five minutes. I’ll publish it on Friday mornings since there are often less meetings that day. It’s also completely free so you can just focus on learning.</p><p>My top priority is to make the content as good as it can be. If you have any suggestions on how to improve it for the community, you can reply to the newsletter emails. I will read every response.</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join other software engineers who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p>Thanks for reading,<br><em><a href=\"https://twitter.com/ryanlpeterman\">Ryan Peterman</a></em></p>",
+  "truncated_body_text": "My career had a rough start, but I learned something that changed my trajectory forever, which helped me grow from a new grad (IC3) to a staff engineer (IC6) in 3 years.",
+  "wordcount": 331,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "dd2509a9-5053-433f-998d-bea784498439",
+      "publication_id": 1340878,
+      "name": "About",
+      "slug": "about",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        212,
+        100,
+        20
+      ],
+      "population": 71
+    },
+    "DarkVibrant": {
+      "rgb": [
+        45,
+        61,
+        102
+      ],
+      "population": 33
+    },
+    "LightVibrant": {
+      "rgb": [
+        243,
+        185,
+        136
+      ],
+      "population": 91
+    },
+    "Muted": {
+      "rgb": [
+        153,
+        121,
+        90
+      ],
+      "population": 6
+    },
+    "DarkMuted": {
+      "rgb": [
+        76,
+        84,
+        108
+      ],
+      "population": 1
+    },
+    "LightMuted": {
+      "rgb": [
+        170,
+        212,
+        164
+      ],
+      "population": 109
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 23,
+  "comment_count": 0,
+  "child_comment_count": 0,
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": []
+}

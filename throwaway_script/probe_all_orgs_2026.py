@@ -19,7 +19,7 @@ import json
 import re
 import sys
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -60,35 +60,48 @@ def name_patterns(name: str, aliases: list[str] = None) -> list[str]:
 
 ORGS: tuple[OrgProbe, ...] = (
     # === Western LLM labs ===
-    OrgProbe.make("Meta / FAIR", ["Meta AI", "FAIR", "Facebook AI Research"],
-                  name_patterns("Meta AI", ["FAIR", "Facebook AI Research", "Meta Platforms"])),
-    OrgProbe.make("DeepMind", ["DeepMind", "Google DeepMind"],
-                  name_patterns("DeepMind", ["Google DeepMind"])),
+    OrgProbe.make(
+        "Meta / FAIR",
+        ["Meta AI", "FAIR", "Facebook AI Research"],
+        name_patterns("Meta AI", ["FAIR", "Facebook AI Research", "Meta Platforms"]),
+    ),
+    OrgProbe.make("DeepMind", ["DeepMind", "Google DeepMind"], name_patterns("DeepMind", ["Google DeepMind"])),
     OrgProbe.make("Anthropic", ["Anthropic"], name_patterns("Anthropic")),
     OrgProbe.make("OpenAI", ["OpenAI"], name_patterns("OpenAI")),
-    OrgProbe.make("Microsoft Research", ["Microsoft Research"],
-                  name_patterns("Microsoft Research", ["MSR", "Microsoft AI"])),
+    OrgProbe.make(
+        "Microsoft Research", ["Microsoft Research"], name_patterns("Microsoft Research", ["MSR", "Microsoft AI"])
+    ),
     OrgProbe.make("Cohere", ["Cohere"], name_patterns("Cohere", ["Cohere For AI", "Cohere Labs"])),
     OrgProbe.make("Mistral", ["Mistral AI", "Mistral"], name_patterns("Mistral AI", ["Mistral"])),
     OrgProbe.make("NVIDIA", ["NVIDIA Research", "NVIDIA"], name_patterns("NVIDIA")),
     OrgProbe.make("Apple", ["Apple"], name_patterns("Apple", ["Apple ML", "Apple Intelligence"])),
-    OrgProbe.make("Salesforce", ["Salesforce AI Research", "Salesforce"],
-                  name_patterns("Salesforce", ["Salesforce AI Research", "Salesforce Research"])),
+    OrgProbe.make(
+        "Salesforce",
+        ["Salesforce AI Research", "Salesforce"],
+        name_patterns("Salesforce", ["Salesforce AI Research", "Salesforce Research"]),
+    ),
     OrgProbe.make("Together AI", ["Together AI"], name_patterns("Together AI", ["Together"])),
     OrgProbe.make("Snowflake", ["Snowflake AI"], name_patterns("Snowflake")),
     OrgProbe.make("AI21", ["AI21 Labs", "AI21"], name_patterns("AI21")),
     OrgProbe.make("IBM Research", ["IBM Research"], name_patterns("IBM Research", ["IBM AI"])),
-    OrgProbe.make("LinkedIn", ["LinkedIn Corporation", "LinkedIn AI", "LinkedIn"],
-                  name_patterns("LinkedIn", ["LinkedIn Corp"])),
-
+    OrgProbe.make(
+        "LinkedIn", ["LinkedIn Corporation", "LinkedIn AI", "LinkedIn"], name_patterns("LinkedIn", ["LinkedIn Corp"])
+    ),
     # === Chinese labs ===
-    OrgProbe.make("Qwen / Alibaba", ["Qwen", "Alibaba", "Tongyi"],
-                  name_patterns("Qwen", ["Tongyi", "Alibaba Cloud", "Alibaba Group"])),
+    OrgProbe.make(
+        "Qwen / Alibaba",
+        ["Qwen", "Alibaba", "Tongyi"],
+        name_patterns("Qwen", ["Tongyi", "Alibaba Cloud", "Alibaba Group"]),
+    ),
     OrgProbe.make("DeepSeek", ["DeepSeek"], name_patterns("DeepSeek")),
-    OrgProbe.make("ByteDance Seed", ["ByteDance", "ByteDance Seed"],
-                  name_patterns("ByteDance", ["ByteDance Seed", "Doubao"])),
-    OrgProbe.make("Tencent (broader)", ["Tencent AI Lab", "Tencent"],
-                  name_patterns("Tencent", ["Tencent AI Lab", "WeChat AI", "Tencent ARC"])),
+    OrgProbe.make(
+        "ByteDance Seed", ["ByteDance", "ByteDance Seed"], name_patterns("ByteDance", ["ByteDance Seed", "Doubao"])
+    ),
+    OrgProbe.make(
+        "Tencent (broader)",
+        ["Tencent AI Lab", "Tencent"],
+        name_patterns("Tencent", ["Tencent AI Lab", "WeChat AI", "Tencent ARC"]),
+    ),
     OrgProbe.make("Hunyuan", ["Hunyuan"], name_patterns("Hunyuan", ["Tencent Hunyuan"])),
     OrgProbe.make("Moonshot / Kimi", ["Moonshot AI", "Kimi"], name_patterns("Moonshot", ["Kimi"])),
     OrgProbe.make("Zhipu / GLM", ["Zhipu AI", "Zhipu", "GLM"], name_patterns("Zhipu", ["Z.ai"])),
@@ -96,17 +109,19 @@ ORGS: tuple[OrgProbe, ...] = (
     OrgProbe.make("01.AI / Yi", ["01.AI", "01.ai"], name_patterns("01.AI", ["Yi"])),
     OrgProbe.make("StepFun", ["StepFun", "Step-1"], name_patterns("StepFun", ["Step AI"])),
     OrgProbe.make("Baichuan", ["Baichuan"], name_patterns("Baichuan")),
-    OrgProbe.make("LongCat / Meituan", ["Meituan LongCat", "LongCat", "Meituan"],
-                  name_patterns("LongCat", ["Meituan"])),
-    OrgProbe.make("Alibaba DAMO", ["Alibaba DAMO", "DAMO Academy"],
-                  name_patterns("DAMO Academy", ["Alibaba DAMO"])),
+    OrgProbe.make(
+        "LongCat / Meituan", ["Meituan LongCat", "LongCat", "Meituan"], name_patterns("LongCat", ["Meituan"])
+    ),
+    OrgProbe.make("Alibaba DAMO", ["Alibaba DAMO", "DAMO Academy"], name_patterns("DAMO Academy", ["Alibaba DAMO"])),
     OrgProbe.make("Baidu Research", ["Baidu Research", "ERNIE"], name_patterns("Baidu", ["ERNIE"])),
-    OrgProbe.make("InternLM / Shanghai AI", ["InternLM", "Shanghai AI Laboratory"],
-                  name_patterns("InternLM", ["Shanghai AI Lab", "Shanghai AI Laboratory"])),
+    OrgProbe.make(
+        "InternLM / Shanghai AI",
+        ["InternLM", "Shanghai AI Laboratory"],
+        name_patterns("InternLM", ["Shanghai AI Lab", "Shanghai AI Laboratory"]),
+    ),
     OrgProbe.make("THUDM", ["THUDM"], name_patterns("THUDM", ["Tsinghua KEG"])),
     OrgProbe.make("THUNLP", ["THUNLP", "Tsinghua NLP"], name_patterns("THUNLP", ["Tsinghua NLP"])),
     OrgProbe.make("OpenBMB", ["OpenBMB"], name_patterns("OpenBMB")),
-
     # === Asian (non-Chinese) ===
     OrgProbe.make("KAIST AI", ["KAIST AI"], name_patterns("KAIST AI", ["KAIST"])),
     OrgProbe.make("LG / EXAONE", ["LG AI Research", "EXAONE"], name_patterns("LG AI Research", ["EXAONE"])),
@@ -114,18 +129,20 @@ ORGS: tuple[OrgProbe, ...] = (
     OrgProbe.make("NAVER Clova", ["NAVER", "Clova"], name_patterns("NAVER", ["Clova"])),
     OrgProbe.make("Rakuten", ["Rakuten Institute", "Rakuten"], name_patterns("Rakuten")),
     OrgProbe.make("Yandex", ["Yandex Research"], name_patterns("Yandex")),
-
     # === Research nonprofits / consortiums ===
-    OrgProbe.make("AllenAI / Ai2", ["Allen Institute for AI", "AI2"],
-                  name_patterns("Allen Institute for AI", ["Ai2", "AllenAI"])),
+    OrgProbe.make(
+        "AllenAI / Ai2", ["Allen Institute for AI", "AI2"], name_patterns("Allen Institute for AI", ["Ai2", "AllenAI"])
+    ),
     OrgProbe.make("EleutherAI", ["EleutherAI"], name_patterns("EleutherAI")),
     OrgProbe.make("LAION", ["LAION"], name_patterns("LAION")),
-    OrgProbe.make("HuggingFace", ["HuggingFace research", "Hugging Face research"],
-                  name_patterns("Hugging Face", ["HuggingFace"])),
-
+    OrgProbe.make(
+        "HuggingFace", ["HuggingFace research", "Hugging Face research"], name_patterns("Hugging Face", ["HuggingFace"])
+    ),
     # === Big Tech ML (eng blogs heavy — low yield expected) ===
     OrgProbe.make("Amazon Science", ["Amazon Science"], name_patterns("Amazon", ["Amazon Science", "Amazon AWS"])),
-    OrgProbe.make("Google Research", ["Google Research"], name_patterns("Google Research", ["Google AI", "Google Brain"])),
+    OrgProbe.make(
+        "Google Research", ["Google Research"], name_patterns("Google Research", ["Google AI", "Google Brain"])
+    ),
     OrgProbe.make("Snap Research", ["Snap Research", "Snap Inc"], name_patterns("Snap", ["Snap Research", "Snap Inc"])),
     OrgProbe.make("Pinterest", ["Pinterest"], name_patterns("Pinterest")),
     OrgProbe.make("Netflix", ["Netflix"], name_patterns("Netflix")),
@@ -161,9 +178,7 @@ async def fetch_search_page(page, keyword: str, page_idx: int, size: int = 200):
     try:
         await page.goto(url, wait_until="domcontentloaded", timeout=45_000)
         await page.wait_for_selector("li.arxiv-result", timeout=12_000)
-        await page.evaluate(
-            "() => document.querySelectorAll('a.abstract-full').forEach(a => a.click())"
-        )
+        await page.evaluate("() => document.querySelectorAll('a.abstract-full').forEach(a => a.click())")
     except Exception:
         return []
     return await page.eval_on_selector_all(
@@ -251,15 +266,16 @@ async def go():
                     fh.flush()
                     per_org_new[org.label].append(rec)
                     kept_new += 1
-            print(f"  candidates 26xx={total}, verified-affil={kept_new}, NOT-in-Neon={sum(1 for r in per_org_new[org.label] if not r['in_neon'])}")
+            print(
+                f"  candidates 26xx={total}, verified-affil={kept_new}, NOT-in-Neon={sum(1 for r in per_org_new[org.label] if not r['in_neon'])}"
+            )
         await b.close()
 
-    print(f"\n=== SUMMARY (sorted by NEW missing from Neon) ===")
+    print("\n=== SUMMARY (sorted by NEW missing from Neon) ===")
     print(f"{'org':30s} {'all-26':>7} {'in-Neon':>8} {'MISSING':>8}")
     print("-" * 60)
     grand_missing = 0
-    for org_label, recs in sorted(per_org_new.items(),
-                                   key=lambda x: -sum(1 for r in x[1] if not r['in_neon'])):
+    for org_label, recs in sorted(per_org_new.items(), key=lambda x: -sum(1 for r in x[1] if not r["in_neon"])):
         in_n = sum(1 for r in recs if r["in_neon"])
         miss = sum(1 for r in recs if not r["in_neon"])
         grand_missing += miss

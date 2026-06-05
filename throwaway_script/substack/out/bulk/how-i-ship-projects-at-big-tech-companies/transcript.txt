@@ -1,0 +1,52 @@
+A shocking article hit the front page of Hacker News this week. It was titled “How I ship projects at big tech companies.” I highlighted the worst point the article makes below:
+
+I’m not entirely against optics; you should make your work visible. However, impact (and the reality of it) should always come before good optics. How people perceive your work is a byproduct of doing work that matters.
+
+
+## Why Impact Comes First
+
+
+Top big tech companies do not reward people based purely on optics. Although companies get more political as they grow, even the biggest companies (e.g. FAANG) have designed their organizations to minimize this. These companies are data-driven where possible and reward people who improve metrics that help the business.
+
+This makes career growth less about making leadership happy and more about the concrete improvements you drive. A culture of metrics can be a double-edged sword, but metrics are generally good because they help us seek truth (especially when you pair them with some critical thinking).
+
+Even if you still disagree, there’s another reason you should focus on impact first. Doing impactful work makes it much easier to market your work. Trying to get people to think your work is great when the results are bad is much harder. And if you work with people who know what is going on, you risk hurting your credibility too.
+
+Each of these reasons is good enough for me to focus on the end results of my work. However, that’s not why I do it.
+
+I do it because it is uninspiring to do work that doesn’t matter just because someone said so. Do you really want to do work that doesn’t make a difference but just makes your leadership happy? I don’t.
+
+
+## Steer the Ship
+
+
+If you ship something users hate that makes no money you lack some of the most basic skills of a Staff+ engineer. Engineers should influence the direction of their organization to avoid work that isn’t impactful. Management needs strong engineers to partner with them to steer the organization.
+
+In a healthy organization, you should be able to push back against management when they are wrong. Having the skills to do this is one of the ways you can have a lot of leveraged impact. Imagine changing the direction of a large group of engineers from working on something users hate to something beneficial.
+
+So much of the author’s original logic is flawed, even if some of his conclusions are fine.  For instance, you shouldn’t add a fallback mechanism because you want to build trust with leadership. You add it because it prevents user-facing breakages. Trust is the byproduct. It’s just weird that almost everything he says is motivated by pleasing leadership.
+
+If your organization values pleasing leadership over impact, I’d recommend switching teams. Your career will grow faster in the long term if you go where people are prioritizing impact. Not to mention that doing work that matters is much more fulfilling than pleasing people who may be wrong.
+
+What do you think of the source article? It seemed to split the Hacker News community in half, so I’m curious about which side you fall on.
+
+If you liked this post, consider sharing it with a friend. As always, you can find more of my stuff here:
+
+  - LinkedIn
+
+LinkedIn
+
+  - Twitter
+
+Twitter
+
+  - Threads
+
+Threads
+
+  - Youtube
+
+Youtube
+
+Thanks for reading,
+Ryan Peterman

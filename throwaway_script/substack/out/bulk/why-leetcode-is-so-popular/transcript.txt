@@ -1,0 +1,68 @@
+Every time I mention interviews, I get frustrated comments about Leetcode. So then why is it so popular?
+
+It’s because it actually does a decent job (although there’s room for improvement). To understand this, it’s helpful to think through the problem Big Tech is trying to solve with their hiring processes.
+
+
+## Why Leetcode Is Common in Big Tech
+
+
+Top tech companies (e.g. FAANG or “Big N”) have an insane volume of job applicants. Even if you filter out the obviously bad ones, you still have hundreds of applicants (if not more) per available position.
+
+These companies need to find outstanding candidates without spending too much time on each candidate. Leetcode does a decent job of filtering since, in just 45 minutes, they can assess your ability to produce working code to solve a problem.
+
+Although the Leetcode problems are often much harder than what you would do on the job, that’s by design. Remember, that there is a huge pool of people they are trying to filter through. False negatives (good software engineers who can’t do Leetcode) aren’t a problem because Big Tech companies have so many options.
+
+Besides, I’d challenge the point that Leetcode doesn’t test the skills you need. There are many other signals these companies gather from the interview aside from your algorithm problem solving. They also test your ability to write code, test that code, and communicate throughout the process.
+
+
+## Why Leetcode Isn’t Bad for Candidates
+
+
+If these companies didn’t ask Leetcode questions, how would they filter candidates? There some ideas I can think of but they are gameable or expensive to implement at scale:
+
+  - Practical interview problems - Imagine interview questions that dump you in the middle of a large codebase. Debugging or implementing a feature here would match the job better. The issue here is it would be a lot of work to design these questions and build a process around them.
+
+Practical interview problems - Imagine interview questions that dump you in the middle of a large codebase. Debugging or implementing a feature here would match the job better. The issue here is it would be a lot of work to design these questions and build a process around them.
+
+  - Reviewing some software you build or doing work trials - This would provide the strongest signal but is too time-consuming for both the candidate and the company.
+
+Reviewing some software you build or doing work trials - This would provide the strongest signal but is too time-consuming for both the candidate and the company.
+
+  - Asking for references from past employers - This signal is biased and too easy to cheat. Candidates can easily give these companies the contact information for their friends. Not to mention that the bar isn’t consistent across companies.
+
+Asking for references from past employers - This signal is biased and too easy to cheat. Candidates can easily give these companies the contact information for their friends. Not to mention that the bar isn’t consistent across companies.
+
+Without interview processes that filter well at scale, big tech companies would need to look towards other methods.
+
+Maybe they would care more about your GPA, the college you attended, or the prestige of places you’ve worked at. This feels less equitable than Leetcode. I’ve seen plenty of people from non-prestigious backgrounds get into big tech because they studied Leetcode. It feels meritocratic that if someone wants the job enough, they can will their way into being good at Leetcode.
+
+So although Leetcode isn’t perfect, at Big-Tech scale the alternatives also have problems.
+
+There’s too much momentum to expect large companies to change their interview processes soon. However, smaller companies are starting to ask more practical questions, which feels like a step in the right direction. A buddy of mine recently went through the interview process and got many coding questions that weren’t Leetcode. These were from relatively large companies (e.g. Figma, Stripe) too. His Leetcode prep was more than enough to succeed on these practical questions.
+
+If you hate Leetcode that much, the solution is simple: just don’t apply to the biggest tech companies. There are plenty of smaller companies which don’t use the same interview processes.
+
+For me, Leetcode was a no-brainer because of the companies I was interested in. Also, although it was a big time investment, I felt I would certainly get a return on it. Not because I’m amazing at Leetcode but because we’re lucky in software engineering that there are so many companies to apply to that have a similar process. Even though there is randomness in hiring outcomes, I felt I would always get something with enough shots and the right prep.
+
+Hiring processes are a complex topic, and although this writing is relatively pro-Leetcode I’m sure there is a better way. Leave a comment if you have any thoughts on how you think this process could be better. Also, please share if you’ve had any non-Leetcode interview experiences recently.
+
+As always, you can find more of my stuff here:
+
+  - LinkedIn
+
+LinkedIn
+
+  - Twitter
+
+Twitter
+
+  - Threads
+
+Threads
+
+  - Youtube
+
+Youtube
+
+Thanks for reading,
+Ryan Peterman

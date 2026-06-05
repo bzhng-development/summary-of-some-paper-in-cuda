@@ -1,0 +1,140 @@
+After two years of writing this newsletter, we reached 100,000 readers! This journey taught me a lot and made me much more confident in my writing ability.
+
+Since engineers need to write, I figured it’d be helpful to share everything I learned about writing in the process. After 2 years and writing 100+ posts, I’ll summarize my notes on what helped me write better and grow the newsletter.
+
+
+## On Writing Well
+
+
+When I first started, I had a theory. Even though quality was my number one priority, I believed focusing on quantity was how I’d get there. That’s why I committed to writing weekly. Even though it was a lot of work, I forced myself to publish something every week. The results speak for themselves: Here’s an old post vs a new post if you want to compare the quality.
+
+If you want to improve your writing, I’d highly recommend this strategy. In addition to writing often, I recommend reading the first section of “On Writing Well” called “Principles.” That part of the book will help you improve your delivery regardless of your writing style.
+
+After months of writing, I felt confident in delivering my message. However, I realized how well you structure your message is just a small part of writing something people want to read. Even more important is what you write about and how you manage attention. 
+
+Even the world’s best writer could only do so much with a boring topic. This was obvious when I was looking at the analytics since I put the same amount of effort into polishing each post, yet some posts did much better than others. For instance, this post on the hot topic of LLM-assisted dev tooling did unusually well.
+
+How I go about picking interesting topics:
+
+  - Write about what I find interesting - Rather than asking what people want, I often think about what I wish I could have read earlier in my career. This led me to write some of my best posts on switching to management, scaling yourself, and how to onboard. Also, the career stories I’ve worked on (e.g. Rahul, Evan) are based on similar stories that I loved and inspired me when I first joined Meta.
+
+Write about what I find interesting - Rather than asking what people want, I often think about what I wish I could have read earlier in my career. This led me to write some of my best posts on switching to management, scaling yourself, and how to onboard. Also, the career stories I’ve worked on (e.g. Rahul, Evan) are based on similar stories that I loved and inspired me when I first joined Meta.
+
+  - Engaging on social media - Reading LinkedIn and Twitter gives me ideas and helps me learn what topics people are most interested in based on their engagement. It’s also a great testing ground for ideas since you get immediate feedback.
+
+Engaging on social media - Reading LinkedIn and Twitter gives me ideas and helps me learn what topics people are most interested in based on their engagement. It’s also a great testing ground for ideas since you get immediate feedback.
+
+Understanding how to manage attention was probably the most impactful part of learning to write online. Once you start posting, you’ll quickly learn how fast people’s attention drops off. People will only read the N+1th line if the Nth line interests them. Therefore, the first few lines of your writing are exponentially more important than the rest. That’s why I try to show the reader why they should care immediately.
+
+For instance, in this article’s intro I:
+
+  - Talked about the value of writing (a relevant topic) and how this article will help the reader
+
+Talked about the value of writing (a relevant topic) and how this article will help the reader
+
+  - Shared results that give me some credibility on the topic
+
+Shared results that give me some credibility on the topic
+
+  - Explained that I’ll condense 2 years of effort into a brief post
+
+Explained that I’ll condense 2 years of effort into a brief post
+
+You need to grab the reader’s interest at the beginning. If I had just launched into the topic without making the reader care, few people would read until the end. Understanding your audience is one of the most important parts of communicating effectively.
+
+
+## Growing to 100k Subscribers
+
+
+Thankfully, Substack has kept all the metrics since I started, so I can tell you exactly where all the subscribers came from:
+
+  - ~69k from Substack recommendations
+
+~69k from Substack recommendations
+
+  - ~15.5k from LinkedIn
+
+~15.5k from LinkedIn
+
+  - ~7.3k from cross promotions & collaborations
+
+~7.3k from cross promotions & collaborations
+
+  - ~4k from Twitter
+
+~4k from Twitter
+
+  - ~2.7k from referrals
+
+~2.7k from referrals
+
+  - ~1k from Google searches
+
+~1k from Google searches
+
+  - ~0.5k from Instagram/Threads
+
+~0.5k from Instagram/Threads
+
+Substack recommendations drove most of my growth (~69% of total subs). I was intentional about that since I realized piggybacking off the growth of others would create a powerful network effect. I’d recommend exchanging recommendations with other Substack authors in your niche with a similar audience size. I did this by subscribing to newsletters and replying to the welcome email to ask.
+
+Aside from that, the second tactic that drove significant growth was posting on social media (~20% of total subs). The feeds of platforms like LinkedIn and Twitter are natural discovery engines for your work. Also, building a brand on social media has a snowball effect because as your account grows, it becomes easier to grow further because followers engage with your content and give you social proof. Because of this, the few accounts at the top grow easily while most people at the bottom get almost nothing. Growth at the beginning will be tough, but it’s worth it if you invest enough to break out.
+
+Lastly, newsletter collaborations are a higher-effort method to grow (~7.3% of total subs). At first, I thought it would be a great tactic for growth if I wrote articles for other publications to get some of their subs. I did a few like this one and this one, but the results were underwhelming relative to their effort. The only collaboration that was worth it was this one with ByteByteGo which drove ~2k subs (0.2% conversion rate) since Alex has such a massive email list. I wouldn’t recommend writing fresh content for cross-promotion due to the low conversion rate. If someone wants to repost something you’ve already written though that’s a no-brainer.
+
+
+## Monetization
+
+
+I’ve thought about monetizing but never did. Here are all the potential options I considered and why I didn’t choose them:
+
+  - Sponsorships & Ads - This felt like it’d create a conflict of interest between being credible and making money. Also, I felt like it traded off with quality since I’d have to put ads in the writing. Maybe one day I’ll find a way to do this that doesn’t trade off with credibility or content quality.
+
+Sponsorships & Ads - This felt like it’d create a conflict of interest between being credible and making money. Also, I felt like it traded off with quality since I’d have to put ads in the writing. Maybe one day I’ll find a way to do this that doesn’t trade off with credibility or content quality.
+
+  - Selling Courses - This one never appealed to me since it felt like a cash grab that’d extract more value than it added. Also I felt like doing it wouldn’t be that interesting or fun.
+
+Selling Courses - This one never appealed to me since it felt like a cash grab that’d extract more value than it added. Also I felt like doing it wouldn’t be that interesting or fun.
+
+  - Paid Newsletter or Community - I was thinking about doing a Q&A column where paid folks could submit questions and I’d write tailored responses since many were asking for 1:1 mentorship. Seemed like a decent idea but I didn’t do it since I was drowning in work last year already.
+
+Paid Newsletter or Community - I was thinking about doing a Q&A column where paid folks could submit questions and I’d write tailored responses since many were asking for 1:1 mentorship. Seemed like a decent idea but I didn’t do it since I was drowning in work last year already.
+
+  - Writing a Book - Although I enjoy writing, books take a ton of time and the payout is uncertain. If you can write a best-seller, you can make a good amount ($1M+), but most books flop. Given that risk and that I’m already so strapped for time, I decided not to. Who knows though maybe one day I’ll write a book for fun rather than the anticipated payout.
+
+Writing a Book - Although I enjoy writing, books take a ton of time and the payout is uncertain. If you can write a best-seller, you can make a good amount ($1M+), but most books flop. Given that risk and that I’m already so strapped for time, I decided not to. Who knows though maybe one day I’ll write a book for fun rather than the anticipated payout.
+
+I’m lucky my full-time job pays me enough so monetization wasn’t a big focus for me.
+
+
+## Future Plans
+
+
+Committing to writing weekly was a hell of an accountability mechanism. You have no idea how many Thursday nights I stayed up late (I wrote this at 3:31am) because I felt I promised you all an article on Friday. It gave me the needed motivation to stick it out.
+
+A few weeks ago, I created a poll asking if people cared about the weekly cadence. The results were overwhelmingly in favor of not caring when the newsletter arrives as long as the quality is high. Moving forward, I’ll stop posting weekly on Fridays and instead invest in less frequent, more interesting posts.
+
+Also, I want to free up some time to write about my passion project on my other Substack and this budding podcast I’ve been working on. I can tell I have a lot of room for improvement in my speaking ability and I want to get to a point where I feel confident in it.
+
+Big thanks to everyone who has followed along since my weekly writing journey began. Although I believe writing has a lot of benefits even if no one reads it, it wouldn’t be the same without you all!
+
+As always, you can find more of my content at:
+
+  - LinkedIn
+
+LinkedIn
+
+  - Twitter
+
+Twitter
+
+  - Threads
+
+Threads
+
+  - Youtube
+
+Youtube
+
+Thanks for reading,
+Ryan Peterman

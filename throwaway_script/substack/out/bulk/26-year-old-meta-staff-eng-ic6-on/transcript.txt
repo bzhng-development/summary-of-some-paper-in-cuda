@@ -1,0 +1,64 @@
+Listen Now:
+
+  - Spotify
+
+Spotify
+
+  - Apple Podcasts
+
+Apple Podcasts
+
+  - Youtube
+
+Youtube
+
+Had an interesting conversation with Simon Kindström who got promoted from New Grad (IC3) → Staff (IC6) in 3 years, got “Redefines Expectations” ratings twice, and received secret bonuses (discretionary equity). He also tried out management, which didn't go well for him, and he switched back.
+
+We talked about his career story in full detail so that you can learn from it. If you aren’t interested in the video format, here’s a summary of the takeaways I think are worth sharing:
+
+  - Story behind the redefines expectations rating - There was a story he shared about how some experiments flopped unexpectedly. He didn’t give up on those experiments until he understood why. He followed up with a few changes and reran them until they either understood what was going on or the results improved. This led to some of his biggest wins and the “redefines expectations” rating.
+
+Story behind the redefines expectations rating - There was a story he shared about how some experiments flopped unexpectedly. He didn’t give up on those experiments until he understood why. He followed up with a few changes and reran them until they either understood what was going on or the results improved. This led to some of his biggest wins and the “redefines expectations” rating.
+
+  - Writing well was an important part of his career - Simon shared about the leverage that comes from writing about your work. He also shared how it’s important to put the impactful, interesting parts of the writing at the top. It’s a common mistake for engineers to get too deep into the details that the audience often doesn’t care about.
+
+Writing well was an important part of his career - Simon shared about the leverage that comes from writing about your work. He also shared how it’s important to put the impactful, interesting parts of the writing at the top. It’s a common mistake for engineers to get too deep into the details that the audience often doesn’t care about.
+
+  - Impact drove his insane career growth - His manager convinced him to join the team by explaining the business impact his work would have and how that’d lead to career growth for him. He joined because of that and landed many unexpected revenue wins for the company that led to high ratings and fast promotions.
+
+Impact drove his insane career growth - His manager convinced him to join the team by explaining the business impact his work would have and how that’d lead to career growth for him. He joined because of that and landed many unexpected revenue wins for the company that led to high ratings and fast promotions.
+
+  - His manager was a key part of his story - His manager was coaching him and working closely with him throughout. His manager knew the company well and had been promoted fast himself before transitioning so Simon learned a lot from him.
+
+His manager was a key part of his story - His manager was coaching him and working closely with him throughout. His manager knew the company well and had been promoted fast himself before transitioning so Simon learned a lot from him.
+
+  - Scaling himself was a critical skill for growth to Staff - Simon shared how he was having trouble delegating to others because he was not taking ownership of work he assigned to others. When the end of the half came, it was always a scramble to get good results. The critical learning for him was to take ownership of their results ("Delegate, don't abdicate").
+
+Scaling himself was a critical skill for growth to Staff - Simon shared how he was having trouble delegating to others because he was not taking ownership of work he assigned to others. When the end of the half came, it was always a scramble to get good results. The critical learning for him was to take ownership of their results ("Delegate, don't abdicate").
+
+  - Transitioning to management - Simon tried out management to learn a new skill set and help the org. He got further from the technical work he enjoyed and also ran into a lot of thrash so he switched back to IC. He was transparent about the whole journey to and from management.
+
+Transitioning to management - Simon tried out management to learn a new skill set and help the org. He got further from the technical work he enjoyed and also ran into a lot of thrash so he switched back to IC. He was transparent about the whole journey to and from management.
+
+I hope the summary was a convenient way to grab some of the learnings from the conversation without having to listen to the whole thing. If you have any feedback for me I’d love to hear it!
+
+I’ve recorded some interesting conversations that I’m working through edits of, I hope you find them helpful. Here’s what to expect in the coming weeks:
+
+  - Amazon Senior Manager on PIPs, stack ranking, and politics
+
+Amazon Senior Manager on PIPs, stack ranking, and politics
+
+  - Early Facebook IC7 on Zuck, culture, and writing
+
+Early Facebook IC7 on Zuck, culture, and writing
+
+  - Chief Scientist at GoogleX on imposter syndrome, and what the highest levels are like
+
+Chief Scientist at GoogleX on imposter syndrome, and what the highest levels are like
+
+  - A few other IC8+ engineers
+
+A few other IC8+ engineers
+
+Have a good week and as always, thanks for reading,
+Ryan Peterman

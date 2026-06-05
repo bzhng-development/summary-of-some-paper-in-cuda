@@ -1,0 +1,68 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups, and career growth. Thank you for your readership, we hit 53,000 readers this week 🙏 🎉
+
+This week, I wrote about how mentorship helped me get to Staff. If you find the post helpful, please share it with your friends and coworkers. Enjoy!
+
+Having great mentors is one of the top reasons I grew to Staff (IC6) in 3 years. There are two stories I’d like to share about mentorship I received that were key to my growth. These examples will help you learn ‌how to find a mentor and what good mentorship looks like.
+
+
+## Types of Mentorship
+
+
+Before I get into the stories, it’s helpful to distinguish between the two common forms of mentorship:
+
+  - Explicit - You set up regular check-ins with someone to get advice.
+
+Explicit - You set up regular check-ins with someone to get advice.
+
+  - Implicit - You work with someone strong in the skills you want to develop. You grow just by collaborating with them.
+
+Implicit - You work with someone strong in the skills you want to develop. You grow just by collaborating with them.
+
+They each have their strengths, which I’ll show through my two career stories.
+
+
+## Explicit Mentorship: Closing My Biggest Gap
+
+
+My manager told me that my biggest gap in growing to Staff (IC6) was in finding staff-level scope. To help me develop this skill he found me a mentor in my org with this strength.
+
+My manager introduced me to my new mentor and we set up a weekly one-on-one. Each time, I brought more questions than we had time for and took tons of notes. As the mentee, I always drove the agenda. This is important because you can’t expect your mentor to keep track of what you need. You should own your career growth and pull what you need.
+
+Here are some examples of the types of questions I asked:
+
+  - How can I find staff-level scope?
+
+How can I find staff-level scope?
+
+  - How do I influence other teams to take on shared roadmaps?
+
+How do I influence other teams to take on shared roadmaps?
+
+  - What did your journey to staff look like?
+
+What did your journey to staff look like?
+
+I learned so much from my mentor and made sure to take everything he said to heart. As a mentee, I always felt like I didn’t have much to offer my mentors. The bare minimum I could give back was honest appreciation and results that came from their advice. Now, as a mentor, I see that this is one of the best things a mentee can give. One of the most satisfying parts of mentoring someone is seeing them grow quickly.
+
+Explicit mentorship is great for getting high-level, directional advice. But how do you find one? Look around your org for someone who is strong in what you want to get better at. Ask them for some one-on-one time. You’d be surprised at how giving people are if you ask politely. If you don't feel comfortable asking, some companies have mentorship programs that can help you find a match as well. Your manager should help you navigate this search.
+
+Most people think of this type of mentorship when they talk about finding a mentor. However, I find that “implicit” mentorship is much better for growing your technical skills.
+
+
+## Implicit Mentorship: What a “10x Engineer” Really Looks Like
+
+
+Imagine an IC who writes and reviews more code than anyone in your org. Someone who, because of his domain expertise, receives the most questions yet is also the most responsive. This IC also consistently solves problems that many Staff engineers can’t. And if that’s not enough, this IC’s main project work often has industry influence. Hard to believe, but I’ve seen Haixia Shi do this half over half since I started working with him.
+
+He’s the de facto video domain specialist for Instagram, which is a big deal for an app where video is a central part of the user experience. I have never received formal mentorship from Haixia, but I didn’t need to. Engineering excellence radiates from him. Strong engineers become even stronger just by asking him technical questions and seeing how he solves problems. Working with peers like him makes coming to work delightful and is one of the key contributors to my engineering career growth.
+
+Implicit mentorship tends to feel more natural and is great for hard skill development. There are so many small tips and tricks you learn from building features and debugging issues with stronger engineers.
+
+My technical skills have come almost entirely through this kind of mentorship. The best way to find it is to work on teams that have a high density of talent. That way, you’ll grow no matter what you’re working on.
+
+Mentorship is one of the most effective ways to grow your career. I’d start by talking with your manager since they can help position you with the right people and projects for more mentorship.
+
+If you’re still having trouble finding a mentor, I like to think of my writing as low-commitment way of getting mentorship. If you found this useful, please share it with a friend and consider subscribing if you haven’t already.
+
+Thanks for reading,
+Ryan Peterman

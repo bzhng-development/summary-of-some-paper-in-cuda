@@ -1,0 +1,491 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/new-grad-to-staff-at-meta-in-3-years",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 153005624,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-12-13T14:01:29.664Z",
+  "updated_at": "2025-07-29T14:06:56.447Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "new-grad-to-staff-at-meta-in-3-years",
+  "social_title": null,
+  "subtitle": "On Speed, Being Bold, and Depositing Into the “Favor Bank”",
+  "teaser_post_eligible": true,
+  "title": "New Grad to Staff at Meta in 3 years: Evan King",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 34,
+  "reactions": {
+    "❤": 297
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "why-leetcode-is-so-popular",
+  "next_post_slug": "the-developing-dev-compiled-2024",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/e8abd461-72c3-4591-8bf8-8dea66512eff_1456x1048.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 153005624,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "On Speed, Being Bold, and Depositing Into the “Favor Bank”",
+  "body_html": "<p><em>👋 Hi, this is Ryan with another edition of my weekly newsletter. Each week, I write about software engineering and career growth. ​​Thanks to your support, we’re getting close to 100k readers (92k now!)</em></p><p><em>Today’s post is an engineering career story from <a href=\"https://www.linkedin.com/in/evan-king-40072280/\">Evan King</a> who grew from a new grad to a Staff Engineer (IC6) at Meta in 3 years. He shares the top 6 principles that impacted his career most. It’s a great write-up, and I especially like the first two principles as I can relate that they were helpful for me too.</em></p><p><em>Also if you end up liking the write up, I did a <a href=\"https://www.youtube.com/watch?v=yZ4J98u7GLo\">full interview with him on his career story</a>. You can hear more detail about his promotions there.</em></p><p><em>If you’re new to FAANG levels, here’s a <a href=\"https://www.levels.fyi/?compare=Amazon,Google,Facebook&amp;track=Software%20Engineer\">side-by-side comparison from levels.fyi</a> that shows his journey:</em></p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!3E3-!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F3c9314ca-1d74-4573-abaf-3a4c46f268cc_1232x760.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!3E3-!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F3c9314ca-1d74-4573-abaf-3a4c46f268cc_1232x760.png 424w, https://substackcdn.com/image/fetch/$s_!3E3-!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F3c9314ca-1d74-4573-abaf-3a4c46f268cc_1232x760.png 848w, https://substackcdn.com/image/fetch/$s_!3E3-!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F3c9314ca-1d74-4573-abaf-3a4c46f268cc_1232x760.png 1272w, https://substackcdn.com/image/fetch/$s_!3E3-!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F3c9314ca-1d74-4573-abaf-3a4c46f268cc_1232x760.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!3E3-!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F3c9314ca-1d74-4573-abaf-3a4c46f268cc_1232x760.png\" width=\"1232\" height=\"760\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/3c9314ca-1d74-4573-abaf-3a4c46f268cc_1232x760.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:760,&quot;width&quot;:1232,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:null,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!3E3-!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F3c9314ca-1d74-4573-abaf-3a4c46f268cc_1232x760.png 424w, https://substackcdn.com/image/fetch/$s_!3E3-!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F3c9314ca-1d74-4573-abaf-3a4c46f268cc_1232x760.png 848w, https://substackcdn.com/image/fetch/$s_!3E3-!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F3c9314ca-1d74-4573-abaf-3a4c46f268cc_1232x760.png 1272w, https://substackcdn.com/image/fetch/$s_!3E3-!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F3c9314ca-1d74-4573-abaf-3a4c46f268cc_1232x760.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><p><em>For more from Evan, I recommend you follow him on <a href=\"https://www.linkedin.com/in/evan-king-40072280/\">LinkedIn</a>. He’s now the co-founder of&nbsp;<a href=\"https://www.hellointerview.com/\">hellointerview.com</a>&nbsp;which helps swe candidates prepare for interviews. I’ve had a few friends use their system design mock interviews and they tell me how it was much more effective than reviewing resources alone. If you have upcoming software engineering interviews, I recommend you check them out (I’m not sponsored).</em></p><p><em>Here’s Evan:</em></p><div><hr></div><p>Junior to Staff at Meta in 3 years. That sentence raises eyebrows.</p><p>I've dodged telling this story for years. Maybe it's the ex-athlete in me cringing at self-promotion, or maybe I'm just uncomfortable with attention I'm not sure I deserve. But after countless requests to share it, I figured it's worth putting out there—even if it makes me squirm.</p><p>Let's start with the reality check: I hit the timing jackpot. Right org, explosive growth phase, and a manager who saw something in me before I saw it myself. If you're looking for a pure meritocratic story, this isn't it. Nobody lands promotions this fast without the stars aligning.</p><p>Still, there were patterns and principles that emerged—insights that might be useful to others on their own paths.</p><p>Looking back, six key principles had the largest effect on my career.</p><p>First principle: Speed is your multiplier. Everyone talks about thinking bigger or making an impact, but none of that matters if you can't nail your core work faster than others. When you can complete your normal workload with 70% of your time, that extra 30% becomes your secret weapon. That's where the real growth happens.</p><p>The second principle relies on the first: Keep your head up and your aperture wide. Use that extra bandwidth to operate like someone a level above you. As a junior dev, I studied what my teammates were doing, connecting dots they might have missed. At senior, I expanded that lens to sister teams. By Staff, I was thinking across entire organizations.</p><p>Here's the third thing, and it's a liberating truth: No one has all the answers. Not your boss, not the VPs, not even the CEO. This isn't meant to dismiss their expertise—I've learned invaluable lessons from every leader I've worked with. But realizing this freed me to put my ideas out there without the paralyzing weight of needing to be right.</p><p>The fourth principle grounds everything else: focus on problems, not technologies. You don't need to be the most technical, brilliant person in the room. What matters is seeing the simplest path to the goal. While others might get caught up in building elegant technical solutions, I learned that stepping back and questioning our basic assumptions often revealed much more simple solutions hiding in plain sight.</p><p>Fifth: Build goodwill early and often. Remember that extra 30% of time you got back? Use it to help others. Support your cross functional partners, lend a hand to other engineers, and jump in when other functions need backup. These deposits in the “favor bank” compound over time.</p><p>Finally—and this might be the most underrated factor—stay positive. Our industry can be surprisingly cynical. But look around: We're solving fascinating problems, working with brilliant people, and yes, being well compensated for it. A positive outlook isn't just about being nice—it's a career accelerant.</p><h3>1. Speed Is Your Multiplier</h3><p>This first principle might be the hardest one to replicate, but it's a necessary foundation.</p><p>From day one at Meta, I could grasp problems and crank out code faster than most people around me. Maybe it was luck, maybe it was my background—I'm not sure.</p><p>My first project at Meta involved migrating a legacy system that ingested ISIS and Al-Qaeda propaganda content and then hashed it to prevent copies from appearing on the platform. The timeline was set for \"a month plus.\"</p><p>I finished it in under a week.</p><p>I now had three weeks to make it better. I redesigned the entire system. We took ingestion times from multiple days down to just seconds. And timing was critical here.</p><p>When terror organizations post new media, their followers immediately reshare it across platforms. Most views happen within the first few hours. Our original pipeline, taking days to process, meant we were always too late. By reducing ingestion time to seconds, we could catch and block content before it gained traction.</p><p>This was real, significant impact in my first month on the job as a junior engineer. We were now detecting an order of magnitude more harmful content.</p><p>If you're not yet blazing through your core responsibilities, stop reading this article. Put all your energy into mastering your fundamental skills first. That speed multiplier—that extra 30% of time when you're good at your core job—unlocks everything else we're about to discuss.</p><h3>2. Operating Above Your Level</h3><p>Freeing up 30% of your time changes everything. You can use it to develop the perspective of someone a level above you. This mindset came naturally when I was a junior engineer, but as I grew more senior, I needed my manager to push me to think even bigger.</p><p>As a junior engineer, I wasn't just focused on my tasks—I was studying how my senior teammates approached problems, evaluated trade-offs, and thought about systems. By the time I hit senior, I had shifted my lens to understanding how staff engineers connected broader technical strategies across teams. And as I approached staff, I was thinking about how technical decisions impacted entire organizations and shaped our long-term architecture.</p><p>This pattern of looking ahead served me throughout my career. Each step up wasn't just about doing more—it was about seeing more. Understanding the concerns, constraints, and opportunities that only become visible at higher levels.</p><p>It's easy to get stuck with a narrow aperture. Widening it is uncomfortable—you're stretching your mind to consider problems you're not yet expected to solve. I leaned heavily on my manager and trusted senior engineers to understand how they thought about problems at their level, then worked to develop that same perspective.</p><p>The beauty of this approach is its simplicity. At worst, you develop a deeper understanding of your organization's challenges. At best, you start operating at that next level, making promotion a recognition of how you already think rather than a bet on your potential.</p><h3>3. No One Has All The Answers</h3><p>Many engineers join FAANG companies with crippling impostor syndrome. That alone is enough to sink—or at least significantly stall—most careers.</p><p>For whatever reason, I didn't have it. Seeing the vulnerability of others around me reinforced a powerful truth—no one has all the answers. Not the senior engineers, not the directors, not even the VPs. Once I internalized this, I was suddenly free to share ideas broadly and without hesitation.</p><p>Meta was a unique place for this mindset. Workplace, our internal version of Slack, allows employees to share their work and ideas across the company. This effectively surfaced valuable insights, regardless of an employee's level. You could develop a concept, draft a proposal, or pose a thought-provoking question and post it for everyone to see. The most impactful contributions naturally rose to the top.</p><p>Sometimes, my posts got no reaction. Sometimes, that reaction was even negative. For example, I remember one post where a veteran employee publicly stated all the reasons why my proposal was idiotic. But here's what mattered: nobody remembered or cared the next day, including me.</p><p>Other times, my posts went viral and led to meetings with directors or VPs to discuss my ideas 1:1. It was meritocracy at its finest—but you could only take advantage of it if you weren't paralyzed by the fear of looking stupid. Once you accept that, you stop waiting for permission to contribute.</p><h3>4. Simple Solutions to Complex Problems</h3><p>There's a tendency in tech—especially at companies like Meta—to reach for complex technical solutions. We're surrounded by brilliant minds building cutting-edge technology, so it's easy to get caught up in that current. But I learned early on that my strength wasn't in being the most technically sophisticated engineer in the room. Instead, it was in seeing the clearest path to solving the actual problem.</p><p>A perfect example of this came during my work on suicide prevention. Our team faced an incredibly difficult challenge: detecting potential suicides in live videos in real time. The stakes couldn't have been higher—every false negative meant a potentially missed opportunity to save a life.</p><p>We had a team of brilliant ML PhDs working alongside Meta's unified AI org to develop state-of-the-art models for video and audio. The technical complexity was staggering. But after watching enough false negatives, I noticed something that seemed almost too obvious. While our sophisticated models were still processing frame sequences and temporal features, the viewers in the comments section had already identified the crisis.</p><p>Comments like \"don't do it\" or \"it's not worth it\" were appearing consistently. While we were pouring resources into optimizing frame embeddings and acoustic models, the clearest signals were hiding in plain sight.</p><p>I suggested we add comments as a modality to our model. The results were immediate and dramatic: our recall jumped from 9% to over 50%. This breakthrough gave us a foundation to build on, and with further iterations—including incorporating comment embeddings as temporal features in our sequence models—and an expanding training dataset, we pushed our recall into the 90% range.</p><p>This experience reinforced a crucial lesson: sometimes the best solution isn't the most technically sophisticated one. Taking a step back, questioning our assumptions, and being willing to see the problem from different angles does wonders. I've followed this principle throughout my career—always pushing myself to grow technically, but never letting the pursuit of technical elegance overshadow the fundamental goal: solving the problem.</p><h3>5. The Favor Economy</h3><p>Conventional wisdom says don't get distracted by things that don't drive direct impact. That's good advice for what it’s worth, and it's absolutely true in the startup world.</p><p>But I took a different path, and it paid off.</p><p>I helped everyone, especially in the beginning. Whether it was ops, DE, DS, or other engineers—it didn't matter if they were higher or lower level—I went out of my way to help.</p><p>There's a fine line here, which I struggled with as I grew more senior. Time is finite and valuable. You can't waste it.</p><p>But those early favors compound. By the time I hit Staff, others I'd helped had grown too. That manager from another team I helped? Now a director. That ops guy I assisted? Director of ops. While I never expected favors in return, they trusted me. That goodwill meant I was in all the right conversations. People came to me first with their ideas and opportunities.</p><p>If someone outside the org wanted to talk about Content Integrity (my org), there was a good chance my name came up and they were routed to me. Those cross-discipline relationships I built meant people associated my name with my organization. And now those people were in positions of power. Say what you want about whether this is good for an organization, but it was definitely good for my career.</p><h3>6. The Power of Positive Motion</h3><p>I saved this one for last because it's both the easiest to replicate and the most underappreciated. The tech industry breeds cynicism. You'll find countless LinkedIn posts complaining about how big companies exploit their workers. Yet where else can you earn $200k+ straight out of college, enjoy free meals, excellent benefits, and a healthy work-life balance? We solve fascinating problems alongside brilliant minds while being well compensated. That hardly qualifies as exploitation in my book.</p><p>Instead, I chose a different path: I made a conscious decision to never talk shit about anyone—not even in my thoughts. This wasn't about ignoring problems. I saw the flaws and felt the frustrations just like everyone else. But unless I could meaningfully address an issue, I wouldn’t focus on it.</p><p>This mindset shift changed everything. I genuinely looked forward to coming to work each day. I found myself excited by our challenges rather than drained by them. I fully bought into our mission. Most importantly, I discovered that work became more fun—and there's no limit to what you can accomplish when you're enjoying what you do.</p><p>Happiness and positivity are wild accelerants in life, not just work.</p><h3>Conclusion</h3><p>The reality is there's no magic formula for rapid career growth. My path was as much about fortunate timing as deliberate action. But while we can't control timing, we can control our approach.</p><p>These six principles—mastering speed as a multiplier, operating above your level, embracing that no one has all the answers, focusing on simple solutions to complex problems, building a favor economy, and maintaining positivity—weren't strategies I consciously developed. They emerged naturally as I reflected on what worked. They're not prescriptive steps to follow, but rather patterns I noticed in retrospect.</p><p>Here's what I know for certain: if you're reading this looking for a blueprint to replicate my timeline, you're focusing on the wrong thing. The timeline isn't what matters. What matters is building sustainable habits that compound over time. Start with mastering your core responsibilities. Use that mastery to create bandwidth. Deploy that bandwidth strategically. Build relationships. Stay positive. The rest will follow.</p><p>Good luck.</p><div><hr></div><p><em>Ryan again, hope you enjoyed <a href=\"https://www.linkedin.com/in/evan-king-40072280/\">Evan’s</a> career story. Of course career growth as fast as his has an element of luck. However there’s a few things I noticed that helped him seize opportunity:</em></p><ol><li><p><em>Excellent at execution</em></p><ol><li><p><em>He was a high performer at all times</em></p></li><li><p><em>Used his spare time to help others and learn the next level’s behaviors</em></p></li></ol></li><li><p><em>Willingness to push his boundaries and be bold</em></p><ol><li><p><em>Kept him growing at each point</em></p></li><li><p><em>Increased his visibility which unlocked opportunities</em></p></li></ol></li><li><p><em>Strong communication &amp; relationship building</em></p><ol><li><p><em>He was good at communicating his ideas publicly and working with others</em></p></li><li><p><em>Opportunities came to him as a result</em></p></li><li><p><em>This increased his “luck surface area”</em></p></li></ol></li></ol><p><em>I’ll be having a conversation with him for the podcast. Anything you’d like me to ask him or dig deeper about? <strong>Drop a comment below and I’ll make sure to ask.</strong></em></p><p><em>Thanks for reading,<br>Ryan Peterman</em></p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 92,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p></p>",
+  "truncated_body_text": "👋 Hi, this is Ryan with another edition of my weekly newsletter. Each week, I write about software engineering and career growth. ​​Thanks to your support, we’re getting close to 100k readers (92k now!)",
+  "wordcount": 2498,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "a2f82702-f657-459f-b972-84b24f8a3b62",
+      "publication_id": 1340878,
+      "name": "Engineering Career Stories",
+      "slug": "engineering-career-stories",
+      "hidden": false
+    },
+    {
+      "id": "bbec9c1f-66ea-461d-baa6-2a8acc4d8aa9",
+      "publication_id": 1340878,
+      "name": "Blog",
+      "slug": "blog",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        24,
+        132,
+        244
+      ],
+      "population": 6
+    },
+    "DarkVibrant": {
+      "rgb": [
+        60,
+        60,
+        132
+      ],
+      "population": 1
+    },
+    "LightVibrant": {
+      "rgb": [
+        124,
+        193,
+        240
+      ],
+      "population": 13
+    },
+    "Muted": {
+      "rgb": [
+        172,
+        104,
+        84
+      ],
+      "population": 2
+    },
+    "DarkMuted": {
+      "rgb": [
+        87,
+        65,
+        54
+      ],
+      "population": 112
+    },
+    "LightMuted": {
+      "rgb": [
+        154,
+        159,
+        209
+      ],
+      "population": 169
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    },
+    {
+      "id": 286712935,
+      "name": "Evan King",
+      "handle": "evankingswe",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6c5a9aba-d644-4e99-b6e1-2c25578712ff_2758x2758.jpeg",
+      "bio": "Former Meta Staff Engineer and current co-founder of www.hellointerview.com",
+      "profile_set_up_at": "2024-12-13T16:31:22.293Z",
+      "reader_installed_at": "2025-01-28T06:54:40.043Z",
+      "is_guest": true,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      },
+      "primaryPublicationId": 3512256,
+      "primaryPublicationName": "Evan King",
+      "primaryPublicationUrl": "https://evan208.substack.com",
+      "primaryPublicationSubscribeUrl": "https://evan208.substack.com/subscribe?"
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 297,
+  "comment_count": 24,
+  "child_comment_count": 15,
+  "audio_items": [
+    {
+      "post_id": 153005624,
+      "voice_id": "en-US-AlloyTurboMultilingualNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/153005624/tts/d12c4c36-7ec1-4267-b231-3424c44191bc/en-US-AlloyTurboMultilingualNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 81389284,
+      "body": "I think he mentioned all the information in six points. A very good blog this week🙌. It’s good to have simplicity, positive mindset, helping nature and time management skills. ",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I think he mentioned all the information in six points. A very good blog this week🙌. It’s good to have simplicity, positive mindset, helping nature and time management skills."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 153005624,
+      "user_id": 222972410,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-12-13T19:02:09.727Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Komal",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5724f42f-c6be-4753-a9f6-4cc332b2c0b7_144x144.png",
+      "handle": "komal178581",
+      "reactor_names": [
+        "Evan King"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 7
+      },
+      "reaction_count": 7,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "komal178581",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 12,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 81420912,
+      "body": "Is speed the trait you think is most important out of the ones you've listed? Since it allowed you to make \"extra time\".\n\nWhy did you quit after 3 years? You had no signs of slowing down.\n\nAre you the mythical 10x engineer?\n\nGreat insights, thanks for sharing.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Is speed the trait you think is most important out of the ones you've listed? Since it allowed you to make \"extra time\"."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Why did you quit after 3 years? You had no signs of slowing down."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Are you the mythical 10x engineer?"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Great insights, thanks for sharing."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 153005624,
+      "user_id": 10331700,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-12-13T22:57:50.604Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "jo",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/8d4b2d72-a04a-4626-8575-ecc94bb5f645_144x144.png",
+      "handle": "joibarra",
+      "reactor_names": [
+        "Evan King"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "joibarra",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "unsubscribed",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "jo",
+          "id": 4553519,
+          "base_url": "https://joibarra.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 7,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply"
+    }
+  ]
+}

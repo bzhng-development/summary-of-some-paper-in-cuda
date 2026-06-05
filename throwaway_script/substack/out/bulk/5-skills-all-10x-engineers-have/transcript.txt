@@ -1,0 +1,120 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 30,000 readers this week 🙏 🎉
+
+This week, I’m writing about what we can learn from the best engineers I know. If you find the post helpful, please share it with your friends and coworkers. Enjoy!
+
+I’ve been lucky to work with a handful of incredible engineers, each impactful in unique ways:
+
+  - An industry-leading expert who solves problems that no one else can
+
+An industry-leading expert who solves problems that no one else can
+
+  - An architect who is a tech lead among tech leads
+
+An architect who is a tech lead among tech leads
+
+  - A code machine who produces more impactful code than an entire team of engineers
+
+A code machine who produces more impactful code than an entire team of engineers
+
+Even though their working styles are so different, these engineers all have the same 5 skills in common. I’ll go over these and provide some actionable tips on how you can develop these skills too.
+
+
+## 1) Code ROI
+
+
+All these engineers have a strong sense of the return on investment (ROI) of their code. This understanding guides them to have much more impact with their limited time. They are often hard to reach unless you’re working on something they think is high ROI. They aren’t trying to be mean; it is out of necessity to have more impact.
+
+To develop this skill:
+
+  - Think about the “why” behind your work - Understand the cost and benefit of potential projects. You can discuss the ROI of potential work with your tech lead or manager for feedback since they should have a good sense of this. Getting involved in your team’s project roadmapping and prioritization is a concrete opportunity to practice this.
+
+Think about the “why” behind your work - Understand the cost and benefit of potential projects. You can discuss the ROI of potential work with your tech lead or manager for feedback since they should have a good sense of this. Getting involved in your team’s project roadmapping and prioritization is a concrete opportunity to practice this.
+
+
+## 2) Technical Breadth And Depth
+
+
+There’s a lot of discussion about whether it’s better to be a specialist or a generalist. These engineers don’t choose. They have both incredible technical breadth and depth.
+
+Their depth allows them to solve problems that few others can. There are plenty of examples of this but to me, one of the most obvious examples is during outages. For the most severe issues that are difficult to diagnose, you might have dozens of engineers all looking into the problem. It is often the top engineers that find the fix.
+
+Their breadth helps them quickly understand new systems they haven’t seen before. This is worth its weight in gold at big tech companies since the code base is too large to know deeply.
+
+To develop this skill:
+
+  - Follow your curiosity - In industry, there is no structured learning. I’ve found that curiosity is a great teacher since it helps you learn on the job. When I encounter something I don’t know, I ask questions out of personal interest. This habit has helped me grow my understanding faster over time.
+
+Follow your curiosity - In industry, there is no structured learning. I’ve found that curiosity is a great teacher since it helps you learn on the job. When I encounter something I don’t know, I ask questions out of personal interest. This habit has helped me grow my understanding faster over time.
+
+  - Work with strong engineers - You learn technical skills best by working with other strong engineers. There’s so much context that you can pick up by asking technical questions and seeing how others solve problems.
+
+Work with strong engineers - You learn technical skills best by working with other strong engineers. There’s so much context that you can pick up by asking technical questions and seeing how others solve problems.
+
+
+## 3) Influence Without Authority
+
+
+These engineers all influence others without authority. Their strong communication skills coupled with their understanding of code ROI and excellent technical skills help them guide others.
+
+Their succinct, clear reasoning is usually debate-winning. They take complex topics and explain them simply. This makes it easy for them to influence others.
+
+To develop this skill:
+
+  - Prioritize writing and speaking - Take every opportunity you have to practice. Each time you do, reflect on what you could do better. For instance, if I explain something and see it fall flat, I’ll think about how I can explain it more clearly next time.
+
+Prioritize writing and speaking - Take every opportunity you have to practice. Each time you do, reflect on what you could do better. For instance, if I explain something and see it fall flat, I’ll think about how I can explain it more clearly next time.
+
+  - Learn to sell -  “How To Win Friends And Influence People” by Dale Carnegie is a good start if you’re looking for a general resource. The book is full of great content that can help you learn this skill:
+
+Learn to sell -  “How To Win Friends And Influence People” by Dale Carnegie is a good start if you’re looking for a general resource. The book is full of great content that can help you learn this skill:
+
+> “The only way on earth to influence other people is to talk about what they want and show them how to get it” - Dale Carnegie
+
+“The only way on earth to influence other people is to talk about what they want and show them how to get it” - Dale Carnegie
+
+
+## 4) Uplifting Others
+
+
+These engineers make everyone around them better. They are a force multiplier. There are many ways they grow others aside from 1:1 mentorship:
+
+  - Knowledge Sharing - Writing wikis, giving presentations, contributing to Q&A groups
+
+Knowledge Sharing - Writing wikis, giving presentations, contributing to Q&A groups
+
+  - Collaboration - Growing others while working with them (e.g. code reviews, design reviews, discussions)
+
+Collaboration - Growing others while working with them (e.g. code reviews, design reviews, discussions)
+
+  - Building Tools - Automating common processes or making it much easier to debug regressions
+
+Building Tools - Automating common processes or making it much easier to debug regressions
+
+To develop this skill:
+
+  - Build tools that everyone can use - If you see a pattern of everyone solving a problem manually, consider building tooling to simplify that workflow and spread it to maximize its usefulness.
+
+Build tools that everyone can use - If you see a pattern of everyone solving a problem manually, consider building tooling to simplify that workflow and spread it to maximize its usefulness.
+
+  - Share your expertise - Look for opportunities to spread your knowledge and provide feedback. Code review is one of the best ways to get started.
+
+Share your expertise - Look for opportunities to spread your knowledge and provide feedback. Code review is one of the best ways to get started.
+
+
+## 5) Ownership Mentality
+
+
+All these engineers have a strong sense of ownership. They take responsibility for the large initiatives they lead. They don’t care who does the work, just that it gets done right. This mindset lets them scale themselves through delegation. They do what is needed (even if it isn’t writing code).
+
+To develop this skill:
+
+  - Think like an owner - Own your projects end-to-end. Put your name on it and act like your reputation is on the line. Do whatever it takes for the project to succeed.
+
+Think like an owner - Own your projects end-to-end. Put your name on it and act like your reputation is on the line. Do whatever it takes for the project to succeed.
+
+Being intentional about learning these skills will help you grow faster. If you have opportunities to work with an incredible engineer consider taking it. You don’t need to receive formal mentorship from these engineers to learn a lot. Strong engineers become even stronger just by asking them technical questions and seeing how they work.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already. Also, if you have feedback about how I can make the content better, please share it here 🙏
+
+Thanks for reading,
+Ryan Peterman

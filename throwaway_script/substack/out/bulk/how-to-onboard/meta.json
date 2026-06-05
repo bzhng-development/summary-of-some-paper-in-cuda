@@ -1,0 +1,468 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/how-to-onboard",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 141265100,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-02-02T14:01:38.090Z",
+  "updated_at": "2024-02-02T14:52:51.669Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "how-to-onboard",
+  "social_title": null,
+  "subtitle": "Career Cold Start Algorithm, Landing Code Fast",
+  "teaser_post_eligible": true,
+  "title": "How To Onboard",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 23,
+  "reactions": {
+    "❤": 222
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "ratings-promotions",
+  "next_post_slug": "why-write-small-diffs",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!7CD6!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5675297b-3340-47e7-9fb9-ba20e90b84b5_659x352.jpeg",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 141265100,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Career Cold Start Algorithm, Landing Code Fast",
+  "body_html": "<p>👋<em> Hi, this is&nbsp;<a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a>&nbsp;with this week’s newsletter. I write about software engineering, big tech/startups, and career growth. Thank you for your readership, we hit 47,000 readers this week </em>🙏<em> </em>🎉</p><p><em>This week, I share about how to onboard well as a software engineer. If you find the post helpful, please share it with your friends and coworkers. Enjoy!</em></p><div><hr></div><p>In 2022, the <a href=\"https://stackoverflow.blog/2022/04/19/whats-the-average-tenure-of-an-engineer-at-a-big-tech-company-ep-434/#:~:text=Average%20tenure%20at%20Google%20has%20been%20reported%20at%201.1%20years%2C%20which%20stands%20in%20contrast%20to%20a%20broader%20average%20of%204.2%20years%20for%20software%20developers%20across%20the%20board.\">average tenure at Google was about 1.1 years</a>. Even if you don’t switch companies, you might have to onboard to new domains since big wins often come from underinvested areas. You’ll have to ramp up many times in your software engineering career. </p><p>As a rule of thumb, you should expect to be a solid contributor on a new team after 3 months. For Senior+ roles, that means you’d start to also contribute to the team’s direction by then. After helping many engineers onboard successfully, here’s what I’d keep in mind.</p><h3>“A Career Cold Start Algorithm”</h3><p>Andrew Bosworth, Meta’s CTO, wrote about <a href=\"https://boz.com/articles/career-cold-start\">his onboarding process</a>. It’s brief, but gold. Here’s the important part that explains his algorithm:</p><blockquote><p>“The first step is to find someone on the team and ask for 30 minutes with them. In that meeting you have a simple agenda:</p><ul><li><p>For the first 25 minutes: ask them to tell you everything they think you should know. Take copious notes. Only stop them to ask about things you don’t understand. Always stop them to ask about things you don’t understand.</p></li><li><p>For the next 3 minutes: ask about the biggest challenges the team has right now.</p></li><li><p>In the final 2 minutes: ask who else you should talk to. Write down every name they give you.</p></li></ul><p>Repeat the above process for every name you’re given. Don’t stop until there are no new names.”</p></blockquote><p>This process will build your foundational knowledge and help you establish the relationships you’ll need. I’d recommend two tweaks to make it more effective for software engineers:</p><ol><li><p><strong>Ask your manager or tech lead for the initial list of names</strong>. A directed search is more efficient.</p></li><li><p><strong>Ask targeted questions to learn what you need</strong> - Instead of asking “What do you think I should know”, here are some example questions:</p><ol><li><p><strong>Learning team direction:</strong> “What is the motivation behind your work?”, “How does this fit into the team’s plan?”, “What wins are we expecting from this?”</p></li><li><p><strong>Learning system design:</strong> “Where does your work fit into the overall system?”, “What pieces does our team own?”</p></li><li><p><strong>Learning who knows what:</strong> “Who knows the most about &lt;tech area&gt;?”, “If &lt;tech area&gt; breaks, who knows how to fix it?”</p></li></ol></li></ol><h3>Contribute Code Fast</h3><p>Your immediate priority should be to start landing code. This will help you tie your high-level understanding to the codebase. Also, it’s the fastest way to start having an impact.</p><p>A few years ago, a Staff Engineer joined my team and was a solid contributor after just a week or two. His approach was to land a ton of low-risk changes (~1-2 per day) that improved the codebase. You don’t need to write that much code but you get the idea. This helped him learn faster and get comfortable making changes. </p><p>To get started, your manager should pair you with an “onboarding buddy” who’ll provide hands-on support. The more mature your team’s onboarding process is the less you’ll need their help. A great onboarding process has:</p><ol><li><p>Up-to-date wiki on setting up your dev environment</p></li><li><p>Async support channels (e.g. Q&amp;A groups, eng chat threads) to get small technical questions answered</p></li><li><p>Backlog of unambiguous, low-risk tasks </p></li></ol><p>You have a unique asset as someone who is onboarding. Your fresh perspective can help you see gaps in the current processes. <strong>If you see problems, don’t just unblock yourself. Take the opportunity to also fix it for future hires.</strong></p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!7CD6!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5675297b-3340-47e7-9fb9-ba20e90b84b5_659x352.jpeg\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!7CD6!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5675297b-3340-47e7-9fb9-ba20e90b84b5_659x352.jpeg 424w, https://substackcdn.com/image/fetch/$s_!7CD6!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5675297b-3340-47e7-9fb9-ba20e90b84b5_659x352.jpeg 848w, https://substackcdn.com/image/fetch/$s_!7CD6!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5675297b-3340-47e7-9fb9-ba20e90b84b5_659x352.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!7CD6!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5675297b-3340-47e7-9fb9-ba20e90b84b5_659x352.jpeg 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!7CD6!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5675297b-3340-47e7-9fb9-ba20e90b84b5_659x352.jpeg\" width=\"659\" height=\"352\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/5675297b-3340-47e7-9fb9-ba20e90b84b5_659x352.jpeg&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:352,&quot;width&quot;:659,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:null,&quot;alt&quot;:&quot;Peter Yang on X: \\&quot;I am the documentation https://t.co ...&quot;,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"Peter Yang on X: &quot;I am the documentation https://t.co ...\" title=\"Peter Yang on X: &quot;I am the documentation https://t.co ...\" srcset=\"https://substackcdn.com/image/fetch/$s_!7CD6!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5675297b-3340-47e7-9fb9-ba20e90b84b5_659x352.jpeg 424w, https://substackcdn.com/image/fetch/$s_!7CD6!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5675297b-3340-47e7-9fb9-ba20e90b84b5_659x352.jpeg 848w, https://substackcdn.com/image/fetch/$s_!7CD6!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5675297b-3340-47e7-9fb9-ba20e90b84b5_659x352.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!7CD6!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5675297b-3340-47e7-9fb9-ba20e90b84b5_659x352.jpeg 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">If your team doesn’t have onboarding docs, write them</figcaption></figure></div><p>If you found this useful, <strong>please share it with a friend and consider subscribing if you haven’t already.</strong></p><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 47000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups, and career growth. Thank you for your readership, we hit 47,000 readers this week 🙏 🎉",
+  "wordcount": 667,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "7944911a-7d9b-49e5-a951-df44d652b086",
+      "publication_id": 1340878,
+      "name": "Soft Skills",
+      "slug": "soft-skills",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        212.49999999999997,
+        70.83333333333334,
+        42.50000000000002
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        60,
+        20,
+        12
+      ],
+      "population": 3
+    },
+    "LightVibrant": {
+      "rgb": [
+        232.9,
+        159.23333333333332,
+        144.5
+      ],
+      "population": 0
+    },
+    "Muted": {
+      "rgb": [
+        152,
+        112,
+        98
+      ],
+      "population": 424
+    },
+    "DarkMuted": {
+      "rgb": [
+        72,
+        41,
+        34
+      ],
+      "population": 409
+    },
+    "LightMuted": {
+      "rgb": [
+        218,
+        218,
+        218
+      ],
+      "population": 419
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 222,
+  "comment_count": 35,
+  "child_comment_count": 19,
+  "audio_items": [
+    {
+      "post_id": 141265100,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/141265100/tts/aae2e5fd-3895-40a9-a345-cdd5023caf55/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 49369591,
+      "body": "I appreciate how you're streamlining the onboarding process to be as efficient as possible. \n\nIn my current role, I was able to grasp team dynamics and tools within two weeks, and even contribute to code in the second week.\n\n Onboarding isn't about mastering everything, but rather about understanding enough to start contributing to code and design promptly. \n\nThis can be achieved through code reviews and well-documented tools and processes. \n\nThanks for sharing your experience, Ryan!",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I appreciate how you're streamlining the onboarding process to be as efficient as possible."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "In my current role, I was able to grasp team dynamics and tools within two weeks, and even contribute to code in the second week."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Onboarding isn't about mastering everything, but rather about understanding enough to start contributing to code and design promptly."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "This can be achieved through code reviews and well-documented tools and processes."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Thanks for sharing your experience, Ryan!"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 141265100,
+      "user_id": 170622182,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-02-12T12:11:01.275Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Basma Taha",
+      "photo_url": "https://substackcdn.com/image/fetch/$s_!Gs6J!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F64b2da40-0961-485e-8e00-5880b7a17702_1920x1920.jpeg",
+      "handle": "basmataha",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 4
+      },
+      "reaction_count": 4,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "basmataha",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "unsubscribed",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "بيان",
+          "id": 2202832,
+          "base_url": "https://cleararabictongue.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 9,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 48724657,
+      "body": "Spot on as always!",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Spot on as always!"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 141265100,
+      "user_id": 39460278,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-02-03T01:11:18.531Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Stuart",
+      "photo_url": null,
+      "handle": "stuart198805",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 3
+      },
+      "reaction_count": 3,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "stuart198805",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 8,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "2 replies by Ryan Peterman and others"
+    }
+  ]
+}

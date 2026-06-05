@@ -1,0 +1,7 @@
+{
+  "prompt_tokens": 31497,
+  "completion_tokens": 2849,
+  "total_tokens": 34346,
+  "finish_reason": "stop",
+  "model": "deepseek-ai/DeepSeek-V4-Pro"
+}

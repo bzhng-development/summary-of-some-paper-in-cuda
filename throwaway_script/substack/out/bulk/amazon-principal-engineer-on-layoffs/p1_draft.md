@@ -1,0 +1,29 @@
+Here are the takeaways from this Steve Huynh interview (spent nearly 20 years at Amazon climbing from Support Engineer to Principal Engineer, now runs the career-growth channel A Life Engineered):
+
+**Liberal arts major to temp support engineer at Amazon**
+
+Steve already knew how to program—he'd taken AP Computer Science in high school—but he aspired to be a writer. A college professor gave him blunt advice: find a job that makes money. A friend's referral got him into Amazon as a temporary support engineer after graduating from the University of Washington, and he eventually converted to full-time. This was the early-2000s hiring environment: no Leetcode, far less standardization. "Back then, there wasn't anything like Leetcode," so technical interviews were much more ad-hoc and less of the gauntlet they are today.
+
+**Why most interview prep is garbage: coding is pass/fail; behavioral determines level**
+
+After conducting over 1,000 interviews, Steve's core thesis is that the overwhelming focus on coding and system design in prep culture misses the point. Coding and system design are "just pass no pass"—they get you in the door, but they do not determine your level or whether the team sees you as a fit. "Behavioral interviews are where levels and fit are determined." He stresses that engineers spend a tiny fraction of their prep time practicing how to package their experience for the level they're targeting, which has an outsized impact. His most counterintuitive advice: the highest-leverage programming language to learn isn't Python or Rust—it's **English**. "Programming languages come and go. The language that is high leverage is English." He advocates spending real time learning to communicate well and sell yourself.
+
+**The demand distribution is skewed, and competition happens before the interview**
+
+Demand is limited for junior engineers but "extraordinary" for Senior+. The real bottleneck isn't passing interviews—it's getting selected for one in the first place. Most competition occurs at the **pre-qualification and selection phase**, before you ever talk to a recruiter. This means building a resume and network that make you an outlier is the actual fight. One implication: job hopping often early in your career to get promoted fast is probably optimal. But once you hit Senior+ levels, job hopping stops being an effective strategy; at that point you need to find a place to stay for a while to unlock further growth.
+
+**Amazon's up-or-out culture and how to avoid layoffs**
+
+Amazon has an explicit **up-or-out policy** for SDE1s: you must get promoted within a certain window or you're managed out. This requirement relaxes at SDE2 and disappears entirely at SDE3 and above. Steve's view on the industry's current layoff wave is counterintuitively calm: "The people being laid off aren't a good culture fit. They aren't low performers—getting into these companies is really hard." As long as companies are backfilling hires (which Meta is doing), he doesn't see cause for existential worry. His single most practical defense against being laid off: **directly ask your manager about expectations**, and do it early. "Bad news delivered early isn't bad news; it's just news." Most people never explicitly ask, leaving themselves vulnerable to surprises. Keeping in continuous touch with your manager about where you stand makes performance anxiety unnecessary.
+
+**The Principal Engineer promo project: owning the thing nobody wanted**
+
+The project that carried Steve to Principal Engineer was a backend system representing the Prime Video catalog—"outdated and brittle," a piece of product infrastructure nobody wanted to touch, yet hundreds of engineers were its customers. He stepped into the void and did a major overhaul. The leverage came from its breadth: many teams and many high-level engineers were invested in its success, which meant his impact radiated widely and visibly. The pattern is classic enterprise PE-scope: find the mission-critical haunted house and become the person who exorcises it.
+
+**Why most engineers don't make Principal: the two-levels-in-one promo gap**
+
+The promotion from Senior (SDE3) to Principal Engineer at Amazon is nearly "two levels worth in one." Engineers frequently get blocked because they start exhibiting Principal behaviors—setting technical direction, influencing across orgs—only to be told they need to contribute *more code*. The expectations pull in opposite directions: you must operate as a force-multiplying architect while still being a prolific individual contributor. Steve's own promotion got blocked multiple times before he navigated this tension. His advice: **start before you're ready**. Most engineers wait until some major project lands to begin the promo process, which delays them. It's better to start early, identify your gaps, and be positioned so that when the right project finally arrives, you're already far along the path.
+
+**Career regrets, spot bonuses, and the people-pleasing trap**
+
+Steve doesn't regret staying at Amazon for nearly two decades, but he does regret not switching teams earlier. Staying put out of uncertainty was just deferring a decision to switch later. On the compensation side, he shared a striking data point: Amazon managers can award performance-based spot bonuses, and one of his managers gave him a bonus worth **$350,000** (after stock appreciation) before leaving the company—a reminder of how much discretion can exist even inside rigid comp structures. When asked what he'd tell his younger self, he landed on something deeper than a career tactic: "Stop people pleasing." He wishes he'd learned earlier to question his underlying motivations—was he climbing the career ladder to please himself, or because of some expectation others had of him? The answer reshapes which sacrifices are worth making.

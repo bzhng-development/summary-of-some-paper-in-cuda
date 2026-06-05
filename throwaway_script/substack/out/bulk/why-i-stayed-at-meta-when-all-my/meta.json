@@ -1,0 +1,442 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/why-i-stayed-at-meta-when-all-my",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 106910635,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-04-14T13:02:18.741Z",
+  "updated_at": "2026-02-02T21:21:44.963Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "why-i-stayed-at-meta-when-all-my",
+  "social_title": null,
+  "subtitle": "",
+  "teaser_post_eligible": true,
+  "title": "Why I Stayed at Meta When All My Friends Left",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 2,
+  "reactions": {
+    "❤": 35
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "staff-career-growth-product-or-infra",
+  "next_post_slug": "how-to-tell-if-you-have-a-good-eng",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!8xJY!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8d7abac1-101d-46ab-9d57-9b62afcb6178_4961x3508.jpeg",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 106910635,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "I started at Meta in 2018 with five friends from college.",
+  "body_html": "<p>I started at Meta in 2018 with five friends from college. Over time, they followed common industry advice - switch jobs often to grow your career and compensation. Me staying at Meta became more and more unusual. Two stories show why I stayed when all my friends left.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!8xJY!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8d7abac1-101d-46ab-9d57-9b62afcb6178_4961x3508.jpeg\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!8xJY!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8d7abac1-101d-46ab-9d57-9b62afcb6178_4961x3508.jpeg 424w, https://substackcdn.com/image/fetch/$s_!8xJY!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8d7abac1-101d-46ab-9d57-9b62afcb6178_4961x3508.jpeg 848w, https://substackcdn.com/image/fetch/$s_!8xJY!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8d7abac1-101d-46ab-9d57-9b62afcb6178_4961x3508.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!8xJY!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8d7abac1-101d-46ab-9d57-9b62afcb6178_4961x3508.jpeg 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!8xJY!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8d7abac1-101d-46ab-9d57-9b62afcb6178_4961x3508.jpeg\" width=\"1456\" height=\"1030\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/8d7abac1-101d-46ab-9d57-9b62afcb6178_4961x3508.jpeg&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:1030,&quot;width&quot;:1456,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:1206318,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/jpeg&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!8xJY!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8d7abac1-101d-46ab-9d57-9b62afcb6178_4961x3508.jpeg 424w, https://substackcdn.com/image/fetch/$s_!8xJY!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8d7abac1-101d-46ab-9d57-9b62afcb6178_4961x3508.jpeg 848w, https://substackcdn.com/image/fetch/$s_!8xJY!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8d7abac1-101d-46ab-9d57-9b62afcb6178_4961x3508.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!8xJY!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8d7abac1-101d-46ab-9d57-9b62afcb6178_4961x3508.jpeg 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">Staying for more than 5 years is unusual</figcaption></figure></div><h3>An Engineer Who Never Broke Anything?</h3><p>When you’re a new grad, you look up to more experienced engineers. Now imagine, one of those engineers is the “tech lead” and everyone you admire looks up to that person. For me, that tech lead was <a href=\"https://www.linkedin.com/in/lukascamra/\">Lukas Camra</a>, my soon-to-be manager. Rumor has it, that Lukas never broke production in all his years as an engineer at Meta, though that might just be team folklore. </p><p>Lukas exceeded my expectations as our manager. Because he was a sharp engineer himself, he knew how to help engineers grow fast. Looking back after working with him for 5 years, it is obvious why my team has been so stable.  </p><p>When you get lucky with a manager like that, you look to stay a little bit, but 5 years? It takes more than a good manager to keep engineers when we have so many options of where to work. There’s one more story that makes it clear why I chose to stay. While this story might seem like an exaggeration, I swear it isn’t.</p><h3>What a “10x Engineer” Really Looks Like</h3><p>Imagine an IC who writes and reviews more code than anyone in your org. Someone who, because of his domain expertise, receives the most questions yet is also the most responsive. This IC also consistently solves problems that many Staff engineers can’t. And if that’s not enough, this IC’s main project work often has industry influence. Hard to believe, but I’ve seen <a href=\"https://www.linkedin.com/in/haixiashi/\">Haixia Shi</a> do this half over half since I started working with him.</p><p>He’s the de facto video domain specialist for Instagram, which is kind of a big deal for an app where video is a central part of the user experience. I have never received formal mentorship from Haixia, but I didn’t need to. Engineering excellence radiates from him. Strong engineers become even stronger just by asking him technical questions and seeing how he solves problems. Having peers like this makes coming to work delightful and is one of the key contributors to my engineering career growth.</p><p>Staying at Meta longer than any of my friends helped me grow into a Staff Engineer (L6) in 3 years. My domain knowledge allowed me to deliver more in less time. I was able to move fast because I was so familiar with our tooling, tech stack, and organizational processes.</p><p>Also, another benefit to staying so long was I built organizational trust. People knew I was a person who could consistently get the job done. As my skills grew, people gave me more responsibility. As I delivered on that, people trusted me with even more scope. This virtuous cycle gave me momentum that helped me grow at a faster and faster rate.</p><p>Staying at Meta for as long as I have has treated me well, but how long should you stay to maximize career growth? I polled over 1,200 people on Twitter to find out.</p><h3>How Long Should You Stay?</h3><p>Almost everyone agrees that 1 year is too short. Onboarding consumes much of that time, leaving little to utilize your knowledge. Past that, it depends on your situation.</p><p>If your job is treating you well and offers growth opportunities then there’s no reason you shouldn’t stay longer than 4 years. At the same time, it could be a good idea to leave fast if you’re stagnating. I’m glad I left my first job after 8 months and in hindsight, it was a great decision. Here are the <a href=\"https://twitter.com/ryanlpeterman/status/1635309790003073024?s=20\">full results from the poll</a> if you’d like to draw your own conclusions.</p><div><hr></div><p>We have a regular team health survey at Meta that asks “how long do you plan to stay at the company?” The funny thing is, I don’t think I’ve ever answered that I’d stay longer than 2 years even though I love my work. Yet, here I am 5 years later. Staying isn’t something you plan at the outset but rather something you regularly check in on.</p><p>At the end of the day, how long you should stay is a case-by-case decision. That’s why it’s important to have mentors you can confide in to help you with career decisions like these.</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 2500+ software engineers who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p>Thanks for reading,<em><br><a href=\"https://twitter.com/ryanlpeterman\">Ryan Peterman</a></em></p>",
+  "truncated_body_text": "I started at Meta in 2018 with five friends from college. Over time, they followed common industry advice - switch jobs often to grow your career and compensation. Me staying at Meta became more and more unusual. Two stories show why I stayed when all my friends left.",
+  "wordcount": 760,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "5a4683e9-1121-4159-b2d7-6ca77779173f",
+      "publication_id": 1340878,
+      "name": "Career",
+      "slug": "career",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        68,
+        212,
+        228
+      ],
+      "population": 3115
+    },
+    "DarkVibrant": {
+      "rgb": [
+        18,
+        92,
+        108
+      ],
+      "population": 4
+    },
+    "LightVibrant": {
+      "rgb": [
+        207,
+        227,
+        184
+      ],
+      "population": 77
+    },
+    "Muted": {
+      "rgb": [
+        135,
+        200,
+        186
+      ],
+      "population": 36
+    },
+    "DarkMuted": {
+      "rgb": [
+        52,
+        103,
+        102
+      ],
+      "population": 15
+    },
+    "LightMuted": {
+      "rgb": [
+        78.81818181818183,
+        109.7272727272727,
+        43.27272727272728
+      ],
+      "population": 0
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 35,
+  "comment_count": 7,
+  "child_comment_count": 3,
+  "audio_items": [
+    {
+      "post_id": 106910635,
+      "voice_id": "en-US-AlloyTurboMultilingualNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/106910635/tts/8d3e6709-195e-4cce-81bd-cb54f57783d5/en-US-AlloyTurboMultilingualNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 14692075,
+      "body": "In this job market right now, I would stay at the same job. I don't think its a good idea to leave your job during a \"recession\" in pursue of career growth, but it's a risk. You can leave and gain more experience and career growth, but the downside is mental stress if you can't find a job. Up to you to decide.\n\nIn a great economy, I would stay until I have maximizes networking opportunity. Career growth is important, but I would also add that networking is also important. Networking is going to help you get the job. Career growth is nonexistent if you can't find a job to grow from, so remember to just connect with everyone.\n\n",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "In this job market right now, I would stay at the same job. I don't think its a good idea to leave your job during a \"recession\" in pursue of career growth, but it's a risk. You can leave and gain more experience and career growth, but the downside is mental stress if you can't find a job. Up to you to decide."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "In a great economy, I would stay until I have maximizes networking opportunity. Career growth is important, but I would also add that networking is also important. Networking is going to help you get the job. Career growth is nonexistent if you can't find a job to grow from, so remember to just connect with everyone."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 106910635,
+      "user_id": 110102798,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-04-14T15:28:26.268Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Ivan H",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/cb620ac5-1a6c-4dce-86e1-8198fef618a5_474x532.jpeg",
+      "handle": "ivanh",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "ivanh",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "The Software & Data Spectrum",
+          "id": 1382820,
+          "base_url": "https://ivanh.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 7,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "3 replies by Ryan Peterman and others"
+    },
+    {
+      "id": 41828993,
+      "body": " I don't have any hard limits on how long to stay at a company. If the work is thrilling enough with the opportunity to grow, that is a place I will commit to.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I don't have any hard limits on how long to stay at a company. If the work is thrilling enough with the opportunity to grow, that is a place I will commit to."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 106910635,
+      "user_id": 3621192,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-10-14T04:39:38.380Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Kehinde Adeleke",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/fb7d853d-67c0-4d01-852a-0a965580afd2_1096x1096.jpeg",
+      "handle": "adeleke5140",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "adeleke5140",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

@@ -1,0 +1,431 @@
+I interviewed Leslie Lamport, a Turing Award winner known for his contributions to distributed systems and the inventor of the Paxos algorithm. We walked through the major contributions of his career for the stories behind them and what he learned along the way.
+
+Check out the episode wherever you get your podcasts: YouTube, Spotify, Apple Podcasts.
+
+
+## Timestamps
+
+
+00:01:25 - The Bakery Algorithm
+
+00:08:28 - Experiences with Dijkstra
+
+00:14:44 - His most cited paper
+
+00:23:26 - The “Byzantine Generals” problem
+
+00:38:05 - The Paxos Algorithm
+
+00:46:57 - Paxos vs Raft Algorithm
+
+00:51:26 - Building LaTeX
+
+00:54:45 - Why writing improves your thinking
+
+01:00:21 - Why he wasn’t an academic
+
+01:02:08 - Grand theory of concurrency
+
+01:07:25 - Why he doesn’t think he’s smart
+
+01:09:07 - Advice for his younger self
+
+
+## Transcript
+
+
+
+## 00:01:25 — The Bakery Algorithm
+
+
+Leslie:
+
+[00:01:25] Well, the problem was invented or discovered by Edsger Dijkstra in a 1965, I think it was 1965 paper. And that began, I consider that really the beginning of the theory of concurrency concurrent programming. He was the first one who really made use of the idea of, of concurrency as a way of structuring programs as a collection of semi independent tasks and the processes have to synchronize with one another.
+
+[00:02:07] One of the processes or among the processes would be. Well, this was in the days of time sharing, right? Really at the beginnings of time sharing and the idea of multiple people using the same computer. People realized that computers worked faster than humans and computers were very expensive in those days. So they could use a computer to simultaneously, to be used simultaneously by multiple people.
+
+[00:02:44] The program that each user was running, it was a separate program. But sometimes there were resources that got shared. For example, a printer, two people trying to print on the same printer at the same time. Well, the result would be not very satisfactory. So he realized there was this problem of synchronizing multiple processes. The idea of what he called a critical section or some piece of code in each of the processes so that at most one process can be executing that piece of code at any particular time.
+
+[00:03:24] So that code might be the code that prints something on the printer. So the problem was how to get the processes to synchronize among themselves so that at most one process was executing its critical section at a time. It was in 1972 that I learned about the problem because there was an article giving a solution to it in the CACM communications of the acm. And I used to program, and I liked little programming problems, and this was just a very nice little programming problem.
+
+[00:04:12] And so I looked at the solution, which is fairly complicated. I said, oh, gee, that shouldn’t be so hard. And so I whipped off a very simple algorithm for two processes and submitted it to cacm. And a couple of weeks later I received a letter from the editor pointing out the bug in my program. So that had two effects. The first was that I realized that concurrent programs were hard to get right and that you needed a proof that they were correct.
+
+[00:04:54] And the second was that made me feel, I’m going to solve that damn problem. And I came up with the Bakery algorithm, which was inspired by. The idea came from what now called the deli problem, where you have a deli counter that collects tickets, a roll of tickets, and every customer would come in and take a ticket, and then the next person to be served would be the one with the highest, the lowest number ticket that hadn’t been served yet.
+
+[00:05:33] And basically I took that idea. But since there was no central server, or at least the problem as specified by Dijkstra involved no central control, each process basically had to choose their own ticket. That was the basic idea. And the algorithm was quite simple. And I wrote a proof of correctness. And the proof of correctness revealed to me that this algorithm had this very interesting property.
+
+[00:06:15] There was a general feeling, in fact, somebody published in a book or paper saying that it was impossible to implement mutual exclusion like this without using some lower level mutual exclusion. The way most the mutual exclusion that was assumed generally was that of shared registers, shared pieces of memory that could be written and read by different processes. And the idea is that you couldn’t have one process, two processes writing at the same time, or one process reading while the other process was writing.
+
+[00:07:01] People assumed that those actions were atomic. They always performed as if they occurred in some specific order. But the amazing thing about the Bakery algorithm was that it didn’t require that assumption. It used each shared memory. A piece of memory was only written by a single process, so you didn’t have to worry about two processes interfering with each other. The only problem that you might come is that somebody reading the value while it was being written might get some unknown value.
+
+[00:07:39] But the algorithm worked Anyway, if somebody read one process read while the registers were being written, that process reading process could get absolutely any value and the algorithm still worked.
+
+Ryan:
+
+[00:07:54] I saw in your writing about this problem that you shared it with a colleague named Anatol Holt, and the proof was so remarkable that they didn’t believe it.
+
+Leslie:
+
+[00:08:08] Well, the result was so remarkable, yes, that they didn’t believe it. And I wrote the proof on the whiteboard for him and he couldn’t find a problem with it. But he went home and saying there must be something wrong with it. He obviously never found anything wrong with it.
+
+
+## 00:08:28 — Experiences with Dijkstra
+
+
+Ryan:
+
+[00:08:28] I saw the name of the paper is a new solution of Dijkstra’s concurrent programming problem. What was it about Dijkstra’s old solution that you felt was unsatisfactory and made you want to solve this problem?
+
+Leslie:
+
+[00:08:44] Well, there was an unsatisfactory aspect of his original solution that had the property that if there were a lot of processes kept trying to enter their critical section, an individual process might be starved. It might never get access to the critical section that was solved by. Next solution, I think, was Don Knuth’s. The condition that was desired or that measured what was considered the efficiency of it was how long a process might have to wait.
+
+[00:09:29] I believe that the Bakery algorithm was the first one that was really first come, first serve. That is, if one process came. What it meant is if one process chose its number before another process tried to enter, that first process would enter the critical section before the other process did. I believe the Bakery algorithm was the first one with that property also.
+
+Ryan:
+
+[00:10:01] I see that you worked with Dijkstra and I saw in 1976 you actually worked for a month in the Netherlands and you worked with them. Can you talk about that a little bit?
+
+Leslie:
+
+[00:10:17] Dijkstra used to had the things, they’re called EWDs, his initials, they’re little papers, things that when he. He thought of something, had some idea, he would write it down and send it out to people. Well, One of those EWDs was about he and some associates, or actually sort of mentees I guess you would call them, wrote this algorithm. It was the first concurrent garbage collection algorithm. A way of writing programs evolved where there was a pool of memory that when a program would need a piece of memory, it would ask some server for it and be given this piece of memory, but at some point it would stop using that memory, but the program itself wouldn’t know that.
+
+[00:11:10] The particular process that created this memory wouldn’t know whether some other process is using that memory or not. So there was an additional process called the garbage collector, which would go around examining the memory and decide which pieces of memory were no longer being used and then put them back on the. What’s called the free list, in which the server that the process that was giving out the memory would be able to take it.
+
+[00:11:43] I looked at it, and I realized that I could simplify the algorithm because he had some special. The handling of the free list was done by a special process which had to worry about its own coordination with the processes that were using the memory. I realized that that free list could just be made part of the regular data structure, so it didn’t need special handling. And that seemed to me like a very simple idea, a very obvious idea.
+
+[00:12:22] And I said it to him. And then when I got the next version of the paper, I discovered he had made me an author. And I thought that was very generous of him to have done that because it seemed like a very simple idea and very obvious idea. And I later realized much later that it was not an obvious idea to most people, and that that had actually impressed Dijkstra. That was the only thing I actually did with Dijkstra.
+
+[00:13:02] Many years later. He said that I had a remarkable ability at abstraction. Only in very recent years. I mean, maybe after I got the Turing Award, that I realized that the reason for my success, the reason I wound up getting a Turing Award, was not that I was particularly that smart, but that I had this gift of abstraction. And Dijkstra was smart enough to realize that I was invited to spend a month, but not with Dijkstra, with a colleague of his, Carl Scholten.
+
+[00:13:46] Only one thing that was ever published came out of that. Carl and I would meet with Dijkstra once a week. In the course of that discussion, the idea somehow came up that led to a variant of the Bakery algorithm that I wrote up and published. So that was the one tangible result that came from my month in the Netherlands.
+
+Ryan:
+
+[00:14:14] Yeah, I saw that you wrote that you spent one afternoon a week working, talking and drinking beer at Dijkstra’s house. And you kind of don’t remember exactly who was, you know, in charge of what on that paper.
+
+Leslie:
+
+[00:14:29] Yeah, well, I don’t think I was really could have gotten that drunk, because I probably drove to the meeting and back from the meeting.
+
+Ryan:
+
+[00:14:38] Right, right.
+
+Leslie:
+
+[00:14:39] The Dutch beer that I was drinking was not very alcoholic.
+
+
+## 00:14:44 — His most cited paper
+
+
+Ryan:
+
+[00:14:44] I wanted to talk about your most cited paper, the one titled Time Clocks and the Ordering of Events and Distributed Systems. What’s the story behind the paper and the problem you were solving with it.
+
+Leslie:
+
+[00:14:56] The origin was simple. Well, somebody sent me a paper on building distributed databases where you’ll have multiple copies of the data at different places and you need to keep them synchronized in some way. I looked at it and I realized that their solution had this problem that it had the property that things would be executed as if they occurred in some sequence, but that sequence could be different from the sequence in which they actually happened.
+
+[00:15:33] The notion of what happening before means is not obvious or not obvious to most people. But I happen to learn about special relativity in particular what’s known as the. It’s the space time view of special relativity where you basically consider space and time together as one four dimensional thing. Einstein wrote his paper in 1905, and in I think it was 1909, somebody whose name I’m blocking on provided this four dimensional view.
+
+[00:16:18] And that four dimensional view has the particular notion of what it means for one event to occur before another. And that notion is that one event happens before another. If a signal was emitted from the first event and received by whoever did that second event before that second event happened, but the communication could not travel faster than the speed of light, because nothing can travel faster than the speed of light.
+
+[00:16:53] Well, I realized there was an obvious analogy. The notion of happens before is exactly the same as in relativity, except instead of being whether one event can influence another by things traveling at the speed of light, it’s whether the first event could have affected the other by information sent over messages that were actually sent in the system. The thing that blew people away was this definition of happened before in a distributed system.
+
+[00:17:33] Also, this was the first paper I would call it had a scientific result about distributed systems. I made perhaps a mistake that I was warned against at some point of having two ideas in one paper. The other thing that I realized was that there was an algorithm that would show whether one event, it would produce an ordering that satisfied that condition. That if one event happened before the other, then that first event would be ordered before the other.
+
+[00:18:11] I realized that if you had an algorithm to do that, you could use it to basically provide the synchronization you needed for any distributed system, because you could describe that system in terms of a state machine. A state machine, as I described it then, is something that has a state and process executes commands that need to be executed in order. The command simply is something that makes a change of the state and produces a value.
+
+[00:18:50] And so you just describe this state machine as just how commands affect the state and how they produce and what the new state is as a function of the original state and what the value is as a function of the original state. It turns out that this was very obvious to me, but that’s really in practice, the important idea in that paper, because it showed that this method of building distributed systems by thinking in terms of state machine and thinking about concurrent systems in terms of state machines, but that part was completely ignored.
+
+[00:19:37] As a matter of fact, twice I talked to people about that paper and they said there was nothing in that paper about state machines. I just had to go back and reread the paper to be sure I wasn’t going crazy. And it really did talk about state machines. It’s important for another reason. If you’re trying to understand a concurrent program, recurrent programs are written. The Bakery algorithm is really an exception.
+
+[00:20:07] Concurrent programs are written assuming atomic actions, so that you assume that the execution behaves like a sequence. You can assume that the execution proceeds as a sequence of events. It turns out that the way to understand why does a program produce the right answer? Well, the answer is, well, you give it the the right input, you give it the input, and then it produces the right answer. Well, but by the time you’re in the middle of execution, what it was given at the beginning is ancient history.
+
+[00:20:47] The only thing that tells the program what to do next is its current state. The way to understand a program, a simple program that just takes input and produces an answer, is to say what is the property of the state at each point that ensures that the answer it produces is going to be correct? That property, which is mathematically a Boolean valued function of the state, is called an invariant. And understanding the invariant is the way to understand the system, the program.
+
+[00:21:32] And I realized that the same thing is true of concurrent systems and concurrent programs. People like to write proof, behavioral proofs, reasoning about sequences. And the problem with that is that the number of sequences, possible sequences, is exponential in the length of the sequence. While your complexity of your reasoning gets to be very complicated, it’s very easy to miss cases. But the complexity of an invariance proof, the complexity of the invariant basically is, well, oh God.
+
+[00:22:12] The number of possible executions is exponential in the number of processes. But. The behavior of the proof of an invariance proof is quadratic in the number of processes. That’s basically why invariance proofs are better. But for a long time that people doing distributed systems theory are trying to do it develop methods and formalism, something that are based on partial orderings and that they’ve published a lot of papers, but it’s just not the way.
+
+[00:22:56] If you want to do it in practice, that’s not the way to do it. I shouldn’t say it’s not the way. There are algorithms like the Bakery algorithm that thinking impartial orderings is in fact a very good way of doing it. But those are the exceptions. The method that works that you can be sure will work is the use of invariants.
+
+
+## 00:23:26 — The “Byzantine Generals” problem
+
+
+Ryan:
+
+[00:23:26] I want to talk about the next paper, which is the Byzantine Generals problem. I think that’s something that we hear about and we learn about when you’re going through college and computer science. And the name is great. And I want to know the story behind that problem.
+
+Leslie:
+
+[00:23:44] After I wrote that time clocks paper, that was a tells you how to build a distributed system, but assuming no failures. And it was obvious that, you know, distributed. One reason for distributed systems is you have multiple computers. So if one fails, you can, you know, keep going. Like in particular, that was the problem that was being solved at SRI when I joined it. But before I got to sri, I started working on that problem.
+
+[00:24:21] And there’s no notion of idea of what I should think about is what can a failure do? So I assumed that the worst possible case that a failed process might do absolutely anything. I came up with an algorithm that basically would implement a state machine under that assumption.
+
+[00:25:08] you can relay messages and people can check that the relayed message is actually the one that was originally sent. And so a solution using that. When I got to sri, I realized that people were trying to solve the same problem. But there are two differences. First of all, at the time I did this was 1975, very few people knew about digital signatures. And in fact, I don’t remember when the Diffie Hellman paper was published, but it was around 1975.
+
+[00:25:46] I happen to know about digital signatures because Whit Diffie, who was one of the two authors of that paper, was a friend of mine. In fact, at one point we were at a coffee house and he was describing these things and he said, we have this problem of building digital signatures we haven’t solved. And I said, oh, that seems easy enough. I sat down and literally on a napkin, I wrote out the first digital signature algorithm.
+
+[00:26:20] It was not practical at the time. Because it required basically something like 128 bits to sign one bit of the thing that you’re signing. It’s not quite that bad as you might think, because you could use sign not the entire document, but a hash of that document, which you assume is people cannot forge the hash.
+
+[00:26:54] You can’t take a hash and find some other hash that or some other document that satisfies that hash. But anyway, that’s why I had. Digital signatures were part of my toolkit. So the people at SRI didn’t have that, but they also had a nicer abstraction of it. Instead of getting agreement on a sequence among the processes on a sequence of commands, they would agree, have an algorithm for agreement on a single command, and then that algorithm would be executed multiple times to.
+
+[00:27:40] And that was a nicer way of describing what you’re doing than my method. The first paper that was published gave both their original, but since they didn’t have digital signatures, they used a different algorithm and they had the property that to tolerate one faulty process you needed four processes, whereas if you use digital signatures you only needed three processes. So the original paper contained both algorithms.
+
+[00:28:21] And so I was one of the authors. The other algorithm without digital signatures is more complicated. And the general one for N processes was really a work of genius. It was almost incomprehensible. You just had to read this complicated proof that for the arbitrary case of an arbitrary number of processes, to tolerate N faults you needed 4N processes, whereas with digital signatures you need 3N processes.
+
+[00:28:56] And the algorithm for single fault wasn’t hard. But the one for multiple four, four parts, Marshall Pease was the one who did it and just brilliant. Later, in a later paper I discovered a simpler proof, one that was an inductive proof, namely proof that if it works for n minus 1, it worked for n. With 3n, it works for 3 times n minus 1. The original paper was, you know, the original one was just brilliant.
+
+[00:29:34] Who would have discovered it? Anyway? So we published that paper and I realized that this was this whole idea of Byzantine fault. So the thing is, well, Byzantine fault is one that where assume the process can do anything. Now I was assuming that process can do anything because I didn’t know what to assume. But the people at SRI had the contract for building a multi process, multi computer system for flying airplanes.
+
+[00:30:08] And so they were the ones who appreciated the need for solving processes that can do malicious things because they really couldn’t assume what it would do. And every time you would get an algorithm and you’d see, oh, well, this algorithm. Try to get an algorithm with three processes for one fault. You’d find that, oh, this works. It must be. Really couldn’t happen in practice. And then you’d be able to find some sequence of plausible failures that would lead the algorithm to be defeated if there were a faulty process.
+
+[00:30:50] So you needed four. For some reason, I thought that digital signatures was almost a metaphor in the algorithm, that it should be possible, since we weren’t worried about malicious failures, but just things that happen randomly, that there should be some way of writing a digital signature algorithm that would have a sufficiently low probability of failing. But I never worked on that and nobody else ever did.
+
+[00:31:31] So that algorithm was pretty much ignored because digital signatures were very expensive in those days. I don’t know what’s being done now, because computers are. Digital signatures are just computing and computing is cheap. But I remember at some point I happened to be communicating with someone who was an engineer at Boeing. I asked whether they knew about those results. He said yes, when that he, in fact, was the one at Boeing who had read that paper.
+
+[00:32:10] And his reaction was, oh, shit, we need four. Four computers. But anyway, I realized that this was an important result and it should be well known. I had learned one thing from Dijkstra. Dijkstra, one of the things I learned from Dijkstra, he wrote this paper called the The Dining Philosopher’s Problem. And that paper got a lot of attention. But the Dining Philosophers problem, I won’t go into what it is, but I think the basic problem was not particularly interesting, but it had a cute story to it.
+
+[00:32:50] It involved a bunch of philosophers sitting around the table with some funny kind of spaghetti, that it required two forks, and there was one fork between each faarch would be shared with two people. And I think realized it was because of that cute story that that problem was popular. And so I decided that our work needed a cute story, a nice story, and I invented Byzantine generals. The idea being that you have a group of.
+
+[00:33:24] For the one failure case, you have four generals who have to agree whether or not to attack. And if they all attack, they’ll win the battle. But if only some of them attack, or even if three of them attack, they’ll win the battle. But if only two attacked, they would lose. But one of the generals might be a traitor. How could you solve this problem? It’s phrased in terms of these generals having to communicate and decide whether to make the single decision whether to attack or retreat.
+
+[00:34:06] And I called it the Byzantine Generals problem.
+
+Ryan:
+
+[00:34:11] I saw in your notes about the problem that there was maybe a subset of the problem or a prior version that was called the Chinese generals problem or something like that.
+
+Leslie:
+
+[00:34:22] Oh yeah, yeah. I was. There’s a different problem that Jim Gray described as an impossibility result. Basically it’s called the Chinese generals problem. I won’t bother going into what it is that gave me the idea of generals. I actually originally thought of the idea of Albanian generals because at that time Albania was a black hole as far as the rest of the world was concerned. It’s a communist regime, part of the Soviet bloc, but it was even more Soviet than the Soviet Republic and more restrictive.
+
+[00:35:09] My boss said, well there are Albanians in the world so you shouldn’t that and so should have a different name. And then I realized that Byzantine, there aren’t any Byzantiums Byzantines around. And that was the perfect name.
+
+Ryan:
+
+[00:35:25] It’s interesting to me in the story that because this isn’t the first time the problem was specified, but it’s the first time that you had named it, gave it a good catchy name essentially and added some additional results. What was it that you saw in that problem that made it interesting? Or rather how do you know that a problem is worth putting extra time into?
+
+Leslie:
+
+[00:35:50] Oh, this one, it was because, you know, it was obvious that people were going to be building, that computers were going to fly or airplane. Fly airplanes. And the reason in fact because was, was that this was during the time of the oil crisis in the 70s and that they knew, people knew that they could build more energy efficient planes by reducing the size, the size of the control surfaces. But that made the plane aerodynamically unstable and a pilot couldn’t make all the adjustments needed to keep it flying, but a computer could.
+
+[00:36:31] So it was clear the future was airplanes were going to be being flown by computers as they are today. People didn’t realize, they thought that if you want to be able to tolerate one fault, you just use three computers. And they didn’t realize that with arbitrary faults you need four. And so that was a really important result. And that’s why I believe that it needed to be well known.
+
+Ryan:
+
+[00:37:03] Generally when you look at the problems that you are solving with your work, how’d you decide? Because if you’re working at a company, you can decide based off of maybe the, I guess the impact to the company, like is it going to make more money or save cost or something like that. But I wonder in your work, across your career, you know, think about the bakery problem or some of Your later work as well.
+
+[00:37:31] How do you know it’s so open ended? How do you know which problems are the ones worthwhile?
+
+Leslie:
+
+[00:37:37] Throughout my career I worked for private companies, you know, not. Not in academia or for the government. And so some problems arose because of sometimes an engineer would have a problem and come to me and so Disk Paxos for example was a case of that that somebody actually wanted an algorithm to do what it did.
+
+
+## 00:38:05 — The Paxos Algorithm
+
+
+Ryan:
+
+[00:38:05] You mentioned earlier Paxos and I know that’s one of your most famous works. Curious about the story behind maybe that paper and the problem you’re solving.
+
+Leslie:
+
+[00:38:17] Well, the problem I was trying is exactly the same problem as I was solving in the Byzantine General’s work. Basically building a fault tolerant state machine. But by that time it was the faults that interested industry were ones where failure meant that the computer just stopped, not that it did arbitrary things. Paxos is an algorithm for building fault tolerant systems for handling that class of faults.
+
+[00:38:57] The people I was working at was the DECSERC lab, which I joined in 1985 and they built a. One of the first operating systems that was a distributed operating system. So that basically everybody had. Basically these are the people who had come from Xerox PARC and had invented personal computing, but they also had the notion of distributed personal computing. They invented the Ethernet for that. So basically all of the computers in the building were on a single ethernet network and shared a common storage and they had an algorithm for maintaining consistency of that storage.
+
+[00:39:56] And I didn’t believe, well, they didn’t have an algorithm, they had an operating system with code that did that. I didn’t believe that what they did was possible. Namely I didn’t think. Well, I forget exactly why I didn’t think it was possible. But at any rate I started try to come up with an impossibility proof and then the solidity proof. Well, an algorithm to solve this would have to do this and in order to do this it would have to do that.
+
+[00:40:38] And at some point I stopped and said oh, this isn’t a proof, it can’t. This is an algorithm that does it.
+
+Ryan:
+
+[00:40:45] You said that they had code but not an algorithm. What do you mean by that?
+
+Leslie:
+
+[00:40:53] When most people sit down and start writing programs, they start by thinking in terms of code. One of the things I learned fairly early in my career, I don’t remember exactly when that back in the days when I started writing current algorithms, people talked about, people were calling them programs and I was probably calling them programs too. I mean I remember then at some point I realized That I wasn’t talking about programs, I was talking about interested in algorithms.
+
+[00:41:29] And an algorithm is something that’s more abstract than a program. An algorithm can be a program is written in some particular code, but an algorithm can be implemented in programs written in any kinds of code. It’s something that’s, that’s at a higher level of abstraction. And of course I like that because abstraction is something I was good at, even without realizing that that’s what I was doing.
+
+[00:42:01] And so what I’ve spent a large part of my career, basically maybe about 2000 or so onward was getting people who build concurrent systems to not just write code, but to have an algorithm. Now a system does lots of things, but there should be some kernel of the program that’s involved with synchronizing the different processes or distributed system, the different computers. That code is very hard to get that correct.
+
+[00:42:53] You don’t want to think in terms of code because that encoding conflates a lot of issues that are irrelevant to the concurrency aspect. You should be thinking, first get an algorithm that does that synchronization and then implement that algorithm.
+
+Ryan:
+
+[00:43:12] I was looking at the Paxos paper and some of your notes about it, and I saw that there’s an eight year gap between when you came up with the algorithm and when the paper was actually published called Part Time. Parliament is the name of the paper. Why is there an eight year gap?
+
+Leslie:
+
+[00:43:34] Well, the referees originally said, well, this paper is okay, not terribly important. But fortunately Butler Lamson realized the importance of the algorithm together with the idea of getting implement anything because it’s implementing a state machine, you know, went about proceed proselytizing, building your systems, you know, using Paxos, you know, and, and thinking in terms of state machines. And so, you know, I wasn’t.
+
+[00:44:13] So the idea was getting out. So, you know, I was in no hurry to publish. So, you know, I just let the paper sit. And eventually there was a new editor that came along and he said that I think the status of the paper was that it was just, it had been accepted but needed revision. And so he decided that, yeah, let’s publish it. And it was eventually published with a few things to take, well to mention work that had been done in the interim.
+
+[00:44:58] And what I got is got a Keith Marzullo to do that part for me. And so the story was that this manuscript, well, the story about Paxos was that it’s a, this happened centuries ago and this manuscript. And I use that to the effect that when something, the tales of something were I considered obvious and not interesting. The paper would say it’s not clear how the Paxons, what the Paxons did at this point.
+
+[00:45:38] At any rate, Keith kept up that idea that this was a description of this ancient thing.
+
+Ryan:
+
+[00:46:04] writing too, when you were talking about presenting the paper initially, you even dressed up in an Indiana Jones style archaeologist. Well, how did that go when you presented about this Paxos paper and algorithm?
+
+Leslie:
+
+[00:46:17] Well, I think the lecture may have gone well, but I think nobody understood the algorithm. Where nobody understood the significance of the algorithm.
+
+Ryan:
+
+[00:46:27] It sounds like no one understood it except for Butler Lamson. What did he see that made him unique, I guess.
+
+Leslie:
+
+[00:46:35] Well, he had a good understanding of building systems. He really deserved his Turing Award. He was one of the original people at Xerox PARC who were building distributed personal computing. He and Chuck Thacker, I think, were probably the two senior people in that lab.
+
+
+## 00:46:57 — Paxos vs Raft Algorithm
+
+
+Ryan:
+
+[00:46:57] I saw later there was a paper which describes a new algorithm which seems to solve the same problem, the Raft paper. I was wondering if you read that and what your thoughts were on that versus Paxos.
+
+Leslie:
+
+[00:47:11] The authors of that actually sent me a draft of the original paper and I looked at it and said, I forget whether I said, send it back to me when you have an algorithm or send it back to me when you have a proof. I forget which one it was. And you got the idea and they really, they did write, you know, ad proof the paper or not. Yeah, I never read future later versions. And someone whose judgment I value said, you know, had read it and said that it’s basically it’s the Paxos paper, but, you know, but with some of the tales left unfinished by the Paxos paper, by some of the details filled in, but they described it in a very different way.
+
+[00:48:07] The basic idea of what Paxos works is it’s two phases and you’re trying to implement a sequence of decisions. It turns out you can do the first phase once, it involves a leader and the leader has to get elected. But it turns out that you can do the first phase once and you don’t have to do it again as long as you have the same leader. But it’s only the second part that you have to do. And then you have to let the new leader, if a new leader fails, and do the first part.
+
+[00:48:56] So think about it in those two phases. But the way people, way engineers seem like to think about it is, well, you do this you’re talking about the first part, the second phase, you keep doing this until the leader fails and then you go back, then you have to do this thing. So you. It’s explaining it in the opposite order. And in fact, when you start it from fresh, you don’t have to do the first phase.
+
+[00:49:31] Basically, what started the first phase could be just built in into the initial state. But I think that that’s those two phases the way to understand it. But you know, the RAFT people also had this idea that Raft is better because it’s simpler. I must say that a lot of people say that Paxos is hard to understand, and I don’t understand why. I mean, I’ve explained it to people in five minutes and they understood it.
+
+[00:50:02] At any rate, the RAFT people said that one of the ideas were simpler because. And they even have Paxos to one class and Raft to another. And they took. And then yes, the people, all the students said that yes, it was more understandable. The interesting thing about it though is that there was a bug discovered in Raft and fixed. But I believe that the algorithm that they found more understandable was one with that bug.
+
+[00:50:36] So made me realize that what most people. What does understanding mean? For me, understanding means you can write a proof of it. But what understanding means for most people is a warm fuzzy feeling. The RAFT description gave them more of a warm fuzzy feeling because, you know, that that seems to be the way programmers like to think about the algorithm, the second phase first, until you get a failure.
+
+[00:51:18] But the way I describe it is one that helps you get a better understanding of why it actually works.
+
+
+## 00:51:26 — Building LaTeX
+
+
+Ryan:
+
+[00:51:26] So, yeah, we talked about a lot of your papers. I know one of your other contributions, whether you knew it or not at the time, was Latex and building that and something that has impacted the entire academic community. What’s the story behind wanting to build latex?
+
+Leslie:
+
+[00:51:46] Oh, that was very simple. I was wanted. I was in the process of starting to write a book and it was clear that tech was the basic typesetting system that one had to use. But I felt that I would need macros to make tech do what I wanted it to do. And so I, I figured with a little extra effort, I could make macros usable by other people. The system I had been using before tech is called Scribe.
+
+[00:52:51] Scribe will do the formatting. Well, Scribe didn’t do that great job of formatting, but obviously I like the idea abstraction that it’s the ideas that matter, not the text that the writing that matters, not the typesetting. And so I actually, at some point I met Peter Gordon, Addison Wesley, I’m not sure what you would call him, but he looks for books to publish and he convinced me that I should write a book.
+
+[00:53:41] And those days it never occurred to me people would actually spend money for a book about software. But you know, what the hell. And what he did was he introduced me to a typographic designer at Addison Wesley who was responsible for really for the typographic design that’s in the standard latex styles. And so, you know, basically I just did that in my quote, spare time. You know, took me six or nine months or so.
+
+[00:54:29] I suppose the statute of limitations has run out, but I was really spent some time working on that when I was allegedly billing the time to some project that had nothing to do with it.
+
+
+## 00:54:45 — Why writing improves your thinking
+
+
+Ryan:
+
+[00:54:45] On the topic of writing, you have a quote that I really enjoy. If you’re thinking without writing, you only think you’re thinking. And I was curious to hear your thoughts on what you mean by that.
+
+Leslie:
+
+[00:54:59] Well, it was really meant for people building computer systems. You have an idea and you think it’s going to work or you have something that you think is something that somebody else will want to use. Well, write a description of it. There’s an old maxim that I heard that is write the instruction manual before you write the program. Great advice. I did not do that with latex, but definitely when I was writing the book and I discovered that something was hard to describe, hard to explain, that needed to be changed, and I made a number of changes to it as a result of that.
+
+[00:55:51] But I didn’t start at the beginning with the instruction manual.
+
+Ryan:
+
+[00:55:55] Why is writing conducive to good thinking?
+
+Leslie:
+
+[00:56:00] Because. It’s very easy to fool yourself. I mean, that underlies my whole idea of writing proofs. One thing I learned is that you had to write a correctness proof of a concurrent algorithm. And when my algorithm is starting to get more complicated, the proof started. I started right. You know, I was a math PhD in math, I knew how to write proofs and I was starting writing the proofs the way I would normally do and I realized it just didn’t work because there were just so many details involved and I just couldn’t keep track of them and whether I had done it.
+
+[00:56:49] And so as a computer science know how to deal with concurrency. It’s hierarchical structure. And so I devised this hierarchical structure where a proof is, you know, is a sequence of Steps, each of which has a proof. And the proof is either a para. Well, a proof is either a paragraph or, or a statement, a sequence of steps, each with its proof. And that proof can be either a paragraph or a sequence of steps with its proof.
+
+[00:57:22] So you break the whole problem up into these smaller pieces. So there’s never any question of where is this coming from. You’re stating that this step follows from this step, this step, this step, this step. And if it does not follow from that step, your proof is wrong. The theorem might be correct, but it means your proof is wrong. Well, I discovered that worked great on writing my proofs of programs, but I decided to really.
+
+[00:57:51] I also write proofs of theorems, proofs that are things that are more like ordinary math. And I started trying that on them, and I discovered it worked beautifully. So when I started to try to convince mathematicians to write these proofs, I started in one small seminar. I won’t describe what it was about, but I described this proof through maybe 20 mathematicians or something. Their reaction shocked me.
+
+[00:58:27] They became angry. I really thought that they might physically attack me. So I believe that what’s going on is that when I believe that’s totally irrational, and when people act irrationally, it tends to be out of fear. And what I believe people are afraid of is that mathematicians are afraid of, is that they’re going to have to write their proofs to convince a, a computer program. And in fact, one of those talks I gave, I say very clearly, this doesn’t have to be.
+
+[00:59:09] You don’t have to be any more formal than you do. You can write the exact same thing proof, but it’s just a matter of organizing things. And it’s very simple hierarchical structure. And then when you’re using a fact, mention that you’re using that. Nothing about formalism or anything. After I gave that talk, someone got up and said, I don’t want to have to write my proofs for a computer program. In fact, it’s more work doing that, because the reason it’s more work is that it reveals what you haven’t said and that there’s steps in there that you may think they’re obvious, but you haven’t written them down.
+
+[00:59:58] And if you believe something is correct but don’t really, if you think you know something but don’t write it down, you only think you know it. And that’s where errors come in. That’s where that one third of your paper’s errors can you come in, because it really makes you honest.
+
+
+## 01:00:21 — Why he wasn’t an academic
+
+
+Ryan:
+
+[01:00:21] When I look across Your career, I think you had a lot of contributions people might expect, might come from academia, these papers and things, but you did all of your work in industry. Why did you not see yourself as an academic and more of working for industry?
+
+Leslie:
+
+[01:00:39] Well, I started out programming and I eventually got jobs where took me into what we now call computer science. At the time, I never even realized that there could be a science of computing. It wasn’t until maybe until mid to late 70s that I realized yes, there was the computer science as a computer scientist, but it never seemed to me that computer science was an academic subject. At some point I had to make a choice between doing computer science without calling it computer science or teaching math at a university.
+
+[01:01:29] I chose for fairly random reasons to do computer science. So for the first, I don’t know, well, till maybe the mid-80s or something, it just didn’t seem to me that computer science was something that people needed to go to a university to learn. And I suppose afterwards that I was sort of. I guess I just didn’t think it would be fun teaching computer science.
+
+
+## 01:02:08 — Grand theory of concurrency
+
+
+Ryan:
+
+[01:02:08] I saw in your writing you had a footnote that said somewhere that you felt like a failure at some point because you wanted to develop this grand theory of concurrency and you never discovered it. Do you still feel that way or what are your thoughts on that footnote?
+
+Leslie:
+
+[01:02:28] Lots of people, a large percentage of the people who were doing things like I was doing, which is not a large number of people. There’s this notion that they’re looking for the Turing machine of concurrency. The Turing machine was this abstraction which really captured what computing was and they were looking for something that would be the Turing machine of concurrent computing. Nobody succeeded.
+
+[01:03:09] There are some people who think they’ve succeeded the Patriot or something that I guess I don’t have time to explain, but it was big in the 70s and I was actually surprised to think that there’s still a large community of people doing Patriot. But what I now realize is that Patriot and most of the things that people were doing was really language based. And I was never interested in languages. I’m interested in what the language is expressing.
+
+[01:03:46] And I realized, in some sense, maybe I realized what the Turing machine of computing is. State machines, state machines are a little bit different the way I now describe them. They don’t have commands, they just have a state and a next state relation. Even simpler than talking about commands and values and stuff. And to me that’s the Turing machine of concurrency. But. It doesn’t have the function that Turing machines offer.
+
+[01:04:27] Because what Turing machines Do is describe what’s possible. And state machines can describe anything, including things that are not possible. In fact, there’s a good reason for that. For example, when I describe an algorithm, I will talk about the values of a variable can be any integer. Now, you can’t implement the program where you have any integer. But that makes talking about computer integers would complicate things unnecessarily.
+
+[01:05:22] People have this funny idea that because something is infinite, it’s more complicated. They got it backwards. Infinity was introduced to simplify things. The first thing you learn is arithmetic. You’re learning arithmetic with an infinite number of integers, because if you were restricted to a finite set of integers, arithmetic becomes much more complicated. So the abstractions of mathematics which people find because they don’t have the proper training in mathematics, find difficult are really what’s simplifying things.
+
+[01:06:05] And that’s what you use this mathematics. The state machine is described by me using mathematics. That’s the right, the most powerful way of doing it. But computer people and computer scientists and programmers are really hung up on languages. And so they are looking for, you know, they invent all sorts of languages and they’re all describable. And in fact, if you want to give them a semantics, you would do it in terms of a state machine.
+
+[01:06:40] And they just think that this, this language improves your thinking. It doesn’t. I mean, there are reasons why you use computer languages and you don’t write your program’s code in math. And they involve basically efficiency, but for understanding. You can’t build math, you can’t beat math. And you know, attempts to do it by something that looks like a programming language is just the wrong way to deal when you’re trying to deal with concurrency.
+
+
+## 01:07:25 — Why he doesn’t think he’s smart
+
+
+Ryan:
+
+[01:07:25] When I look at everything that you’ve written and all the stories, there’s these little anecdotes, there’s things where you say things like, you never considered yourself smart, but you noticed that other kids had an awful time understanding things. Or yeah, there’s a problem that you solved where someone else had difficulties, but you don’t view your contribution as a brilliant one or anything like that.
+
+[01:07:51] And that doesn’t connect with me because you’ve also won a Turing Award and done all these amazing things. So how could that be that you in a just merely discover things and are not smart, yet you’ve achieved so much?
+
+Leslie:
+
+[01:08:07] Well, this general thing that psychologists talk about is that when someone is good at something, they don’t realize how good they are at it because it’s simple to them. There’s the opposite one that people who are bad at something think they’re better than they are because they’re bad at it. Or put a little bit more concisely, stupid people think they’re smart because they’re too stupid to realize they’re not.
+
+[01:08:48] The gift that I have is not in some sense raw intelligence. It’s abstraction. And it’s only recently, last 10 or so years, that I realized how much better I am at that than other people.
+
+
+## 01:09:07 — Advice for his younger self
+
+
+Ryan:
+
+[01:09:07] Most other people at this point, you’ve experienced so much, and when you look back on your career, if you could go back to yourself when you just graduated college and give yourself some advice, knowing what you know now, what would you say?
+
+Leslie:
+
+[01:09:24] One thing I’ve learned fairly early in my life is that I shouldn’t waste time trying to answer questions that I don’t have to answer. I don’t think about what I should have done, because that’s a question that I don’t have to answer.

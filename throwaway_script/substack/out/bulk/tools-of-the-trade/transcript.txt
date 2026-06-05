@@ -1,0 +1,40 @@
+> "Give me six hours to chop down a tree, and I will spend the first four sharpening the axe." — Abraham Lincoln
+
+"Give me six hours to chop down a tree, and I will spend the first four sharpening the axe." — Abraham Lincoln
+
+It’s easy to get caught up in the urgency of your main project work and neglect tooling and automation. Setting aside some time to optimize common workflows will help you have more impact in the long run.
+
+
+## Why? Leverage & Satisfaction
+
+
+Developer tooling has significant impact because of leverage. It’s a productivity multiplier for everyone around you. Imagine you build a tool that 100 engineers are using. Even a small 1% improvement in their productivity would save time equal to having an extra engineer around.
+
+Aside from the potential impact, building developer tooling is satisfying. You make your life easier by automating tedious tasks. It’s also rewarding to see people around you move faster because of your tools.
+
+
+## Understanding Tradeoffs
+
+
+However, we shouldn't automate everything since there are tradeoffs. Investing in tooling will initially slow progress on our main projects. We should only work on tooling if the incremental gain is higher than working on the problem directly. If done right, it should look like the “theory” panel in the XKCD comic below:
+
+The benefit of tooling and automation comes from how much time we can save. Here's a simple way to think about it:
+
+Total Time Saved = Task Frequency x Time Savings
+
+Tasks that are frequent or expensive have the highest potential benefit. XKCD has a great table showing how long you should spend based on the total time you can save across 5 years:
+
+
+## How To Maximize Your Impact
+
+
+We should always look for ways to add value immediately. The faster we can make a tool available, even if it isn’t perfect, the faster we’ll be able to get value out of it. Releasing a minimum viable version also has the added benefit of letting you iterate on feedback. Avoid working on nice-to-haves like a clean user interface or handling edge cases at first.
+
+Once you have something useful, distribute it to maximize leverage. This might mean that you package the tool and create a small writeup so it is easier for others to use. From my experience, increasing adoption also improves the tools since engineers who use them often contribute. This creates a virtuous cycle since the more people who adopt the tool, the better it gets, which in turn drives more adoption.
+
+It is easy for our main project work to cannibalize work on tooling. We must set aside time for tooling work to prevent this. There are many ways to do this, but you might consider scheduling a team-wide focus week or hackathon for tooling. Allocating dedicated time works much better than hand-wavy guidance to spend 10-20% of your time on tooling improvements.
+
+If you have any past tooling success stories, I’d love to hear them! Feel free to share in the comments below; I'll reply to everyone as usual.
+
+Thanks for reading,
+Ryan Peterman

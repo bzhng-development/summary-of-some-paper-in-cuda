@@ -1,0 +1,62 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 11,000 readers this week 🙏 🎉
+
+This week, we’ll continue our “FAANG Career Ladder” series, comparing IC levels from Junior (L3) to Principal (L8) at FAANG-like companies.
+
+If you enjoy the content, drop a like. It helps me prioritize the content you want to see more of. Here’s the L5 vs L6 article; enjoy!
+
+Staff Engineers (L6) are at the same level as engineering managers. They solve problems that few others can and play a critical role in setting team direction. They lead major initiatives and influence the engineering culture of teams around them.
+
+Some say that promotion from L5 → L6 is harder than L6 → L7 due to the significant behavior changes needed. Here are the major differences between L5 and L6.
+
+
+## Influence Across Teams
+
+
+Staff Engineer’s projects often extend beyond their team. They take on larger problems by influencing other teams without authority.
+
+Once L6s establish these workstreams they tackle the hardest problems and work through others. They focus on outcomes and don’t always do the work themselves. Working through delegation and influence across teams is the biggest mindset shift in going from L5 → L6.
+
+This style of working isn’t limited to their main project impact. L6s should also be using their influence to inspire a culture of higher engineering quality and reliability across teams.
+
+
+## Creating Scope
+
+
+Senior Engineers (L5) build roadmaps of several medium-to-large features that help achieve their team’s goals. In this case, the problem and its business impact are clear; we just need an engineer to create a plan to solve it.
+
+Staff Engineers (L6) handle more ambiguity. They don’t just solve known problems; they create scope by finding impactful opportunities and problems. Managers work with their L6s to expand the scope of the team.
+
+
+## L6 Project Scope
+
+
+Big tech companies determine what level projects are in a few ways. Here’s a comparison of the criteria for L5 and L6 levels:
+
+Project complexity also distinguishes L6 scope. Problems that L5s can’t solve are considered L6 scope. This is why specialists often have L6+ scope; their projects can’t be done by others by definition.
+
+These criteria aren’t a checklist. Work can be L6 scope by meeting only some of these. Your manager will use these criteria to argue that your work is L6 scope. This is one of the reasons why it’s important to align with your manager on your work’s scope. If you only work on L5 scope, you won’t get any closer to promotion, no matter how good your work is.
+
+
+## People Development
+
+
+Staff engineers uplift others around them. They should have the ability to help L5 engineers grow. There are a few ways they uplift others:
+
+  - Mentorship - Dedicated mentorship, preferably with senior engineers
+
+Mentorship - Dedicated mentorship, preferably with senior engineers
+
+  - Knowledge sharing - Writing wikis, giving presentations, contributing to Q&A groups
+
+Knowledge sharing - Writing wikis, giving presentations, contributing to Q&A groups
+
+  - Collaborations - Growing others while working with them (e.g. code reviews, design reviews, discussions)
+
+Collaborations - Growing others while working with them (e.g. code reviews, design reviews, discussions)
+
+L6 engineers should also contribute to growing the organization. This means that they help with recruiting and partner with their manager on improving team health.
+
+Getting to the Staff Engineering level can take a long time. Since L5 is considered “terminal”, there is no external pressure to achieve L6 fast. However, if you are eager to grow as fast as possible I plan to write a “speedrunning” guide for the Staff level. In it I’ll share some of the learnings that helped me get promoted to Staff in 1 year. Stay tuned!
+
+Thanks for reading,
+Ryan Peterman

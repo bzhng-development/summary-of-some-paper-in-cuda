@@ -1,0 +1,76 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups, and career growth. Thank you for your readership, we hit 44,000 readers this week 🙏 🎉
+
+This week, I’m writing about how to drive meetings which is a necessary skill to grow to Senior (L5). If you find the post helpful, please share it with your friends and coworkers. Enjoy!
+
+Driving meetings is a critical skill for growing to Senior (L5). It’s a baseline expectation to have team-level influence and lead projects of multiple engineers.
+
+It’s not taught anywhere though. After driving hundreds of meetings, I’ve summarized what I learned so you can develop this skill faster.
+
+
+## A Necessary Evil
+
+
+Every engineer knows that meetings can be terrible for productivity. They disrupt your focus time and waste time on context switching. Many meetings can be replaced with async discussions.
+
+Meetings do have their place though. They are more efficient if you need to have back-and-forth discussions. Imagine how slow it’d be to hash out an engineering design if you needed to wait for every reply.
+
+Also, meetings are a good forcing function. People are often less responsive to messages than face-to-face. Sometimes I’ll book meetings to force progress or to get participation in a group activity (e.g. brainstorming).
+
+One tactic that works well is to “threaten” with a meeting by booking it and offering to cancel if we figure it out async. Most of the time, the work gets done before the meeting since people don’t want to attend it.
+
+Lastly, meetings are better if you have something sensitive to share. There’s just no replacement for meeting in person for non-verbal communication.
+
+
+## Before the Meeting
+
+
+Given the cost of meetings, we need to be extra careful that the time is well spent. The best way I know to do that is to prepare well. If you don’t, your meeting is doomed before it starts. There’s two pieces you need to lock down:
+
+  - Who - Invite the smallest group that you need to achieve your meeting’s goal. Every person attending costs the company.
+
+Who - Invite the smallest group that you need to achieve your meeting’s goal. Every person attending costs the company.
+
+  - What - Make the goal of the meeting clear. Set the agenda so you can achieve that goal. I often send this to attendees in advance.
+
+What - Make the goal of the meeting clear. Set the agenda so you can achieve that goal. I often send this to attendees in advance.
+
+Do all the necessary pre-work to achieve the meeting’s goal. This might mean pulling data or outlining the options in advance. Don’t waste everyone’s time by doing things on the fly.
+
+
+## During the Meeting
+
+
+When you’re driving the meeting, you’re not just a normal attendee. You have extra responsibilities to lead the meeting and make sure everything goes smoothly. Here’s a typical example from start to finish:
+
+  - Greeting - Welcome people and set expectations on when you’ll start (people should sense you’re driving the meeting)
+
+Greeting - Welcome people and set expectations on when you’ll start (people should sense you’re driving the meeting)
+
+  - Preamble - Give a brief explanation of the goal and agenda
+
+Preamble - Give a brief explanation of the goal and agenda
+
+  - Moderation (important) - Guide the group towards the goal. This means you manage the floor and keep track of time. If someone is speaking too long or getting off track, kindly guide the conversation back.
+
+Moderation (important) - Guide the group towards the goal. This means you manage the floor and keep track of time. If someone is speaking too long or getting off track, kindly guide the conversation back.
+
+  - Conclusion - Summarize the discussion, agree on follow-ups, and assign ownership. These are your meeting’s “impact”.
+
+Conclusion - Summarize the discussion, agree on follow-ups, and assign ownership. These are your meeting’s “impact”.
+
+Moderating the meeting is the most stressful part and takes time to get right. After running tons of meetings, one thing that relieved stress for me was that I realized I didn’t need to have all the answers when leading a meeting. Knowing that you can ask others or look it up after takes a lot of pressure off.
+
+
+## After the Meeting
+
+
+Take the rough follow-ups you have and polish them to share with the others, so they don’t get lost. It’s important that every follow-up has one owner. If you spread the responsibility among more than one person then it’s easy for people to think someone else will handle it.
+
+If there are other people who didn’t attend but should know what happened, summarize what was discussed and share it.
+
+It’s common to feel uncomfortable driving meetings, but if you want to grow to Senior you’ll have to learn how to do this. One thing I can promise though is it gets easier. After running tons of meetings, I don’t get nervous anymore.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already.
+
+Thanks for reading,
+Ryan Peterman

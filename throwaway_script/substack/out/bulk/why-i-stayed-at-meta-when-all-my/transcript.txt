@@ -1,0 +1,40 @@
+I started at Meta in 2018 with five friends from college. Over time, they followed common industry advice - switch jobs often to grow your career and compensation. Me staying at Meta became more and more unusual. Two stories show why I stayed when all my friends left.
+
+
+## An Engineer Who Never Broke Anything?
+
+
+When you’re a new grad, you look up to more experienced engineers. Now imagine, one of those engineers is the “tech lead” and everyone you admire looks up to that person. For me, that tech lead was Lukas Camra, my soon-to-be manager. Rumor has it, that Lukas never broke production in all his years as an engineer at Meta, though that might just be team folklore.
+
+Lukas exceeded my expectations as our manager. Because he was a sharp engineer himself, he knew how to help engineers grow fast. Looking back after working with him for 5 years, it is obvious why my team has been so stable.
+
+When you get lucky with a manager like that, you look to stay a little bit, but 5 years? It takes more than a good manager to keep engineers when we have so many options of where to work. There’s one more story that makes it clear why I chose to stay. While this story might seem like an exaggeration, I swear it isn’t.
+
+
+## What a “10x Engineer” Really Looks Like
+
+
+Imagine an IC who writes and reviews more code than anyone in your org. Someone who, because of his domain expertise, receives the most questions yet is also the most responsive. This IC also consistently solves problems that many Staff engineers can’t. And if that’s not enough, this IC’s main project work often has industry influence. Hard to believe, but I’ve seen Haixia Shi do this half over half since I started working with him.
+
+He’s the de facto video domain specialist for Instagram, which is kind of a big deal for an app where video is a central part of the user experience. I have never received formal mentorship from Haixia, but I didn’t need to. Engineering excellence radiates from him. Strong engineers become even stronger just by asking him technical questions and seeing how he solves problems. Having peers like this makes coming to work delightful and is one of the key contributors to my engineering career growth.
+
+Staying at Meta longer than any of my friends helped me grow into a Staff Engineer (L6) in 3 years. My domain knowledge allowed me to deliver more in less time. I was able to move fast because I was so familiar with our tooling, tech stack, and organizational processes.
+
+Also, another benefit to staying so long was I built organizational trust. People knew I was a person who could consistently get the job done. As my skills grew, people gave me more responsibility. As I delivered on that, people trusted me with even more scope. This virtuous cycle gave me momentum that helped me grow at a faster and faster rate.
+
+Staying at Meta for as long as I have has treated me well, but how long should you stay to maximize career growth? I polled over 1,200 people on Twitter to find out.
+
+
+## How Long Should You Stay?
+
+
+Almost everyone agrees that 1 year is too short. Onboarding consumes much of that time, leaving little to utilize your knowledge. Past that, it depends on your situation.
+
+If your job is treating you well and offers growth opportunities then there’s no reason you shouldn’t stay longer than 4 years. At the same time, it could be a good idea to leave fast if you’re stagnating. I’m glad I left my first job after 8 months and in hindsight, it was a great decision. Here are the full results from the poll if you’d like to draw your own conclusions.
+
+We have a regular team health survey at Meta that asks “how long do you plan to stay at the company?” The funny thing is, I don’t think I’ve ever answered that I’d stay longer than 2 years even though I love my work. Yet, here I am 5 years later. Staying isn’t something you plan at the outset but rather something you regularly check in on.
+
+At the end of the day, how long you should stay is a case-by-case decision. That’s why it’s important to have mentors you can confide in to help you with career decisions like these.
+
+Thanks for reading,
+Ryan Peterman

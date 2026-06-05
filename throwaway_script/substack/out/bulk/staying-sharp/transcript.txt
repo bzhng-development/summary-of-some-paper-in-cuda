@@ -1,0 +1,44 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 60,000 readers this week 🙏 🎉
+
+This week I’m sharing a note about why you should interview periodically even when you’re happy. Hope it is helpful; enjoy!
+
+An engineer with one of the fastest-growing careers I’ve ever met (IC3 to IC8 in 5 years at Meta) told me something I didn’t expect.
+
+He said he interviews at other companies once a year. Yet he’s worked at Meta for over a decade now. Interviewing and choosing to stay gave him confidence that he was always in the best spot.
+
+Later, I heard similar advice from a Staff (IC6) mentor of mine. Here’s why you should consider interviewing even when you enjoy your current role.
+
+
+## Abundance & Opportunity
+
+
+The worst time to look for a new job is when you need one. Needing to succeed can make you anxious and affect your interview performance.
+
+Even if you get an offer, negotiations will be less effective. If your best alternative (your current job) is bad, you’ll have less leverage. Looking for a new role when you aren’t desperate will make you more likely to get an offer and negotiate better terms.
+
+But that isn’t the main reason to look. Access to the right opportunity becomes the limiting factor for career growth eventually. Therefore, the best reason to look around is because it is an effective way to find opportunities.
+
+
+## Case Against
+
+
+Yet most engineers don’t look around when they are happy. Interviewing feels like a waste of time. It’s a contrived process that doesn’t make you a better engineer.
+
+However, I’d argue that interviewing when you’re happy is the most time efficient for two reasons:
+
+  - You apply for fewer roles - You only apply for roles that might be better than your current one. Since you like your current job, the list of potential roles should be short.
+
+You apply for fewer roles - You only apply for roles that might be better than your current one. Since you like your current job, the list of potential roles should be short.
+
+  - You don’t need to overprepare - Since you don’t need the role, you can just spend the 20% of the time that gets you 80% of the benefit.
+
+You don’t need to overprepare - Since you don’t need the role, you can just spend the 20% of the time that gets you 80% of the benefit.
+
+Consider interviewing every once in a while even when you’re happy with your current team.
+
+Worst case, you remain happy in your current role and you’re sharper in case you need to interview later. Best case, you find an opportunity that is better than what you have.
+
+About that IC8 I mentioned that grew his career unusually fast (IC3 → IC8 in 5 years), would you be interested in hearing his career story similar to this one? Like this post if so and I’ll use that to gauge interest.
+
+Thanks for reading,
+Ryan Peterman

@@ -1,0 +1,50 @@
+The conversation I had with Ethan Evans (ex-Amazon VP) struck a cord with the internet. A mixture of disgust and admiration for his transparency.
+
+A clip from our conversation got millions of views. In it, Ethan says:
+
+> “One of the hardest things for people to understand is I’ve identified a legitimate weakness in my boss. I go to my skip. Why doesn’t he do something?
+
+“One of the hardest things for people to understand is I’ve identified a legitimate weakness in my boss. I go to my skip. Why doesn’t he do something?
+
+Although many people were disgusted, Ethan was a high performer at Amazon and shared the incentive structure with unusual transparency. He’s not commenting on what is right or wrong. He’s saying what is.
+
+From my experience, as my career grew I worked with more high performers at Meta. Some people play the game selfishly while others play the game while also focusing on what is right. But common among all high performers is they understand “the game” and its incentives.
+
+When you understand the incentives, you can focus your limited time on what is rewarded. When I was a junior engineer, I spent so much time working on random code cleanups and miscellaneous projects that were not impactful. Later, I still worked hard but I focused on projects that mattered.
+
+In the example where Ethan is the skip-level manager and an engineer has a problem with one of his front-line managers. Ethan explains how the incentive structure naturally leads him to not prioritize the needs of the engineer.
+
+You can hate him, but he’s just playing the game. You probably just hate that game.
+
+
+## If you hate the game
+
+
+I wouldn’t try to change the game since the effort is usually not worth it. The best move is often to find a different team, role, or company.
+
+It’s unfortunate, but it’s the reality. The dream is a job where the incentives match the work you care about. Early in my career, I got lucky. I loved coding and optimizing infrastructure, which Meta rewarded well. Those situations do exist in tech, but you may need to do some searching to find them.
+
+I asked Ethan how to avoid office politics, and he summed up your options well.
+
+One more thing: if you hate the game but try to play it based on how you think the incentives should be, you will get burned. Best case, you’ll do okay but not as good as you could have. Worst case, you’ll get fired for being difficult or doing work that doesn’t matter.
+
+As Ethan said, “do yourself a favor and get good at this [politics].”
+
+Full conversation is here if you’re interested:
+
+I plan to write more about the most interesting takeaways I learn from my podcast guests. I won’t write every week, but I will write whenever I have something interesting to share.
+
+A few personal updates for those following what I’m working on:
+
+  - Keyboard – We launched on Kickstarter and hit our funding goal in 8 hours after launch, thank you if you backed it 🙏
+
+Keyboard – We launched on Kickstarter and hit our funding goal in 8 hours after launch, thank you if you backed it 🙏
+
+  - Podcast – It is still cash flow negative, but I tested a sponsorship with my friends Evan and Stefan from Hello Interview (it’s here if you’re curious). It went well, so I might try more in ways that don’t take away from the content.
+
+Podcast – It is still cash flow negative, but I tested a sponsorship with my friends Evan and Stefan from Hello Interview (it’s here if you’re curious). It went well, so I might try more in ways that don’t take away from the content.
+
+Also, I’m thinking of making this newsletter’s branding more general. That way I can write about anything interesting, not limited to only software engineering career growth. If you have thoughts on this, let me know!
+
+Thanks for reading,
+Ryan Peterman

@@ -1,0 +1,150 @@
+Note: I am not sponsored for any product in this article.
+
+2020 was an unusual year. For the first time in my life, I was working completely remote. Meta had just announced work from home for all employees due to the COVID-19 breakout.
+
+I realized that my presence at work would become just video and audio on calls. Not to mention that I’d be spending a ton of time using my work from home (WFH) setup.
+
+I decided to invest over a thousand dollars into my setup since it would pay for itself if it helped me get promoted to Senior/IC5 (~$100k per year raise).
+
+My philosophy with my purchases was to find a middle ground that got me 90%+ of the benefit without overpaying for diminishing marginal returns. At a glance, here’s what I picked:
+
+  - VideoSony a6300 camera (already had)Dummy battery (~$24)Elgato Cam Link 4K (~$94)Elgato Master Mount L (~$45)
+
+Video
+
+  - Sony a6300 camera (already had)
+
+Sony a6300 camera (already had)
+
+  - Dummy battery (~$24)
+
+Dummy battery (~$24)
+
+  - Elgato Cam Link 4K (~$94)
+
+Elgato Cam Link 4K (~$94)
+
+  - Elgato Master Mount L (~$45)
+
+Elgato Master Mount L (~$45)
+
+  - AudioBlue Yeti mic (~$100)Bose QC35 headphones (already had)
+
+Audio
+
+  - Blue Yeti mic (~$100)
+
+Blue Yeti mic (~$100)
+
+  - Bose QC35 headphones (already had)
+
+Bose QC35 headphones (already had)
+
+  - ErgonomicsKinesis Freestyle2 Split Keyboard (~$144)Logitech Lift Mouse (~$61)Aeron Miller Chair (bought used ~$250)Jarvis Standing Desk (~$652)
+
+Ergonomics
+
+  - Kinesis Freestyle2 Split Keyboard (~$144)
+
+Kinesis Freestyle2 Split Keyboard (~$144)
+
+  - Logitech Lift Mouse (~$61)
+
+Logitech Lift Mouse (~$61)
+
+  - Aeron Miller Chair (bought used ~$250)
+
+Aeron Miller Chair (bought used ~$250)
+
+  - Jarvis Standing Desk (~$652)
+
+Jarvis Standing Desk (~$652)
+
+  - Total cost = ~$1370
+
+Total cost = ~$1370
+
+Tech companies have settled on a hybrid working model now. There’s still value in having a good work from home setup. Here’s the full story and rationale behind what I picked.
+
+
+## Video
+
+
+I used to be into photography so I had a Sony a6300 lying around that was collecting dust. I figured that using it for video calls would be much better than the low-quality USB video camera I had.
+
+If you have a similar DSLR or mirrorless camera you’re not using, you can hook it up to your computer with three components:
+
+  - Dummy battery - Most cameras are battery powered so you need to buy a “battery” that fits into your camera and plugs into the wall so you have persistent power (example).
+
+Dummy battery - Most cameras are battery powered so you need to buy a “battery” that fits into your camera and plugs into the wall so you have persistent power (example).
+
+  - Capture card - You need a piece of hardware that takes the camera’s HDMI output and converts it into something your computer can receive on USB (example).
+
+Capture card - You need a piece of hardware that takes the camera’s HDMI output and converts it into something your computer can receive on USB (example).
+
+  - Camera stand - Something to position your camera pointing at you (example)
+
+Camera stand - Something to position your camera pointing at you (example)
+
+A lot of people will tell you that good lighting is more important than a good camera. That’s true, but the lighting in my room is already solid and I wanted to take my video from good to great. Here’s the result:
+
+
+## Audio
+
+
+As with all things you can spend a ton of money to get the best of the best. In my case though I was just looking for something simple that would get me most of the way there.
+
+I ended up picking the popular “Blue Yeti” USB mic. It was simple to set up (just plug it in) and made a noticeable difference in the quality of my voice. Since this mic is a “condenser mic”, it doesn’t need to be close to your mouth to pick up sound. This is nice since you can keep it out of the shot and don’t need to buy a stand to keep it close to your face.
+
+I also use Bose QC35 headphones with a wire so I don’t have to worry about Bluetooth pairing and battery. The noise canceling is a must since I have roommates.
+
+
+## Ergonomics
+
+
+Since I was working more hours and moving around less I started to get some wrist and back pain. I bought some equipment which solved the problem for me.
+
+For wrist pain:
+
+  - Split Keyboard - Most ergonomic split keyboards have some unusual key layout which I didn’t want to learn. The Kinesis Freestyle2 worked best for me since it was split and had tenting but didn’t force me to learn a new layout.
+
+Split Keyboard - Most ergonomic split keyboards have some unusual key layout which I didn’t want to learn. The Kinesis Freestyle2 worked best for me since it was split and had tenting but didn’t force me to learn a new layout.
+
+  - Vertical Mouse - I experimented with a few vertical mice that varied in quality. The Logitech Lift was by far the best one I tried.
+
+Vertical Mouse - I experimented with a few vertical mice that varied in quality. The Logitech Lift was by far the best one I tried.
+
+For back pain:
+
+  - Standing Desk - Buying a standing desk made the biggest difference for my back discomfort since it made it easy to shift around and stretch during meetings. I did some cursory searching on Reddit and went with the Jarvis standing desk which has worked well.
+
+Standing Desk - Buying a standing desk made the biggest difference for my back discomfort since it made it easy to shift around and stretch during meetings. I did some cursory searching on Reddit and went with the Jarvis standing desk which has worked well.
+
+  - A Nice Chair - I was sitting so much I wanted to make sure I had an ergonomic chair. The internet is decisive in that the Herman Miller Aeron chair is the best chair that money can buy. They cost a lot new (~$1500) but are so durable that the used ones are excellent too. I ended up buying one on Facebook Marketplace for ~$250 with no issues.
+
+A Nice Chair - I was sitting so much I wanted to make sure I had an ergonomic chair. The internet is decisive in that the Herman Miller Aeron chair is the best chair that money can buy. They cost a lot new (~$1500) but are so durable that the used ones are excellent too. I ended up buying one on Facebook Marketplace for ~$250 with no issues.
+
+
+## What I Wouldn’t Buy Again
+
+
+  - 3 Monitors - Productivity increases a lot from 1 → 2 monitors, but from 2 → 3 there’s not much of a difference for me. I often use just two of them most of the time.
+
+3 Monitors - Productivity increases a lot from 1 → 2 monitors, but from 2 → 3 there’s not much of a difference for me. I often use just two of them most of the time.
+
+  - Under Desk Treadmill - This is nice in theory, but in practice the friction of having to take it out and move it back affects how often I use it. I wouldn’t get this again unless I had two desks so I could leave the treadmill set up.
+
+Under Desk Treadmill - This is nice in theory, but in practice the friction of having to take it out and move it back affects how often I use it. I wouldn’t get this again unless I had two desks so I could leave the treadmill set up.
+
+The improvements were a common unsolicited topic of conversation during video calls since the quality was unusually high.
+
+The ergonomic changes made a difference too since they supported my habit of working a lot of hours. Without those changes I think the discomfort of working for a long time would’ve discouraged me from working as much.
+
+Hope you enjoyed this post, I’d be curious to hear about your setup as well in the comments. What are some of the favorite parts of your setup that you’d recommend?
+
+Also, I’d like to get some feedback on the cadence of this newsletter since I’ve heard from some people that weekly tends to build up in their inbox. Please vote below to help me decide how often is best for you:
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already.
+
+Thanks for reading,
+Ryan Peterman

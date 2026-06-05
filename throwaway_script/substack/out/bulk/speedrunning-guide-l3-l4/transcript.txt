@@ -1,0 +1,74 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your continued readership, we crossed 8,000 readers this week 🙏 🎉
+
+As promised, I’m writing a “speedrunning guide” on getting to Staff engineer as fast as possible. In this first part, I’ll share some unique perspectives from my growth path from L3 → L6 in 3 years.
+
+This guide is for engineers who want to grow from L3 → L4 as fast as possible. Even if rapid growth isn’t your goal, there are learnings for all big tech career paths in this post. I’ll share everything you need to know to get to L4 fast.
+
+
+## Critical Logistics
+
+
+There are two key points for promotions in big tech. First is the concept of a “lagging” promotion: You need to prove that you’re already operating at the next level before you get promoted. This reduces the risk of failing to meet expectations at the new level. In practice, this means that you must show at least 6 months of consistent performance at the next level before promotion.
+
+Second, your manager plays a huge role in your promotion. Your manager builds your case and advocates for it so they have a lot of influence on the process. Not to mention that L3 → L4 promotions are straightforward so your manager’s perspective is likely accurate. Therefore, you should align with your manager on if your performance is in line with L4 expectations.
+
+
+## The Strategy
+
+
+We talked about what L4 expectations look like in a previous article. The best strategy is to meet those expectations as soon as you can and then sustain them for 6 months. There are two keys to this strategy:
+
+  - Be forward with your manager on your desire to promote - They can set you up with L4 projects and resources, clarify the process and help you understand expectations.
+
+Be forward with your manager on your desire to promote - They can set you up with L4 projects and resources, clarify the process and help you understand expectations.
+
+  - Optimize for dev velocity - Landing code quickly will create a shorter feedback loop that will let you learn faster. This core skill will help you ship L4-scope projects and take the initiative to improve the codebase.
+
+Optimize for dev velocity - Landing code quickly will create a shorter feedback loop that will let you learn faster. This core skill will help you ship L4-scope projects and take the initiative to improve the codebase.
+
+Your promotion timeline is controlled by how quickly you start meeting L4 expectations. Depending on how fast you can close the gaps, you can expect these promotion timelines:
+
+  - Promotion in one half (exceptional) - Rare since you need to meet IC4 expectations immediately while onboarding. This is easier for high-performing return interns since they skip onboarding and may have some past L4 track record already.
+
+Promotion in one half (exceptional) - Rare since you need to meet IC4 expectations immediately while onboarding. This is easier for high-performing return interns since they skip onboarding and may have some past L4 track record already.
+
+  - Promotion in two halves (great) - If you’re ambitious, I’d shoot for this timeline. It’s challenging yet reasonable since it gives you 6 months to onboard and start meeting L4 expectations.
+
+Promotion in two halves (great) - If you’re ambitious, I’d shoot for this timeline. It’s challenging yet reasonable since it gives you 6 months to onboard and start meeting L4 expectations.
+
+
+## My Growth Path
+
+
+Here’s my growth path as an example:
+
+H1 (L3 Exceeds Expectations) - First, I took on any task that came my way. These were nice-to-have features that others didn’t have time for. I completed them quickly and started on a larger pipeline rewrite (L4 scope) that my tech lead offered to me. Outside of my main project work, I made a lot of contributions to removing dead code and speeding up existing code because I enjoyed it.
+
+I started to hit L4 expectations in the last few months of the half. But, since I didn’t have 6 months track record I didn’t meet the promotion criteria.
+
+H2 (L3→L4 Promotion, Greatly Exceeds Expectations) - I continued driving my L4-scope project independently with high engineering quality. I came up with the idea to build a test harness to validate this rewrite that was “comparable to L5 quality” execution. I continued my passion for improving the codebase and led the company in adding static type annotations that MonkeyType couldn’t.
+
+At this point, I had delivered on L4 scope for over 6 months so the promotion made sense.
+
+
+## What I Would Have Changed
+
+
+Looking back, I would have discussed what L4 growth looked like with my manager. I wasted our one-on-one time on project updates instead of career growth. This led to two problems:
+
+  - Spent time on work that wasn’t impactful - I took on any work that was passed my way even though not all of it was impactful. I probably could’ve gotten more out of my time.
+
+Spent time on work that wasn’t impactful - I took on any work that was passed my way even though not all of it was impactful. I probably could’ve gotten more out of my time.
+
+  - Didn’t have accurate expectations - I had another engineer tell me my work was L4 level and that I should get promoted in my first half. I didn’t know anything at the time so I took their word for it. When I didn’t get promoted, I was surprised, which could have been avoided if I was in sync with my manager.
+
+Didn’t have accurate expectations - I had another engineer tell me my work was L4 level and that I should get promoted in my first half. I didn’t know anything at the time so I took their word for it. When I didn’t get promoted, I was surprised, which could have been avoided if I was in sync with my manager.
+
+Although I could have been more calculated, writing as much code as I did opened doors. My tech lead trusted me with an L4 project because I showed I could handle it. Similarly, some of the engineering craft work I did for my own personal pleasure ended up being part of what got me promoted too. The more work you do, the luckier you get.
+
+Hope you enjoyed my L3 → L4 “speedrunning guide”. In future posts up to the Staff level, I’ll add more personal experiences since concrete examples help a lot.
+
+I’ll keep writing about IC levels and expectations up to Principal Engineer (L8) which should cover you for an entire engineering career. The top levels get very interesting!
+
+Thanks for reading,
+Ryan Peterman

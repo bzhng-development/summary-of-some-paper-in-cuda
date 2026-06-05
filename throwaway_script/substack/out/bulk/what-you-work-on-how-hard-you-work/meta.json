@@ -1,0 +1,456 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/what-you-work-on-how-hard-you-work",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 150651382,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-10-25T13:02:58.060Z",
+  "updated_at": "2025-07-29T14:06:58.311Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "what-you-work-on-how-hard-you-work",
+  "social_title": null,
+  "subtitle": "",
+  "teaser_post_eligible": true,
+  "title": "What You Work On >> How Hard You Work",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 20,
+  "reactions": {
+    "❤": 215
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "engineering-confidence",
+  "next_post_slug": "staff-at-airbnb-by-age-26-zach-wilson",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/c58b387d-8c60-4396-82e1-4f20a204eafd_1668x1062.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 150651382,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Last week, I interviewed a friend who got to Staff (IC6) at Google by 28 in an unusual way.",
+  "body_html": "<p>Last week, I interviewed a friend who got to Staff (IC6) at Google by 28 in an unusual way. Getting promoted that quickly is impressive already but that wasn’t what I found surprising.</p><p>He told me that he worked less than 40 hours a week on average even with that career trajectory. Here are the two skills he shared that helped him do that:</p><p><strong>1) Understanding what results his org cared about most and what work would drive the biggest impact</strong></p><p>He told me he turned down work that he knew wouldn’t be impactful enough. That way, he could focus on projects that were worth his time. Each project kept the door open for promotion even though he didn’t have too much on his plate.</p><p>We all have the same amount of time. You can only get so much done if you grind with all your waking hours. So, the only way to have Staff+ impact is to be picky about what you work on.</p><p>I learned this important lesson as a mid-level (IC4) engineer. I stopped blindly taking on any work that people gave me. I had enough conversations with my manager about senior (IC5) expectations to know that small features wouldn’t be impactful enough for promotion.</p><p>I learned to assess the impact of everything that came my way before committing. If you want to develop this understanding, you can build it by discussing potential projects with your manager or tech leads (<a href=\"https://www.developing.dev/p/protect-your-time\">more on this topic here</a>). </p><p>Also, you can reference some of my past writing to get a better sense of FAANG expectations at each level:</p><ul><li><p><a href=\"https://www.developing.dev/p/faang-career-ladder-junior-l3-vs\">Junior (IC3) vs Mid-level (IC4)</a></p></li><li><p><a href=\"https://www.developing.dev/p/faang-career-ladder-mid-level-l4\">Mid-level (IC4) vs Senior (IC5)</a></p></li><li><p><a href=\"https://www.developing.dev/p/faang-career-ladder-senior-l5-vs\">Senior (IC5) vs Staff (IC6)</a></p></li></ul><p><strong>2) The soft skills to say “no” without causing thrash</strong></p><p>When work comes your way that isn’t the best use of time, you can’t just drop it without explaining yourself. Otherwise, you’ll cause people problems.</p><p>The best way to say no is to overcommunicate. Explain that you have something else on your plate that is more urgent or impactful. Your manager will be happy to hear you won’t take on a small task because you’re landing something more impactful.</p><p>Of course, you can’t say no to everything that doesn’t help your career. Otherwise, you’d be a terrible team player, which will bite you long term. You’ll need to evaluate this on a case-by-case basis.</p><p>A few years ago, a mentor told me a story about a Distinguished engineer (IC9) that he worked with. This engineer was so selfish with his time that he was the only person in the org to negotiate his way out of oncall and didn’t answer most people who asked him questions. This left a bad taste in my mentor’s mouth.</p><p>There are two sides to this and it doesn’t mean the IC9 was wrong. It does show that there is a tradeoff in some cases. I would evaluate case-by-case but still lean toward protecting your time though.</p><p>If you don’t protect your time, you can’t get promoted no matter how much you work.</p><div><hr></div><p>Working as hard as you can is not the best way to have more impact by itself. You need to be selective with what you work on. If you do both, your career will grow much faster.</p><p>I recorded the full interview but I haven’t had time to edit the footage yet. It’ll take a while since my time is so limited. Working full-time and writing takes almost all my time. <strong>On top of that I am starting a side project that I visited China for last week.</strong> Excited to share more about it with you soon!</p><p>If you liked this post, consider sharing it with a friend. As always, you can find more of my stuff here:</p><ul><li><p><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">LinkedIn</a></p></li><li><p><a href=\"https://twitter.com/ryanlpeterman\">Twitter</a></p></li><li><p><a href=\"https://www.threads.net/@ryanlpeterman\">Threads</a></p></li><li><p><a href=\"https://www.youtube.com/@RyanLPeterman\">Youtube</a></p></li></ul><p>Thanks for reading,<br>Ryan Peterman</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 83,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p></p>",
+  "truncated_body_text": "Last week, I interviewed a friend who got to Staff (IC6) at Google by 28 in an unusual way. Getting promoted that quickly is impressive already but that wasn’t what I found surprising.",
+  "wordcount": 654,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "3ef0124c-3ef3-40c1-b4d8-de1f82d7695c",
+      "publication_id": 1340878,
+      "name": "To Senior",
+      "slug": "to-senior",
+      "hidden": false
+    },
+    {
+      "id": "bbec9c1f-66ea-461d-baa6-2a8acc4d8aa9",
+      "publication_id": 1340878,
+      "name": "Blog",
+      "slug": "blog",
+      "hidden": false
+    },
+    {
+      "id": "f4df2d6e-046e-448c-b0bf-6dd4ae5a5a6a",
+      "publication_id": 1340878,
+      "name": "To Staff",
+      "slug": "to-staff",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        66.52173913043477,
+        188.47826086956525,
+        88.69565217391298
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        34.59130434782608,
+        98.00869565217393,
+        46.12173913043475
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        238,
+        249,
+        240
+      ],
+      "population": 167
+    },
+    "Muted": {
+      "rgb": [
+        124,
+        132,
+        124
+      ],
+      "population": 4
+    },
+    "DarkMuted": {
+      "rgb": [
+        68,
+        68,
+        68
+      ],
+      "population": 9
+    },
+    "LightMuted": {
+      "rgb": [
+        184,
+        187,
+        184
+      ],
+      "population": 67
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 215,
+  "comment_count": 10,
+  "child_comment_count": 8,
+  "audio_items": [
+    {
+      "post_id": 150651382,
+      "voice_id": "en-US-AlloyTurboMultilingualNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/150651382/tts/17c36108-3c11-4afe-8b48-0a01c6ea821a/en-US-AlloyTurboMultilingualNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 74266861,
+      "body": "Great advice! Thank you for sharing this wisdom. ",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Great advice! Thank you for sharing this wisdom."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 150651382,
+      "user_id": 33033033,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-10-27T04:30:55.825Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "John Sawiris",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/0dd70b4b-f945-400d-9567-49fcb2dc4be7_144x144.png",
+      "handle": "jsawiris",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "jsawiris",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 75009792,
+      "body": "Coincidentally, this has been on my mind since yesterday and your article just confirmed I need to work on it.\n\nI just felt I needed to focus my attention on energy and time on things I'm sure would yield result.\n\nThank you, Ryan.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Coincidentally, this has been on my mind since yesterday and your article just confirmed I need to work on it."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I just felt I needed to focus my attention on energy and time on things I'm sure would yield result."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Thank you, Ryan."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 150651382,
+      "user_id": 161958832,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-11-01T11:30:22.202Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Dimma Joel",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/92fc196d-1934-41fe-b29f-8dba877c6316_1104x1104.jpeg",
+      "handle": "dimmajoel",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "dimmajoel",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 3,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    }
+  ]
+}

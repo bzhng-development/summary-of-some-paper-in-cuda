@@ -1,0 +1,82 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 62,000 readers this week 🙏 🎉
+
+This week I’m sharing the rationale and learnings from my recent team transition. Hope it is helpful; enjoy!
+
+6 years ago, I begged the hiring manager to let me join the team. “Instagram Media Infrastructure” was a perfect match since I liked Instagram and wanted to join an infrastructure team.
+
+Although I was more junior than the manager wanted, he let me join because of how excited I was about the opportunity. From there, I worked hard and made sure he never regretted that decision.
+
+I stayed with the same team for 6 years because it gave me tons of opportunities for interesting work with talented people.
+
+Yet even though I loved the team, I switched recently to AI/ML Training Infra. Here’s my rationale for the career move and what I learned in hopes that it’s helpful for you.
+
+
+## “A Rising Tide Lifts All Boats”
+
+
+It’s no secret that the AI space has been growing a ton. Many companies have raised massive rounds even though overall venture capital investment has shrunk since 2021:
+
+  - OpenAI raised $10B in 2023
+
+OpenAI raised $10B in 2023
+
+  - xAI raised $6B in 2024
+
+xAI raised $6B in 2024
+
+  - Anthropic raised $2.75B in 2024
+
+Anthropic raised $2.75B in 2024
+
+  - Mistral raised $415M in 2023
+
+Mistral raised $415M in 2023
+
+Not to mention that NVIDIA, who supplies the hardware these companies need, has grown by 3000%+ (vs 100% for the S&P500) over the last 5 years:
+
+Fast-growing areas have the most opportunities for career growth. When I studied the careers of 11 people who are IC8+ at Meta, all their careers had this in common. They were in the right place at the right time. They worked on something that grew a ton and their careers grew along with it.
+
+I wanted to work in this fast-growing space to increase my opportunity.
+
+
+## Curiosity & Learning
+
+
+One of the biggest problems in the AI space is the lack of compute. It’s a major bottleneck for making better products.
+
+I worked on compute efficiency before and enjoyed it because of the interesting technical challenges I spoke about here. AI compute has different challenges because of the nature of the workloads and hardware, which makes me curious to learn more.
+
+Optimization work provides a well-defined technical challenge with ambiguous solutions. Perfect if you want to focus on engineering, which I do.
+
+
+## Engineering Talent Density
+
+
+Working with talented engineers helps you learn faster and gives you more opportunities for impact. My new org is unusually senior (almost half are Staff+ engineers).
+
+Levels aren’t a perfect measure of engineering talent, but they are usually a decent signal. This made me more confident of my choice to switch.
+
+This was my first team switch. After going through it, I realized internal transfers have a few benefits if you can find what you’re looking for:
+
+  - No interview prep - I took a call with the hiring manager and two tech leads. After that, I was approved to switch within a week.
+
+No interview prep - I took a call with the hiring manager and two tech leads. After that, I was approved to switch within a week.
+
+  - Reuse existing context - Knowledge about internal tools and processes are reuseable. This has helped me during onboarding.
+
+Reuse existing context - Knowledge about internal tools and processes are reuseable. This has helped me during onboarding.
+
+  - Better role mobility - It’s much easier to transfer into a desirable role if you have a strong performance history. Interviewing outside of Meta for a similar role would have been difficult due to external competition.
+
+Better role mobility - It’s much easier to transfer into a desirable role if you have a strong performance history. Interviewing outside of Meta for a similar role would have been difficult due to external competition.
+
+  - Keep my existing RSUs - Meta’s stock went up over 500% since its low in 2022. Doing an internal transfer let me keep my existing stock package.
+
+Keep my existing RSUs - Meta’s stock went up over 500% since its low in 2022. Doing an internal transfer let me keep my existing stock package.
+
+Even though I was happy on my old team, I was starting to get too comfortable. Growth often comes from outside of your comfort zone. Although the transition has been more work, I’ve enjoyed the process a lot already.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already.
+
+Best,
+Ryan Peterman

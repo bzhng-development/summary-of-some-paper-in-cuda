@@ -1,0 +1,110 @@
+I’ve set goals every 6 months for the last 10 years. Doing this has given me a lot of energy and helped me focus on what matters. I’ve refined the process through years of making mistakes and iterating. Here’s what I’ve learned.
+
+
+## Writing is Thinking
+
+
+Writing out my goals is a big part of what has worked for me. It helps me structure and clarify my thoughts. Also, the writing is useful for reference throughout the half.
+
+I’ve tried a bunch of stuff, but the most impactful thought exercises I keep revisiting for goal setting are:
+
+  - Retrospection - I got a lot of value out of writing about what went well and what didn’t over the previous 6 months. The value mostly comes from considering what didn’t go well and thinking about how to do better the next time (this writing is a product of those reflections).
+
+Retrospection - I got a lot of value out of writing about what went well and what didn’t over the previous 6 months. The value mostly comes from considering what didn’t go well and thinking about how to do better the next time (this writing is a product of those reflections).
+
+  - Where do I want to be - I break my life down into a few categories that are important to me (career, relationships, health, and hobbies). I review each category and think about how I’m doing in each. Then, I consider what it’d take to be completely satisfied in that area. This serves as the basis for my goal setting.
+
+Where do I want to be - I break my life down into a few categories that are important to me (career, relationships, health, and hobbies). I review each category and think about how I’m doing in each. Then, I consider what it’d take to be completely satisfied in that area. This serves as the basis for my goal setting.
+
+I do this every 6 months because yearly isn’t frequent enough. Life priorities can often change a lot in a year.
+
+
+## What They Don’t Tell You About SMART Goals
+
+
+The most common advice for goal setting is to set “SMART” goals. This is solid advice that you can read about somewhere else. When I put them into practice though, I learned a few things:
+
+  - Don’t set too many goals - 3 to 5 goals are enough. Life is more complex than can be captured in just a few goals, so it’s tempting to want to set a ton of them. The problem is you dilute your focus and add a lot of overhead if you do that. And since your top goals are often exponentially more important than others, you’re doing more work for not much additional benefit if you don’t cut down your list. I keep a little list for items that don’t make the cut I don’t want to forget.
+
+Don’t set too many goals - 3 to 5 goals are enough. Life is more complex than can be captured in just a few goals, so it’s tempting to want to set a ton of them. The problem is you dilute your focus and add a lot of overhead if you do that. And since your top goals are often exponentially more important than others, you’re doing more work for not much additional benefit if you don’t cut down your list. I keep a little list for items that don’t make the cut I don’t want to forget.
+
+  - Output metrics are better - When you set measurable goals, you can use input or output metrics. Output metrics measure results, while input metrics measure what you do to achieve results. For example, if I wanted to get stronger, I could track how many times I gym per week (input metric) or how much weight I can lift (output metric). Output metrics are better, if possible, since they are more motivating and aligned with outcomes.
+
+Output metrics are better - When you set measurable goals, you can use input or output metrics. Output metrics measure results, while input metrics measure what you do to achieve results. For example, if I wanted to get stronger, I could track how many times I gym per week (input metric) or how much weight I can lift (output metric). Output metrics are better, if possible, since they are more motivating and aligned with outcomes.
+
+  - Achieving the goal isn’t what matters - What matters is that you’re going in the right direction with your best effort. I learned this at Meta since we often set P50 goals (50% chance of success), which are purposefully ambitious. I try to set similar goals and don’t sweat it if I miss them as long as I make good progress.
+
+Achieving the goal isn’t what matters - What matters is that you’re going in the right direction with your best effort. I learned this at Meta since we often set P50 goals (50% chance of success), which are purposefully ambitious. I try to set similar goals and don’t sweat it if I miss them as long as I make good progress.
+
+
+## What Worked and Didn’t Work
+
+
+How you achieve your goals depends on the specifics of the goal. Rather than giving you a prescriptive framework, I thought it’d be more helpful to share what worked and didn’t that you could pick and choose from.
+
+
+## What worked:
+
+
+  - Shared goals with friends - This is such a powerful tool since you won’t want to let your friends down and they’ll check in with you. The best incentive structure I found was to set a shared goal with someone else with the following structure:If we both achieve the goal => celebrate together somewhereIf only one person achieves the goal => the person who didn’t achieve it pays the person who didIf both fail the goal => both people pay money towards somethingYou don’t need to use money it’s just an example. The important part is you set up incentives so that you’re both rooting for each other and have skin in the game.
+
+Shared goals with friends - This is such a powerful tool since you won’t want to let your friends down and they’ll check in with you. The best incentive structure I found was to set a shared goal with someone else with the following structure:
+
+  - If we both achieve the goal => celebrate together somewhere
+
+If we both achieve the goal => celebrate together somewhere
+
+  - If only one person achieves the goal => the person who didn’t achieve it pays the person who did
+
+If only one person achieves the goal => the person who didn’t achieve it pays the person who did
+
+  - If both fail the goal => both people pay money towards something
+
+If both fail the goal => both people pay money towards something
+
+You don’t need to use money it’s just an example. The important part is you set up incentives so that you’re both rooting for each other and have skin in the game.
+
+  - Habits are powerful - the strongest I’ve ever been was when I built the habit of working out right when I woke up. I had the most success learning Mandarin when I had a weekly lesson. Habits are a powerful tool. For many goals, consistency is key and habits are the best way to achieve that consistency.
+
+Habits are powerful - the strongest I’ve ever been was when I built the habit of working out right when I woke up. I had the most success learning Mandarin when I had a weekly lesson. Habits are a powerful tool. For many goals, consistency is key and habits are the best way to achieve that consistency.
+
+  - Reflecting on progress - I check in on my goals once every two weeks or so. All I do is go over which goals are on track and which aren’t. There was one half where I didn’t do this, and forgot about a few of my goals. It’s also a helpful tool to pace yourself and adjust throughout the half.
+
+Reflecting on progress - I check in on my goals once every two weeks or so. All I do is go over which goals are on track and which aren’t. There was one half where I didn’t do this, and forgot about a few of my goals. It’s also a helpful tool to pace yourself and adjust throughout the half.
+
+
+## What didn’t work:
+
+
+  - Measuring everything - As an engineer, it’s easy to try and measure every single thing you want to improve. The issue is that measurement doesn’t come for free. It adds a lot of overhead and is sometimes impossible. If your system is too complex, it becomes less effective.
+
+Measuring everything - As an engineer, it’s easy to try and measure every single thing you want to improve. The issue is that measurement doesn’t come for free. It adds a lot of overhead and is sometimes impossible. If your system is too complex, it becomes less effective.
+
+  - Promising myself a reward - I thought it’d be motivating to promise myself something if I achieved my goals. Although I enjoyed the rewards, I never thought about it while working towards my goals (it never motivated me).
+
+Promising myself a reward - I thought it’d be motivating to promise myself something if I achieved my goals. Although I enjoyed the rewards, I never thought about it while working towards my goals (it never motivated me).
+
+Knowing yourself is an important part of coming up with a system that works for you. I hope there was something useful in these notes that I learned through trial and error.
+
+Although what works for each person is different, one common point I’d recommend is that you should write out your thoughts. The process of writing where you want to be and why will give you a lot of clarity on your life’s direction.
+
+As always, you can find more of my content here:
+
+  - LinkedIn
+
+LinkedIn
+
+  - Twitter
+
+Twitter
+
+  - Threads
+
+Threads
+
+  - Youtube
+
+Youtube
+
+Thanks for reading,
+Ryan Peterman

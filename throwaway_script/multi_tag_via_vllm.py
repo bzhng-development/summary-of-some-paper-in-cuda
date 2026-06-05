@@ -199,7 +199,7 @@ async def go(args: argparse.Namespace) -> int:
                 continue
             try:
                 done.add(json.loads(line)["arxiv_id"])
-            except (json.JSONDecodeError, KeyError):
+            except json.JSONDecodeError, KeyError:
                 continue
         logger.info("resume: {} already in output file", len(done))
 
@@ -216,9 +216,7 @@ async def go(args: argparse.Namespace) -> int:
 
     async def one(row: dict) -> None:
         nonlocal n_ok, n_fail
-        aid, parsed, err = await tag_one(
-            client, sem, args.model, row["id"], row["title"], row["abstract"]
-        )
+        aid, parsed, err = await tag_one(client, sem, args.model, row["id"], row["title"], row["abstract"])
         if err is not None or parsed is None:
             n_fail += 1
             logger.warning("FAIL {}: {}", aid, err)

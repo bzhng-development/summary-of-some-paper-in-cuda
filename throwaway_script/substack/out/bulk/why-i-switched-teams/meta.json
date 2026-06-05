@@ -1,0 +1,427 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/why-i-switched-teams",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 145396769,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-06-07T13:01:13.464Z",
+  "updated_at": "2024-06-07T13:49:21.443Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "why-i-switched-teams",
+  "social_title": null,
+  "subtitle": "IG Media Infra -> AI/ML Training Infra",
+  "teaser_post_eligible": true,
+  "title": "Why I Switched Teams",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 0,
+  "reactions": {
+    "❤": 66
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "writing-tactics-part-2",
+  "next_post_slug": "promoting-your-work",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!bwcp!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fed862e2b-b863-427b-ae35-c153c1c72af2_2336x1334.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 145396769,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "IG Media Infra -> AI/ML Training Infra",
+  "body_html": "<p>👋<em> Hi, this is&nbsp;<a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a>&nbsp;with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 62,000 readers this week </em>🙏<em> </em>🎉</p><p><em>This week I’m sharing the rationale and learnings from my recent team transition. Hope it is helpful; enjoy!</em></p><div><hr></div><p>6 years ago, I begged the hiring manager to let me join the team. “Instagram Media Infrastructure” was a perfect match since I liked Instagram and wanted to join an infrastructure team.</p><p>Although I was more junior than the manager wanted, he let me join because of how excited I was about the opportunity. From there, I worked hard and made sure he never regretted that decision. </p><p>I stayed with the same team for 6 years because it gave me tons of opportunities for interesting <a href=\"https://www.developing.dev/p/standing-on-the-shoulders-of-giants\">work with talented people</a>.</p><p>Yet even though I loved the team, I <a href=\"https://www.linkedin.com/posts/ryanlpeterman_6-years-ago-i-joined-instagram-and-have-activity-7203047714471698433-y6A5?utm_source=share&amp;utm_medium=member_desktop\">switched recently</a> to AI/ML Training Infra. Here’s my rationale for the career move and what I learned in hopes that it’s helpful for you.</p><h3><strong>“A Rising Tide Lifts All Boats”</strong></h3><p>It’s no secret that the AI space has been growing a ton. Many companies have raised massive rounds even though overall venture capital investment has shrunk since 2021:</p><ul><li><p>OpenAI <a href=\"https://www.cnbc.com/2023/01/10/microsoft-to-invest-10-billion-in-chatgpt-creator-openai-report-says.html\">raised $10B</a> in 2023</p></li><li><p>xAI <a href=\"https://www.theguardian.com/technology/article/2024/may/27/elon-musk-xai-raises-openai-funding-round\">raised $6B</a> in 2024</p></li><li><p>Anthropic <a href=\"https://www.datacenterdynamics.com/en/news/amazon-invests-275bn-in-ai-startup-anthropic-as-part-of-planned-4bn-deal/\">raised $2.75B</a> in 2024</p></li><li><p>Mistral <a href=\"https://techcrunch.com/2023/12/11/mistral-ai-a-paris-based-openai-rival-closed-its-415-million-funding-round/\">raised $415M</a> in 2023</p></li></ul><p>Not to mention that NVIDIA, who supplies the hardware these companies need, has grown by <a href=\"https://portfolioslab.com/tools/stock-comparison/NVDA/SPY\">3000%+ (vs 100% for the S&amp;P500)</a> over the last 5 years:</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!bwcp!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fed862e2b-b863-427b-ae35-c153c1c72af2_2336x1334.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!bwcp!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fed862e2b-b863-427b-ae35-c153c1c72af2_2336x1334.png 424w, https://substackcdn.com/image/fetch/$s_!bwcp!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fed862e2b-b863-427b-ae35-c153c1c72af2_2336x1334.png 848w, https://substackcdn.com/image/fetch/$s_!bwcp!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fed862e2b-b863-427b-ae35-c153c1c72af2_2336x1334.png 1272w, https://substackcdn.com/image/fetch/$s_!bwcp!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fed862e2b-b863-427b-ae35-c153c1c72af2_2336x1334.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!bwcp!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fed862e2b-b863-427b-ae35-c153c1c72af2_2336x1334.png\" width=\"550\" height=\"313.907967032967\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/ed862e2b-b863-427b-ae35-c153c1c72af2_2336x1334.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:831,&quot;width&quot;:1456,&quot;resizeWidth&quot;:550,&quot;bytes&quot;:230606,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!bwcp!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fed862e2b-b863-427b-ae35-c153c1c72af2_2336x1334.png 424w, https://substackcdn.com/image/fetch/$s_!bwcp!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fed862e2b-b863-427b-ae35-c153c1c72af2_2336x1334.png 848w, https://substackcdn.com/image/fetch/$s_!bwcp!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fed862e2b-b863-427b-ae35-c153c1c72af2_2336x1334.png 1272w, https://substackcdn.com/image/fetch/$s_!bwcp!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fed862e2b-b863-427b-ae35-c153c1c72af2_2336x1334.png 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><p><strong>Fast-growing areas have the most opportunities for career growth.</strong> When <a href=\"https://www.developing.dev/i/120085028/summary-and-recommendations\">I studied the careers of 11 people who are IC8+</a> at Meta, all their careers had this in common. They were in the right place at the right time. They worked on something that grew a ton and their careers grew along with it.</p><p>I wanted to work in this fast-growing space to increase my opportunity.</p><h3><strong>Curiosity &amp; Learning</strong></h3><p>One of the <a href=\"https://a16z.com/navigating-the-high-cost-of-ai-compute/\">biggest problems in the AI space is the lack of compute</a>. It’s a major bottleneck for making better products.</p><p>I <a href=\"https://engineering.fb.com/2022/11/04/video-engineering/instagram-video-processing-encoding-reduction/\">worked on compute efficiency before</a> and enjoyed it because of the <a href=\"https://youtu.be/NH9reJtD4OA?si=X11QLFycnDfUmf6A&amp;t=2131\">interesting technical challenges I spoke about here</a>. AI compute has different challenges because of the nature of the workloads and hardware, which makes me curious to learn more.</p><p><strong>Optimization work provides a well-defined technical challenge with ambiguous solutions.</strong> Perfect if you want to focus on engineering, which I do.</p><h3><strong>Engineering Talent Density</strong></h3><p>Working with talented engineers helps you learn faster and gives you more opportunities for impact. My new org is unusually senior (almost half are Staff+ engineers). </p><p>Levels aren’t a perfect measure of engineering talent, but they are usually a decent signal. This made me more confident of my choice to switch.</p><div><hr></div><p>This was my first team switch. After going through it, I realized internal transfers have a few benefits if you can find what you’re looking for:</p><ol><li><p><strong>No interview prep</strong> - I took a call with the hiring manager and two tech leads. After that, I was approved to switch within a week.</p></li><li><p><strong>Reuse existing context</strong> - Knowledge about internal tools and processes are reuseable. This has helped me during onboarding.</p></li><li><p><strong>Better role mobility - </strong>It’s much easier to transfer into a desirable role if you have a strong performance history. Interviewing outside of Meta for a similar role would have been difficult due to external competition.</p></li><li><p><strong>Keep my existing RSUs</strong> - Meta’s stock went up over 500% since its low in 2022. Doing an internal transfer let me keep my existing stock package.</p></li></ol><p>Even though I was happy on my old team, I was starting to get too comfortable. <strong>Growth often comes from outside of your comfort zone.</strong> Although the transition has been more work, I’ve enjoyed the process a lot already.</p><p>If you found this useful,&nbsp;<strong>please share it with a friend and consider subscribing if you haven’t already.</strong></p><p>Best,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 62,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work.</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 62,000 readers this week 🙏 🎉",
+  "wordcount": 670,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        237.20930232558146,
+        124.53488372093015,
+        17.790697674418553
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        123.34883720930235,
+        64.75813953488368,
+        9.251162790697652
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        252,
+        233,
+        215
+      ],
+      "population": 33
+    },
+    "Muted": {
+      "rgb": [
+        142.32558139534888,
+        74.72093023255809,
+        10.67441860465113
+      ],
+      "population": 0
+    },
+    "DarkMuted": {
+      "rgb": [
+        142.32558139534885,
+        74.72093023255809,
+        10.674418604651159
+      ],
+      "population": 0
+    },
+    "LightMuted": {
+      "rgb": [
+        185,
+        220,
+        219
+      ],
+      "population": 44
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 66,
+  "comment_count": 9,
+  "child_comment_count": 5,
+  "audio_items": [
+    {
+      "post_id": 145396769,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/145396769/tts/a10b5168-3008-457f-a138-e66ed28a0bb4/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 58492629,
+      "body": "Great to read about your rationale and your vision about your career! AI/ML is definitely the right thing to focus on. Congrats and I wish you all great things with the change!",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Great to read about your rationale and your vision about your career! AI/ML is definitely the right thing to focus on. Congrats and I wish you all great things with the change!"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 145396769,
+      "user_id": 106098672,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-06-08T00:50:26.013Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Gregor Ojstersek",
+      "photo_url": "https://substackcdn.com/image/fetch/$s_!TiaG!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F1b7fdc30-d8c4-45f2-b0df-0b60baf9d4f4_1000x1000.jpeg",
+      "handle": "gregorojstersek",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "gregorojstersek",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Engineering Leadership",
+          "id": 1115815,
+          "base_url": "https://newsletter.eng-leadership.com"
+        }
+      },
+      "user_bestseller_tier": 1000,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": 1000,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "bestseller",
+          "tier": 1000
+        },
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    },
+    {
+      "id": 58433643,
+      "body": "Excellent, good to hear such stories",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Excellent, good to hear such stories"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 145396769,
+      "user_id": 193943587,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-06-07T13:17:14.951Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Jayn",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/52a3ad88-d964-4918-a932-7047194db927_144x144.png",
+      "handle": "jaynj",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "jaynj",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "unsubscribed",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    }
+  ]
+}

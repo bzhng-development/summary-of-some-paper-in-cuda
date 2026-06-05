@@ -1,0 +1,491 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/looking-in-the-layoff-era",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 125223702,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-06-09T13:01:27.968Z",
+  "updated_at": "2023-06-27T00:25:12.720Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "looking-in-the-layoff-era",
+  "social_title": null,
+  "subtitle": "",
+  "teaser_post_eligible": true,
+  "title": "Job Hunting in the Layoff Era",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 1,
+  "reactions": {
+    "❤": 25
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "maximizing-impact-in-the-layoff-era",
+  "next_post_slug": "finding-staff-level-scope",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!U25C!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F339bb2c2-de12-4c36-83c2-307a784c2aed_1024x1024.png",
+  "cover_image_is_square": true,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "I’ve received messages from a few of you considering leaving your company since growth is stagnant. In this article, I’ll go over market data I paid over $100 for from Crunchbase Pro and LinkedIn Premium along with my thoughts on finding a new company in the layoff era.",
+  "body_html": "<p><em>👋 Hi, this is <a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a> with another edition of my weekly newsletter<strong>.</strong> Each week, I write about topics in software engineering, big tech/startups and career growth. Send me your questions (just reply to this email or comment below) and in return, I’ll humbly share my thoughts (<a href=\"https://www.developing.dev/p/generalist-or-specialisthttps://www.developing.dev/p/generalist-or-specialist\">example past question</a>).</em></p><div><hr></div><p>Layoffs have happened at all FAANG-like tech companies except for Apple at this point. Because of this, I’ve received messages from a few of you considering leaving your company. <strong>In this article, I’ll go over market data I purchased from Crunchbase Pro and LinkedIn Premium along with my thoughts on finding a new company in the layoff era.</strong> </p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!U25C!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F339bb2c2-de12-4c36-83c2-307a784c2aed_1024x1024.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!U25C!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F339bb2c2-de12-4c36-83c2-307a784c2aed_1024x1024.png 424w, https://substackcdn.com/image/fetch/$s_!U25C!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F339bb2c2-de12-4c36-83c2-307a784c2aed_1024x1024.png 848w, https://substackcdn.com/image/fetch/$s_!U25C!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F339bb2c2-de12-4c36-83c2-307a784c2aed_1024x1024.png 1272w, https://substackcdn.com/image/fetch/$s_!U25C!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F339bb2c2-de12-4c36-83c2-307a784c2aed_1024x1024.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!U25C!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F339bb2c2-de12-4c36-83c2-307a784c2aed_1024x1024.png\" width=\"1024\" height=\"1024\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/339bb2c2-de12-4c36-83c2-307a784c2aed_1024x1024.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:1024,&quot;width&quot;:1024,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:1505307,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!U25C!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F339bb2c2-de12-4c36-83c2-307a784c2aed_1024x1024.png 424w, https://substackcdn.com/image/fetch/$s_!U25C!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F339bb2c2-de12-4c36-83c2-307a784c2aed_1024x1024.png 848w, https://substackcdn.com/image/fetch/$s_!U25C!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F339bb2c2-de12-4c36-83c2-307a784c2aed_1024x1024.png 1272w, https://substackcdn.com/image/fetch/$s_!U25C!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F339bb2c2-de12-4c36-83c2-307a784c2aed_1024x1024.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">There’s always a rocketship even when the economy is down (source: Midjourney)</figcaption></figure></div><h3>Current Job Market</h3><p>It’s no surprise that it’s harder to find a job across the board. There are fewer roles available and more competition for them. FAANG-like company hiring is limited to senior IC roles and a small amount for backfilling attrition. <strong>Despite news of doom and gloom among larger companies, there are still some smaller companies growing at a breakneck pace.</strong> </p><p>Here’s a public Google Sheet I typed out by hand containing headcount growth and fundraising rounds for some example high-growth startups:</p><p class=\"button-wrapper\" data-attrs=\"{&quot;url&quot;:&quot;https://docs.google.com/spreadsheets/d/1MMv3j2-MgzARh04WufT3_gfbff32Rb1yAdvmxWiMno0/edit?usp=sharing&quot;,&quot;text&quot;:&quot;Google Sheet Link&quot;,&quot;action&quot;:null,&quot;class&quot;:null}\" data-component-name=\"ButtonCreateButton\"><a class=\"button primary\" href=\"https://docs.google.com/spreadsheets/d/1MMv3j2-MgzARh04WufT3_gfbff32Rb1yAdvmxWiMno0/edit?usp=sharing\"><span>Google Sheet Link</span></a></p><p>As you can see, there are still many companies growing like rocketships (e.g. OpenAI +45%, Notion +60%, Figma +101%) within the last 6 months. In addition, some companies have raised even in the current down environment (e.g. Anthropic, Adept AI, OpenAI), which means they have a strong enough narrative and metrics to support growth still.</p><p>These high-growth companies have total compensation comparable to what you’d expect at FAANG as well. I pulled the median compensation for a few examples from levels.fyi to illustrate:</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!_etP!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F90401f8b-e088-4620-8c0c-78e6e3fe4019_1600x676.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!_etP!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F90401f8b-e088-4620-8c0c-78e6e3fe4019_1600x676.png 424w, https://substackcdn.com/image/fetch/$s_!_etP!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F90401f8b-e088-4620-8c0c-78e6e3fe4019_1600x676.png 848w, https://substackcdn.com/image/fetch/$s_!_etP!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F90401f8b-e088-4620-8c0c-78e6e3fe4019_1600x676.png 1272w, https://substackcdn.com/image/fetch/$s_!_etP!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F90401f8b-e088-4620-8c0c-78e6e3fe4019_1600x676.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!_etP!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F90401f8b-e088-4620-8c0c-78e6e3fe4019_1600x676.png\" width=\"546\" height=\"230.625\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/90401f8b-e088-4620-8c0c-78e6e3fe4019_1600x676.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:615,&quot;width&quot;:1456,&quot;resizeWidth&quot;:546,&quot;bytes&quot;:116730,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!_etP!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F90401f8b-e088-4620-8c0c-78e6e3fe4019_1600x676.png 424w, https://substackcdn.com/image/fetch/$s_!_etP!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F90401f8b-e088-4620-8c0c-78e6e3fe4019_1600x676.png 848w, https://substackcdn.com/image/fetch/$s_!_etP!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F90401f8b-e088-4620-8c0c-78e6e3fe4019_1600x676.png 1272w, https://substackcdn.com/image/fetch/$s_!_etP!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F90401f8b-e088-4620-8c0c-78e6e3fe4019_1600x676.png 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div></div></div></a></figure></div><div class=\"captioned-image-container\"><figure><a class=\"image-link image2\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!mLO8!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F186dfda5-95c2-4367-95d2-9e70fa25656a_1606x686.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!mLO8!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F186dfda5-95c2-4367-95d2-9e70fa25656a_1606x686.png 424w, https://substackcdn.com/image/fetch/$s_!mLO8!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F186dfda5-95c2-4367-95d2-9e70fa25656a_1606x686.png 848w, https://substackcdn.com/image/fetch/$s_!mLO8!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F186dfda5-95c2-4367-95d2-9e70fa25656a_1606x686.png 1272w, https://substackcdn.com/image/fetch/$s_!mLO8!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F186dfda5-95c2-4367-95d2-9e70fa25656a_1606x686.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!mLO8!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F186dfda5-95c2-4367-95d2-9e70fa25656a_1606x686.png\" width=\"540\" height=\"230.6868131868132\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/186dfda5-95c2-4367-95d2-9e70fa25656a_1606x686.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:622,&quot;width&quot;:1456,&quot;resizeWidth&quot;:540,&quot;bytes&quot;:121965,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!mLO8!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F186dfda5-95c2-4367-95d2-9e70fa25656a_1606x686.png 424w, https://substackcdn.com/image/fetch/$s_!mLO8!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F186dfda5-95c2-4367-95d2-9e70fa25656a_1606x686.png 848w, https://substackcdn.com/image/fetch/$s_!mLO8!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F186dfda5-95c2-4367-95d2-9e70fa25656a_1606x686.png 1272w, https://substackcdn.com/image/fetch/$s_!mLO8!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F186dfda5-95c2-4367-95d2-9e70fa25656a_1606x686.png 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div></div></div></a></figure></div><div class=\"captioned-image-container\"><figure><a class=\"image-link image2\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!cR1d!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f12020f-a219-4668-bde7-8cd1c4d2c01b_1602x684.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!cR1d!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f12020f-a219-4668-bde7-8cd1c4d2c01b_1602x684.png 424w, https://substackcdn.com/image/fetch/$s_!cR1d!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f12020f-a219-4668-bde7-8cd1c4d2c01b_1602x684.png 848w, https://substackcdn.com/image/fetch/$s_!cR1d!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f12020f-a219-4668-bde7-8cd1c4d2c01b_1602x684.png 1272w, https://substackcdn.com/image/fetch/$s_!cR1d!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f12020f-a219-4668-bde7-8cd1c4d2c01b_1602x684.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!cR1d!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f12020f-a219-4668-bde7-8cd1c4d2c01b_1602x684.png\" width=\"532\" height=\"227.26923076923077\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/8f12020f-a219-4668-bde7-8cd1c4d2c01b_1602x684.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:622,&quot;width&quot;:1456,&quot;resizeWidth&quot;:532,&quot;bytes&quot;:124149,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!cR1d!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f12020f-a219-4668-bde7-8cd1c4d2c01b_1602x684.png 424w, https://substackcdn.com/image/fetch/$s_!cR1d!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f12020f-a219-4668-bde7-8cd1c4d2c01b_1602x684.png 848w, https://substackcdn.com/image/fetch/$s_!cR1d!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f12020f-a219-4668-bde7-8cd1c4d2c01b_1602x684.png 1272w, https://substackcdn.com/image/fetch/$s_!cR1d!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8f12020f-a219-4668-bde7-8cd1c4d2c01b_1602x684.png 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div></div></div></a></figure></div><h3>Picking the Right Startup</h3><p>Startup and public company job searches differ significantly. Public companies have equity that is priced by the market every day. If a recruiter says your offer contains $100k of RSUs, you’ll receive that amount barring market fluctuations. Also, you don’t need to question if the company will still be around in the next few years. However, startup job searches require much more homework. There are a few key signals you should look at if you’re considering joining a high-growth startup:</p><p><strong>Fundraising History</strong> - If a company fundraised in the past six months, it shows growth potential even in the down market. This fresh funding also increases how long the startup can survive which helps with job security. Some are even saying that these startups are more stable than FAANG-like companies in the current environment. Recent fundraising also means that the company’s valuation is more likely accurate. Avoid joining a company that raised an overvalued round in 2021 but is worth much less in reality now.</p><p><strong>Headcount Growth</strong> - Another important signal to pay attention to is recent headcount growth. Since these are private companies, it’s difficult to get an exact measurement but LinkedIn premium insights get you pretty close. If you don’t want to pay for LinkedIn premium, <a href=\"https://docs.google.com/spreadsheets/d/1MMv3j2-MgzARh04WufT3_gfbff32Rb1yAdvmxWiMno0/edit?usp=sharing\">you can take a look at the spreadsheet I shared earlier</a>. Not only does this measure opportunity for career growth, but this is also one of the top signs a startup is doing well and will raise at a higher valuation later. Take it with a grain of salt though since anything can happen in startups.</p><p><strong>Company Stage </strong>- Startup compensation and risk vary a lot depending on the stage the company is at. I wrote about <a href=\"https://www.developing.dev/p/investing-your-career\">compensation differences between startups and big tech here</a>, but the summary is that smaller companies have less liquid, more volatile equity.  You’ll want to make sure that the company’s stage matches your risk appetite and that the cash portion of the compensation is enough for you in the worst case.</p><div><hr></div><p>I hope this research was helpful for folks working at FAANG-like companies interested in learning more about high-growth startups. <strong>If I missed anything or if you have any unique job-hunting insights, please share below for others to benefit</strong>. Happy to discuss with you all in the comments as usual.</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 3800+ software engineers who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p></p><p><em>Thanks for reading,<br></em><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p>",
+  "truncated_body_text": "👋 Hi, this is Ryan with another edition of my weekly newsletter. Each week, I write about topics in software engineering, big tech/startups and career growth. Send me your questions (just reply to this email or comment below) and in return, I’ll humbly share my thoughts (",
+  "wordcount": 678,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "5a4683e9-1121-4159-b2d7-6ca77779173f",
+      "publication_id": 1340878,
+      "name": "Career",
+      "slug": "career",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        252,
+        84,
+        44
+      ],
+      "population": 1
+    },
+    "DarkVibrant": {
+      "rgb": [
+        141,
+        53,
+        52
+      ],
+      "population": 25
+    },
+    "LightVibrant": {
+      "rgb": [
+        251,
+        140,
+        110
+      ],
+      "population": 507
+    },
+    "Muted": {
+      "rgb": [
+        164,
+        83,
+        83
+      ],
+      "population": 92
+    },
+    "DarkMuted": {
+      "rgb": [
+        76,
+        100,
+        92
+      ],
+      "population": 111
+    },
+    "LightMuted": {
+      "rgb": [
+        203,
+        181,
+        162
+      ],
+      "population": 440
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 25,
+  "comment_count": 4,
+  "child_comment_count": 2,
+  "audio_items": [
+    {
+      "post_id": 125223702,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/125223702/tts/5cf8c48a-ed21-4a87-b7ed-9c52fdc336e4/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 17114796,
+      "body": "When it comes to finding startup jobs my favorite website are:\n- https://www.builtinsf.com/jobs\n- https://startup.jobs/\nBuiltinSF is based in SF Bay Area Jobs, but there are other jobs based in other location and it's pretty good for finding high-growth startups and sometimes public companies\nStartup.jobs is good for finding startups all around (high growth or not), it's more of a 'general' job posting site.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "When it comes to finding startup jobs my favorite website are:"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "- "
+              },
+              {
+                "type": "text",
+                "text": "https://www.builtinsf.com/jobs",
+                "marks": [
+                  {
+                    "type": "link",
+                    "attrs": {
+                      "href": "https://www.builtinsf.com/jobs"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "- "
+              },
+              {
+                "type": "text",
+                "text": "https://startup.jobs/",
+                "marks": [
+                  {
+                    "type": "link",
+                    "attrs": {
+                      "href": "https://startup.jobs/"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "BuiltinSF is based in SF Bay Area Jobs, but there are other jobs based in other location and it's pretty good for finding high-growth startups and sometimes public companies"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Startup.jobs",
+                "marks": [
+                  {
+                    "type": "link",
+                    "attrs": {
+                      "href": "http://startup.jobs"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " is good for finding startups all around (high growth or not), it's more of a 'general' job posting site."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 125223702,
+      "user_id": 110102798,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-06-09T16:13:27.017Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Ivan H",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/cb620ac5-1a6c-4dce-86e1-8198fef618a5_474x532.jpeg",
+      "handle": "ivanh",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "ivanh",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "The Software & Data Spectrum",
+          "id": 1382820,
+          "base_url": "https://ivanh.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 7,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    },
+    {
+      "id": 42038237,
+      "body": "Hello! Like you were, I'm also an engineer at Amazon. I feel like my career growth has been stalling, so I'm also considering leaving after roughly 1 year. Do you have any advice for finding jobs when you have roughly 1 year of experience? Should you aim for new grad jobs or junior engineer jobs (which typically ask for 2-3 years of experience)? ",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hello! Like you were, I'm also an engineer at Amazon. I feel like my career growth has been stalling, so I'm also considering leaving after roughly 1 year. Do you have any advice for finding jobs when you have roughly 1 year of experience? Should you aim for new grad jobs or junior engineer jobs (which typically ask for 2-3 years of experience)?"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 125223702,
+      "user_id": 175972792,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-10-17T23:56:59.310Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "John Whelton",
+      "photo_url": null,
+      "handle": "johnwheltoniii",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 0
+      },
+      "reaction_count": 0,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "johnwheltoniii",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "unsubscribed",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 1,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

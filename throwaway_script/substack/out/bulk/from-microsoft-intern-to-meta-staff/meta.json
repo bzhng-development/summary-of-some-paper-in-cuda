@@ -1,0 +1,470 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/from-microsoft-intern-to-meta-staff",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 138540264,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-11-03T13:01:06.596Z",
+  "updated_at": "2023-11-03T13:02:51.355Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "from-microsoft-intern-to-meta-staff",
+  "social_title": "From Microsoft Intern to Meta Staff Engineer: Raviraj Achar",
+  "subtitle": "Overcoming imposter syndrome and learning to lead",
+  "teaser_post_eligible": true,
+  "title": "From Microsoft Intern to Meta Staff Engineer: Raviraj Achar",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 21,
+  "reactions": {
+    "❤": 198
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "6-software-engineering-templates",
+  "next_post_slug": "5-skills-all-10x-engineers-have",
+  "cover_image": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fce9889e7-c9db-4221-ab47-ab60c949a6ab_1086x475.jpeg",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Overcoming imposter syndrome and learning to lead",
+  "body_html": "<p><em>👋 Hi, this is Ryan with another edition of my weekly newsletter. Each week, I write about software engineering, big tech/startups and career growth. ​​Thank you for your readership, we hit 29,000 readers this week 🙏 🎉</em></p><p><em>Today’s post is an engineering career story from <a href=\"https://www.linkedin.com/in/ravirajachar/\">Raviraj Achar</a> who is a Staff Engineer (E6) at Meta. He shares his story of growth from being an intern at Microsoft all the way to Staff. If you’re new to FAANG levels, here’s a side-by-side comparison <a href=\"https://www.levels.fyi/\">from levels.fyi</a> that shows his journey:</em></p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!0MhS!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6db0649c-18e2-42d7-bb6c-f410111e6c44_1308x789.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!0MhS!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6db0649c-18e2-42d7-bb6c-f410111e6c44_1308x789.png 424w, https://substackcdn.com/image/fetch/$s_!0MhS!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6db0649c-18e2-42d7-bb6c-f410111e6c44_1308x789.png 848w, https://substackcdn.com/image/fetch/$s_!0MhS!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6db0649c-18e2-42d7-bb6c-f410111e6c44_1308x789.png 1272w, https://substackcdn.com/image/fetch/$s_!0MhS!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6db0649c-18e2-42d7-bb6c-f410111e6c44_1308x789.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!0MhS!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6db0649c-18e2-42d7-bb6c-f410111e6c44_1308x789.png\" width=\"1308\" height=\"789\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/6db0649c-18e2-42d7-bb6c-f410111e6c44_1308x789.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:789,&quot;width&quot;:1308,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:null,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!0MhS!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6db0649c-18e2-42d7-bb6c-f410111e6c44_1308x789.png 424w, https://substackcdn.com/image/fetch/$s_!0MhS!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6db0649c-18e2-42d7-bb6c-f410111e6c44_1308x789.png 848w, https://substackcdn.com/image/fetch/$s_!0MhS!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6db0649c-18e2-42d7-bb6c-f410111e6c44_1308x789.png 1272w, https://substackcdn.com/image/fetch/$s_!0MhS!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F6db0649c-18e2-42d7-bb6c-f410111e6c44_1308x789.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><p><em>What sets his story apart is how transparent he is about what didn’t go well with actionable learnings for all levels.</em></p><p><em>For more from Raviraj, I recommend you subscribe to his newsletter, <a href=\"https://link.techleadmentor.com/DDMcNH\">Tech Lead Mentor</a></em><strong> </strong>and <a href=\"https://link.techleadmentor.com/pgK8ax\">follow him on LinkedIn</a><strong>.</strong></p><p><em>Also if you like the content, please share it with your friends and coworkers. Enjoy!</em></p><div><hr></div><p>I am a Staff Engineer (E6) at Meta. I work in an infrastructure team (i.e. Meta's internal cloud) that enables microservices to communicate with each other. I completed my Masters at Georgia Tech, interned at Microsoft, and worked there full-time for 4 years before joining Meta.&nbsp;</p><p>I don't consider myself exceptionally smart, but I believe I am hardworking. I have made mistakes, faced imposter syndrome, and held myself back due to self-doubt. I didn't possess all the qualities required to be a Staff Engineer initially; I had to acquire them over time. If you feel stuck for similar reasons, I hope my story can inspire you to overcome challenges and grow quickly.</p><p>I will share my journey going from a new graduate → mid-level engineer → senior engineer, and eventually to a staff engineer. The story is divided into the following chapters:</p><ul><li><p><strong>Microsoft Internship</strong></p></li><li><p><strong>Microsoft (Level 59 -&gt; 62)</strong>: Growth and taking feedback</p></li><li><p><strong>Mid-level @ Meta (E4 -&gt; E5)</strong>: Finding my place</p></li><li><p><strong>Senior @ Meta (E5)</strong>: Becoming a leader&nbsp;</p></li><li><p><strong>Journey to Staff @ Meta (E5 -&gt; E6): </strong>Learning Staff behaviors</p></li></ul><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!ZIUS!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fce9889e7-c9db-4221-ab47-ab60c949a6ab_1086x475.jpeg\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!ZIUS!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fce9889e7-c9db-4221-ab47-ab60c949a6ab_1086x475.jpeg 424w, https://substackcdn.com/image/fetch/$s_!ZIUS!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fce9889e7-c9db-4221-ab47-ab60c949a6ab_1086x475.jpeg 848w, https://substackcdn.com/image/fetch/$s_!ZIUS!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fce9889e7-c9db-4221-ab47-ab60c949a6ab_1086x475.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!ZIUS!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fce9889e7-c9db-4221-ab47-ab60c949a6ab_1086x475.jpeg 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!ZIUS!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fce9889e7-c9db-4221-ab47-ab60c949a6ab_1086x475.jpeg\" width=\"573\" height=\"250.62154696132598\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/ce9889e7-c9db-4221-ab47-ab60c949a6ab_1086x475.jpeg&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:475,&quot;width&quot;:1086,&quot;resizeWidth&quot;:573,&quot;bytes&quot;:null,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!ZIUS!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fce9889e7-c9db-4221-ab47-ab60c949a6ab_1086x475.jpeg 424w, https://substackcdn.com/image/fetch/$s_!ZIUS!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fce9889e7-c9db-4221-ab47-ab60c949a6ab_1086x475.jpeg 848w, https://substackcdn.com/image/fetch/$s_!ZIUS!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fce9889e7-c9db-4221-ab47-ab60c949a6ab_1086x475.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!ZIUS!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fce9889e7-c9db-4221-ab47-ab60c949a6ab_1086x475.jpeg 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">A tech talk from 2019</figcaption></figure></div><h2><strong>Microsoft Internship (2011)</strong></h2><p>I did my Master's in Computer Science, focusing on distributed systems. I was thrilled when I got an internship at Microsoft even though it wasn’t in distributed systems. I worked on adding a new feature called \"Auto Collage\" to Windows Photo Gallery. This feature would allow the app to take multiple pictures and generate a beautiful collage. The app was a Win32 desktop application written in C++ (pre C++ 11).</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!irW0!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9416b4ba-b060-4ce0-b895-12d604db3b06_413x253.jpeg\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!irW0!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9416b4ba-b060-4ce0-b895-12d604db3b06_413x253.jpeg 424w, https://substackcdn.com/image/fetch/$s_!irW0!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9416b4ba-b060-4ce0-b895-12d604db3b06_413x253.jpeg 848w, https://substackcdn.com/image/fetch/$s_!irW0!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9416b4ba-b060-4ce0-b895-12d604db3b06_413x253.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!irW0!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9416b4ba-b060-4ce0-b895-12d604db3b06_413x253.jpeg 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!irW0!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9416b4ba-b060-4ce0-b895-12d604db3b06_413x253.jpeg\" width=\"413\" height=\"253\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/9416b4ba-b060-4ce0-b895-12d604db3b06_413x253.jpeg&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:253,&quot;width&quot;:413,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:null,&quot;alt&quot;:&quot;Picture showing the auto collage button in Photo gallery.&quot;,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"Picture showing the auto collage button in Photo gallery.\" title=\"Picture showing the auto collage button in Photo gallery.\" srcset=\"https://substackcdn.com/image/fetch/$s_!irW0!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9416b4ba-b060-4ce0-b895-12d604db3b06_413x253.jpeg 424w, https://substackcdn.com/image/fetch/$s_!irW0!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9416b4ba-b060-4ce0-b895-12d604db3b06_413x253.jpeg 848w, https://substackcdn.com/image/fetch/$s_!irW0!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9416b4ba-b060-4ce0-b895-12d604db3b06_413x253.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!irW0!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9416b4ba-b060-4ce0-b895-12d604db3b06_413x253.jpeg 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">Added this functionality during my internship</figcaption></figure></div><p>On my first day, my mentor asked me to explain how one of our team’s features worked. I spent the entire day trying to understand the code. When the time came, I shared with my mentor what I learned and where I struggled. To my relief, my understanding exceeded his expectations. This positive start made me more comfortable reaching out to him sooner thereafter.</p><p>After a few minor changes and a couple of weeks, I sent a giant code change for review to establish the groundwork for the feature. I got around 120 comments on it. There were a bunch labeled as “nits”. This made me think I was good for nothing and wouldn’t get the return offer. However, after resolving the comments and landing the change, my mentor appreciated my attention to detail.</p><blockquote><p><em>What? He made 100+ comments and liked my attention to detail. Why!</em></p></blockquote><p>That taught me that feedback (even nitpicks) is a part of learning and receiving feedback does not mean everything else I am doing is wrong.</p><p>At the end of the internship, I got a return offer. I was too lazy to look for a \"distributed systems\" job that I wanted and enjoyed my experience working in the Photos team, so I decided to join them.</p><p><strong>Takeaways</strong></p><ul><li><p>Don't be afraid of the number of comments you receive in your first set of code reviews. In retrospect, I can see how his feedback helped bring attention to complex things that I overlooked. It saved me time dealing with bugs later!</p></li><li><p>If you are concerned about your performance, it is natural. It simply means you are motivated to excel. Ask your mentor for feedback, and they should either mitigate your worries or give you actionable feedback to improve.</p></li></ul><h2><strong>Microsoft (Level 59 -&gt; 62 | March’12 - April’16)</strong></h2><p>The rest of the team was wrapping up Windows 8 Photos, so I was assigned to a couple of siloed projects. I was responsible for shipping the RAW image codec via Windows Update and making it work on Windows 8 ARM devices (with SSE to Neon translation).</p><p>We had a tight deadline, but I finished those projects ahead of schedule. I took ownership of the entire process and learned a lot. I was overwhelmed by the information overload, so I ended up overworking myself during the first two months. I was doing a lot of learning on the side to “catch up”.</p><p>Since I finished early, I was asked to prototype the next version of the Photo Editor. That went quite well. In fact, this opportunity opened up more opportunities for many other critical projects.</p><p>Two incidents that left a mark:</p><ol><li><p>I spent a week chasing a very elusive memory leak in the codec - That alone significantly stretched the limits of my understanding. I learned a lot from this in hindsight.</p></li><li><p>Accidentally broke the Windows build - I was scared when it happened, but later it turned out to be just okay. It taught me to stay calm when you mess up and do your part to clean up, and prevent it from happening again.</p></li></ol><h3><strong>Receiving Tough Feedback</strong></h3><p>A year later, I was working with a lot of people. In one of my performance reviews, I received critical feedback that I didn't \"listen\" and someone found it hard to get their point across. It felt devastating to hear that feedback. I even denied it. Fortunately, I had a good manager who helped dissect the feedback and also taught me how to take feedback. <em>The issue boiled down to me getting defensive or using trigger words like responding with a \"no\" and cutting off people before they finished.</em> With their help I fixed the problem and I have shared the story in depth<a href=\"https://link.techleadmentor.com/uSQhew\"> here</a>.</p><p>The first three years were great. However, I felt I had stopped learning. My projects and challenges became repetitive, and with a re-org and constant replanning, I realized it was time for a change. This time, I was determined to find a team in distributed systems.</p><p><strong>Takeaways</strong></p><ul><li><p>Finishing your projects quickly and with high quality will build credibility. This leads to more opportunities.</p></li><li><p>When you encounter hard engineering problems try to fix it yourself. This will fast-track your technical skill growth.</p></li><li><p>When someone shares feedback, take it with an open mind. Your instinct will tell you to deny it but pause and listen. Seek improvements and act on them.</p></li><li><p>When your job gets repetitive and devoid of new challenges, you have stopped learning. If that happens and your career goals can’t be met there, then it’s time to move. It is always scary to leave your comfort zone, but it will be fine.</p></li></ul><h2><strong>Mid-level @ Meta (April’16 - Dec’17)</strong></h2><p>I finally joined a hardcore distributed systems team like I wanted since college. This team managed <a href=\"https://zookeeper.apache.org/\">Zookeeper</a> for Meta and enabled service discovery for microservices running inside the Meta cloud. I got what I wanted. Yayy!</p><h3><strong>Feeling Out of Place</strong></h3><p>Oh boy! I was overwhelmed by ‘geeks' around me. I had no real Linux experience and the domain discussions made no sense. The only intersection between my previous job and this one was C++. Heck, I didn’t even touch type at that time and with open offices I felt all my shortcomings were publicly visible. I felt out of place. Imposter syndrome kicked in hard!</p><p>I faked not feeling overwhelmed by focusing on two things</p><ol><li><p>Finishing tasks fast with high quality and volunteering for more tasks.</p></li><li><p>Learning about Zookeeper and digging into the code base.</p></li></ol><p>The ramp up was steep but it was fun. By the end of 2016 I got over these onboarding hurdles and even gave a talk at a Zookeeper summit.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!N5J_!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F032e0850-f8fa-4315-a709-947142057a01_1212x814.jpeg\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!N5J_!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F032e0850-f8fa-4315-a709-947142057a01_1212x814.jpeg 424w, https://substackcdn.com/image/fetch/$s_!N5J_!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F032e0850-f8fa-4315-a709-947142057a01_1212x814.jpeg 848w, https://substackcdn.com/image/fetch/$s_!N5J_!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F032e0850-f8fa-4315-a709-947142057a01_1212x814.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!N5J_!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F032e0850-f8fa-4315-a709-947142057a01_1212x814.jpeg 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!N5J_!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F032e0850-f8fa-4315-a709-947142057a01_1212x814.jpeg\" width=\"469\" height=\"314.9884488448845\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/032e0850-f8fa-4315-a709-947142057a01_1212x814.jpeg&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:814,&quot;width&quot;:1212,&quot;resizeWidth&quot;:469,&quot;bytes&quot;:null,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!N5J_!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F032e0850-f8fa-4315-a709-947142057a01_1212x814.jpeg 424w, https://substackcdn.com/image/fetch/$s_!N5J_!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F032e0850-f8fa-4315-a709-947142057a01_1212x814.jpeg 848w, https://substackcdn.com/image/fetch/$s_!N5J_!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F032e0850-f8fa-4315-a709-947142057a01_1212x814.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!N5J_!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F032e0850-f8fa-4315-a709-947142057a01_1212x814.jpeg 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">Zookeeper Winter Summit 2016</figcaption></figure></div><h3><strong>What Got Me To Senior</strong></h3><p>2017 was an interesting year for me. My main project in service discovery got canceled by the end of Q1 due to my mistake. I was focused on adding ‌functionality instead of how impactful it was to the company. The cancellation was upsetting but it taught me to “focus on impact”. At that time, reducing costs was what mattered most.</p><p>So for the remainder of the year, I solved problems that had a real impact. I found plenty of opportunities in the service discovery area. I also became the go-to person for several areas of the team and mentored new hires. I actively drove the team's direction and played a key role in developing the plan for the upcoming half. As a result, I received the highest rating at Meta, Redefines Expectation (top 1% of ratings), and was promoted to E5. You can read the full story <a href=\"https://link.techleadmentor.com/YZIJZy\">here</a>.</p><p><strong>Takeaways</strong></p><ul><li><p>When you feel like an imposter, focus on what you can accomplish. At E4, pace through your deliverables and slowly work through your learning backlog.</p></li><li><p>Understand what impact means for your team and company. It can be very temporal and change due to various factors. So, adjust your plans accordingly.</p></li><li><p>Identify and act on problems that are affecting the team's reliability, scalability, and operations. Strong ownership is key to getting to senior.</p></li></ul><h2><strong>Senior (Jan’18 - March’19): Becoming a Leader</strong></h2><p>Our team had an ambitious goal with multiple projects that would help us achieve it. A couple months in, we learned we severely underestimated the most important project. We needed more people, so I paused what I was working on to help with the main one.</p><p>This new scope was ambiguous, so I just started by adding a bunch of integration and load tests. This surfaced a bunch of bugs and showed us that we needed to add special load shedding and rate limiting mechanisms. I built those and fixed more bugs.</p><p>We also needed to frequently communicate our project status, and I volunteered to take that up as well. Next, I took on project management and helped generate scope for more engineers in my team on this project. This was the first time I had taken on project management of this scale. That took a lot of my time, and I felt like I was not coding enough. I did not know how to handle that feeling and simply overworked myself to make both things happen.</p><p>Gradually, we had 5 people working on this project and it ran for over a year.</p><p><strong>Takeaways</strong></p><ul><li><p>Easiest way to find scope is to take up stuff related to testing and trying to hit milestones sooner. Bug fixes &amp; feature gaps are a nice way to find your own work.</p></li><li><p>The feeling of not coding enough is pretty common among new tech leads. It will go away. You will soon learn how to quantify leadership work against other coding tasks.</p></li></ul><h3><strong>Troubles Growing to Staff</strong></h3><p>I had become the go-to person for many of the team's areas. I improved our wikis and processes, handled many incidents, supported my peers, mentored engineers to be better mentors, resolved many cross team (XFN) issues, conducted tech talks, and presented team plans to senior leadership. I even received feedback appreciating how I led the team well and built a great culture.</p><p>So you may think that I became Staff after that, right? No.</p><p>During this time, I cycled through three managers and also lacked a Staff-level mentor which posed a challenge of its own. The conversation about my promo never actually happened either. To be honest, I was also afraid of failing at the next level and wasn’t sure if I was ready. I wrote about my struggle <a href=\"https://link.techleadmentor.com/U4HI71\">in a previous article</a>.</p><p>Some of the feedback that I received was along these lines:</p><ul><li><p>While I was a solid leader within my team, I was not seen as a Staff-level leader outside the team.</p></li><li><p>I should have handled some complex XFN with better empathy. This didn’t make sense to me then but I agree now.</p></li><li><p>I had to be OK with ambiguity and I had to build a multi-year vision for the team.</p></li></ul><p>I didn’t know how to close these gaps. In retrospect, I didn’t have all the help I needed.</p><p><strong>Takeaways</strong></p><ul><li><p>When dealing with no managers or poor managers, seek support from your skip-level manager and other managers in your organization. When your manager changes, you need to rebuild your credibility again. So if other leaders in the organization can speak well about you, that will help.</p></li><li><p>If you believe you are ready for a promotion but receive vague feedback, respectfully dig in. Ask for tactical action items you can work on.</p></li></ul><h2><strong>Journey to Staff (March’19 - Dec’20)</strong></h2><p><em>Some people talk about projects that got them promoted to Staff, but that is wrong. Staff promotions are all about having the right set of behaviors.</em></p><h3><strong>The Right Mentor</strong></h3><p>We hired a very experienced engineer (E6+) and they were a great mentor to me. Let’s call them “TL” for simplicity. TL and I partnered together on a lot of things. For instance, I watched them handle a very difficult XFN situation well. It seemed the outcome would force us to make our system less “efficient”. TL was direct but respectful with the partner team. There was a lot of metaphorical yelling and disagreements before things settled. These discussions ran for weeks but eventually we arrived at a solid conclusion. In fact, it spun up a huge project that the TL owned thereafter and branched out of the team.</p><p>TL made it happen with their people skills. I had a cockpit view of how they mitigated a sour relationship. This taught me some valuable lessons:</p><ul><li><p>Some agreements take time &amp; intentional effort to resolve by even pausing your main “project”.</p></li><li><p>You cannot predict the outcome with these so it would feel like a gamble. You have to be brave to accept a potential failure with these ambiguous explorations.</p></li><li><p>Empathize with the opposing views. Sometimes you need to make decisions that seem \"wrong,\" but in reality, they are the right trade-off overall.</p></li></ul><p>TL and I also worked together on defining an ambiguous problem. I had the technical depth and got help in solidifying the problem statement. I learned:</p><ul><li><p>Technical writing is hard and takes a lot of time to craft the message correctly</p></li><li><p>How to quantify the non-coding leadership tasks and feel good about the time I spend</p></li><li><p>How to rally a team full of smart senior engineers to buy into the problem and potential solution that would take a long time to build.</p></li></ul><p>That became the team’s main focus for the next couple of years, which I was the tech lead for.</p><p>Our team also got a new manager that I worked closely with on my promo bar. I worked with them to convert all vague feedback into actionable next steps. Here’s an example of what I’d ask to get clarity: \"I see this feedback, and I understand I should improve XYZ, but I don't know what I should do next. What would you do? Can you find some success stories that I could learn from?\" Then we had a simple checklist that I could refer to.</p><h3><strong>Building Empathy</strong></h3><p>One day, we received several escalations that AI workloads were being throttled by our system and they needed higher limits to meet their growing needs. Their requests were much higher than what we could safely support. The escalations were unstructured and I did not have a single point of contact to work with. Also, I could not simply \"increase the limit\" since it was not feasible, but I did not want to keep repeating that to them. Instead, I asked questions about how and why they needed a higher limit and the internals of their architecture. I provided a status update and asked questions in a broader forum, proposing alternatives, but also stating that I lacked context. This got me a strong senior point of contact from their side. That made things easier.&nbsp;</p><p>They didn't have all the answers, but they listened. I listened. We did our homework. Both our teams had constraints. My team was already working on scaling but could only support what they needed 6 months down the line. They couldn't wait. After more investigation, I suggested a few tweaks to their architecture and made some short-term changes that allowed batching requests on our side to make it work for them for the next 6 months. The issue was mitigated, and I received huge kudos from that org.</p><h3><strong>Consistent Performance</strong></h3><p>Promotions are lagging, so I needed to demonstrate continued Staff-level performance. I executed the team-wide project and also built the team's vision with org-level buy-in. There were more instances of exceptional cross-functional resolutions. For example, I bootstrapped a working group between my team and a customer to eliminate overload and improve our disaster readiness. I continued to support my team and partnered with the manager to keep the team running smoothly. I had established myself as a strong team leader even outside our org.</p><p>I checked off items in my promo bar with solid impact, and as a result, I got promoted.</p><p><strong>Takeaways</strong></p><ul><li><p>When there is unclear or no feedback, don’t assume that there isn’t anything to improve. Don’t make it difficult for your manager to share feedback. Instead, work with them to get a tactical growth plan.</p></li><li><p>I learned the hard way that you can’t fix everything on your own. Learn from individuals who tackle complex and ambiguous problems better than you.&nbsp;</p></li><li><p>Writing is an important skill for a leader. You need it to share your vision for the product and resolve disagreements. Invest in it today.</p></li></ul><h2><strong>What I’d Do Differently</strong></h2><p>By no means is this story‌ complete. I made more mistakes and had more to celebrate than I have time for here. I tried to capture just the pivotal moments that shaped my career.</p><p>As you can see, I didn’t have all the skills to be a Staff Engineer at first. I picked them up at different points in my career. Some I learned by trial &amp; error and others through mentorship.&nbsp;</p><p>Three pieces of wisdom I wish I'd understood better earlier in my career.</p><p><strong>Accept your fears: </strong>In my career, I felt nervous about projects, ideas, or XFN issues. Though it was my nature to hide my fears and appear confident. I couldn't have been more wrong. Being open about my feelings with my mentors and leaders would have helped me address my concerns sooner. They would have helped me spot gaps in my thinking or my approach, and given me the support to be brave.</p><p><strong>Be brave: </strong>Fear of failure held me back from taking bold steps. I was overthinking the risks and trying to suppress all my fears instead of addressing them. As a result, I accepted the status quo for too long, hesitated to propose ambitious projects, and failed to take calculated risks. In reality, when you take the first step with a good idea, others will follow, and your idea will gain momentum. There is a fine line between being rash and brave, but you can find the balance by asking for help.</p><p><strong>Ask for help: </strong>I didn't know how to identify things I needed help with. Asking for help is more than just posing a question to unblock yourself in the moment or seeking feedback for growth. It requires a great deal of introspection to discover where you struggle. I had trouble seeking help on how to build aggressive plans, how to mitigate major concerns, and with writing. However, I was lucky to have great mentors who identified where I struggled.&nbsp;</p><p>Lastly, even though I dealt with imposter syndrome and didn't have all the skills I needed to be a Staff Engineer at first, working hard was the foundation for my growth.&nbsp;</p><div><hr></div><p><em>Hey Ryan here again. Thanks for reading! I hope you enjoyed Raviraj’s career story. We put a lot of effort into making it as actionable and high quality as possible. If you have any questions for Raviraj feel free to drop a comment for him here.</em></p><p><em>If you enjoyed it, consider following more of Raviraj’s writing on <a href=\"https://link.techleadmentor.com/pgK8ax\">his LinkedIn</a> and <a href=\"https://link.techleadmentor.com/DDMcNH\">Newsletter here</a>:</em></p><div class=\"embedded-publication-wrap\" data-attrs=\"{&quot;id&quot;:1931112,&quot;name&quot;:&quot;Techlead Mentor&quot;,&quot;logo_url&quot;:&quot;https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F63647128-647a-4376-914c-bc701c49e402_886x886.png&quot;,&quot;base_url&quot;:&quot;https://newsletter.techleadmentor.com&quot;,&quot;hero_text&quot;:&quot;Being a tech lead is a lot about behaviors than technical acumen. Tangible tips to grow as an engineer. Actionable advice to my fellow tech leads. All based on real world experiences.&quot;,&quot;author_name&quot;:&quot;Raviraj Achar&quot;,&quot;show_subscribe&quot;:true,&quot;logo_bg_color&quot;:null,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"EmbeddedPublicationToDOMWithSubscribe\"><div class=\"embedded-publication show-subscribe\"><a class=\"embedded-publication-link-part\" native=\"true\" href=\"https://newsletter.techleadmentor.com?utm_source=substack&amp;utm_campaign=publication_embed&amp;utm_medium=web\"><img class=\"embedded-publication-logo\" src=\"https://substackcdn.com/image/fetch/$s_!Hb_M!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F63647128-647a-4376-914c-bc701c49e402_886x886.png\" width=\"56\" height=\"56\"><span class=\"embedded-publication-name\">Techlead Mentor</span><div class=\"embedded-publication-hero-text\">Being a tech lead is a lot about behaviors than technical acumen. Tangible tips to grow as an engineer. Actionable advice to my fellow tech leads. All based on real world experiences.</div><div class=\"embedded-publication-author-name\">By Raviraj Achar</div></a><form class=\"embedded-publication-subscribe\" method=\"GET\" action=\"https://newsletter.techleadmentor.com/subscribe?\"><input type=\"hidden\" name=\"source\" value=\"publication-embed\"><input type=\"hidden\" name=\"autoSubmit\" value=\"true\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email...\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"></form></div></div><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 29000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "👋 Hi, this is Ryan with another edition of my weekly newsletter. Each week, I write about software engineering, big tech/startups and career growth. ​​Thank you for your readership, we hit 29,000 readers this week 🙏 🎉",
+  "wordcount": 3409,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "a2f82702-f657-459f-b972-84b24f8a3b62",
+      "publication_id": 1340878,
+      "name": "Engineering Career Stories",
+      "slug": "engineering-career-stories",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        4,
+        131,
+        196
+      ],
+      "population": 465
+    },
+    "DarkVibrant": {
+      "rgb": [
+        4,
+        124,
+        186
+      ],
+      "population": 460
+    },
+    "LightVibrant": {
+      "rgb": [
+        238,
+        189,
+        153
+      ],
+      "population": 97
+    },
+    "Muted": {
+      "rgb": [
+        156,
+        100,
+        84
+      ],
+      "population": 1
+    },
+    "DarkMuted": {
+      "rgb": [
+        69,
+        58,
+        56
+      ],
+      "population": 193
+    },
+    "LightMuted": {
+      "rgb": [
+        192,
+        212,
+        222
+      ],
+      "population": 59
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 167123667,
+      "name": "Raviraj Achar",
+      "handle": "ravirajachar",
+      "previous_name": "Raviraj S Achar",
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbc74ad57-dfb8-4073-9fb9-b47354598c8b_1528x1567.jpeg",
+      "bio": "A Seasoned Tech Lead. I enjoy helping engineers level up their people skills.\nAuthor of the Techlead Mentor newsletter(20K+ subs): newsletter.techleadmentor.com",
+      "profile_set_up_at": "2023-09-06T01:39:27.742Z",
+      "reader_installed_at": "2023-09-06T20:37:36.399Z",
+      "is_guest": true,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      },
+      "primaryPublicationId": 1931112,
+      "primaryPublicationName": "Techlead Mentor",
+      "primaryPublicationUrl": "https://newsletter.techleadmentor.com",
+      "primaryPublicationSubscribeUrl": "https://newsletter.techleadmentor.com/subscribe?"
+    },
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 198,
+  "comment_count": 15,
+  "child_comment_count": 7,
+  "audio_items": [
+    {
+      "post_id": 138540264,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/138540264/tts/1ab55a92-5174-4c4c-9177-b3a784873c70/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 43020033,
+      "body": "A very close article. Thanks for being super transparent, Raviraj. I'm sure identifying and sharing all these vulnerabilities was hard. It'll help many people.\n\nI liked the emphasis you put on finding mentors along the way. I'm the kind of guy who thought \"I can grind my books and my tasks and progress\". But lately, I have realized that on my own I can only do linear progress. Every step is connected to the previous one. But someone who has been there can point and apply pressure to the right levers to make a meaningful change. \n\nYour story is still being written. I'm sure what's coming next is exciting 😁",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "A very close article. Thanks for being super transparent, Raviraj. I'm sure identifying and sharing all these vulnerabilities was hard. It'll help many people."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I liked the emphasis you put on finding mentors along the way. I'm the kind of guy who thought \"I can grind my books and my tasks and progress\". But lately, I have realized that on my own I can only do linear progress. Every step is connected to the previous one. But someone who has been there can point and apply pressure to the right levers to make a meaningful change."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Your story is still being written. I'm sure what's coming next is exciting 😁"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 138540264,
+      "user_id": 170998285,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-11-03T20:25:52.386Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Fran Soto",
+      "photo_url": "https://substackcdn.com/image/fetch/$s_!XWMk!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F10f90fdb-11ac-48b4-8f51-6a59e07763d2_1149x1149.png",
+      "handle": "fransotodev",
+      "reactor_names": [
+        "Ryan Peterman",
+        "Raviraj Achar"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 6
+      },
+      "reaction_count": 6,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "fransotodev",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Strategize Your Career",
+          "id": 1974191,
+          "base_url": "https://strategizeyourcareer.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 11,
+      "children_count": 2,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "2 replies by Ryan Peterman and others"
+    },
+    {
+      "id": 43051746,
+      "body": "My takeaway from this read is, be a life long student. It serves well in multiple and surprising ways. So thank you for writing this.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "My takeaway from this read is, be a life long student. It serves well in multiple and surprising ways. So thank you for writing this."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 138540264,
+      "user_id": 16492182,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-11-04T13:49:12.732Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Anjana Patil",
+      "photo_url": null,
+      "handle": "anjanapatil",
+      "reactor_names": [
+        "Ryan Peterman",
+        "Raviraj Achar"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 4
+      },
+      "reaction_count": 4,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "anjanapatil",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 9,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply"
+    }
+  ]
+}

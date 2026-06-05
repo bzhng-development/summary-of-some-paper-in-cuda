@@ -1,0 +1,108 @@
+Large language models (LLM) will change how software engineers write code forever.
+
+Last weekend, I built a side project using Cursor, an LLM-based IDE, without writing a single line of code myself (I am not sponsored). The project took me a weekend when it otherwise would’ve taken at least a week.
+
+Although LLMs aren’t perfect (I’ll explain where they don’t work later), they do the unsatisfying, repetitive parts of programming well.
+
+
+## New Behaviors
+
+
+An interesting thing happens when you can write the code for a full feature with one command. It becomes more efficient to throw away code and retry with a tweaked prompt. Debugging the broken code is much slower than prompt engineering.
+
+This has its pros and cons. I get things done way faster, but also have much less understanding of the code. This burned me a few times since I accepted code that made sense in a silo but was clowny when I zoomed out. For instance, I had two competing data models for the same concept at one point. If I had written the code myself, I would have avoided such an obvious design mistake.
+
+Also, LLMs make print statement debugging better than using debuggers. I used to prefer debuggers since they make it faster to inspect arbitrary program state. However, you don’t need to type out print statements manually anymore.
+
+LLMs make it easy to inject quality print statements everywhere with a single prompt. This helps you run and inspect your program much faster. And when you’re done, you can clean all the print statements up just as easily.
+
+
+## Goodbye Google
+
+
+LLM responses are better than Google’s most of the time. They give more targeted answers so you don’t need to read tutorials or Stack Overflow answers. There was only a handful of times when I needed Google. Here are two examples:
+
+  - Niche Answer - I wanted my Chrome extension to draw over the current page without changing its DOM. LLMs kept giving me obvious answers that injected components into the DOM. Google got me a better answer that did what I wanted.
+
+Niche Answer - I wanted my Chrome extension to draw over the current page without changing its DOM. LLMs kept giving me obvious answers that injected components into the DOM. Google got me a better answer that did what I wanted.
+
+  - Weird Bug - If you create an OpenAI API key without registering a credit card, the API fails with a 429 response code (too many requests). The LLM kept giving me solutions to cache and rate limit my code, which made sense but didn’t work. A quick Google search showed it was about not having a credit card on file.
+
+Weird Bug - If you create an OpenAI API key without registering a credit card, the API fails with a 429 response code (too many requests). The LLM kept giving me solutions to cache and rate limit my code, which made sense but didn’t work. A quick Google search showed it was about not having a credit card on file.
+
+
+## Know Your LLM
+
+
+You need to know how to query LLMs to get the most out of them. After playing around for a day or two, you develop a sense of what works and what doesn’t. Here are a few examples from my experience:
+
+  - Good at:Small, focused changes - Almost perfect if it was a small algorithm, regardless of how complex. I wouldn’t be surprised if they are super-human at Leetcode.Basic UI - So thankful for this. My side project looks good (although simple) without me having to tweak much CSS.Transpiling - A few hours into the project, I realized I wanted types. I converted all my vanilla Javascript into Typescript in just a minute or two.
+
+Good at:
+
+  - Small, focused changes - Almost perfect if it was a small algorithm, regardless of how complex. I wouldn’t be surprised if they are super-human at Leetcode.
+
+Small, focused changes - Almost perfect if it was a small algorithm, regardless of how complex. I wouldn’t be surprised if they are super-human at Leetcode.
+
+  - Basic UI - So thankful for this. My side project looks good (although simple) without me having to tweak much CSS.
+
+Basic UI - So thankful for this. My side project looks good (although simple) without me having to tweak much CSS.
+
+  - Transpiling - A few hours into the project, I realized I wanted types. I converted all my vanilla Javascript into Typescript in just a minute or two.
+
+Transpiling - A few hours into the project, I realized I wanted types. I converted all my vanilla Javascript into Typescript in just a minute or two.
+
+  - Bad at:Changes outside the code - It was unreliable when setting up my environment or guaranteeing references across my project directory. Open-ended features - The more ambiguity the feature had, the more likely the prompt would fail. I needed to give it specific bulleted instructions the bigger the feature was.
+
+Bad at:
+
+  - Changes outside the code - It was unreliable when setting up my environment or guaranteeing references across my project directory.
+
+Changes outside the code - It was unreliable when setting up my environment or guaranteeing references across my project directory.
+
+  - Open-ended features - The more ambiguity the feature had, the more likely the prompt would fail. I needed to give it specific bulleted instructions the bigger the feature was.
+
+Open-ended features - The more ambiguity the feature had, the more likely the prompt would fail. I needed to give it specific bulleted instructions the bigger the feature was.
+
+My default LLM of choice was “claude-3.5-sonnet”. It runs fast and works most of the time. When Claude had trouble, I would try the most capable model I knew (OpenAI’s O1-preview model). In many cases, that would work, although it is slow (takes a few minutes) and expensive ($0.40 per request). If that failed, then I’d break down the feature into well-scoped tasks.
+
+Hopefully, LLM tooling will one day automatically pick the model based on the task's difficulty. Until then, it’s good to understand what each model can do to balance quality and cost by hand.
+
+
+## What Is Important Now
+
+
+Even though LLM-based development was faster, there were still many limitations that I had to work around. The skills that help with dealing with those limitations are:
+
+  - High-level planning and design - Details and well-scoped algorithm changes are easy for LLMs. Planning out your feature roadmap and technical design matters more since LLMs don’t do this well yet.
+
+High-level planning and design - Details and well-scoped algorithm changes are easy for LLMs. Planning out your feature roadmap and technical design matters more since LLMs don’t do this well yet.
+
+  - Debugging - There were times that I could dump my errors into the LLM and it would figure out the issue. But there were many times when it had trouble with even obvious errors (e.g. deleted critical code or changed function names).
+
+Debugging - There were times that I could dump my errors into the LLM and it would figure out the issue. But there were many times when it had trouble with even obvious errors (e.g. deleted critical code or changed function names).
+
+Also, I was building a simple, full-stack app. There are many online examples in LLM training data, and full-stack boilerplate code is unambiguous. This would have been much less effective for cutting-edge, proprietary code in many parts of the industry.
+
+LLM-based code generation is a powerful tool that can replace the need to write simple, well-scoped code. That doesn’t mean AI is taking our jobs. Play around with it for a while and you’ll see that it is still far from that.
+
+I’m optimistic that these tools will improve our lives though. It feels powerful to program in English. I can express myself with much less time and effort.
+
+This reminds me of the satisfaction I felt as my career grew. Doing higher-leverage work is much more fun than dealing with frustrating implementation details like compiler errors and missing semicolons. It frees you to do interesting, creative work.
+
+If you liked this post, consider sharing it with a friend. As always, you can find more of my stuff here:
+
+  - LinkedIn
+
+LinkedIn
+
+  - Twitter
+
+Twitter
+
+  - Threads
+
+Threads
+
+Thanks for reading,
+Ryan Peterman

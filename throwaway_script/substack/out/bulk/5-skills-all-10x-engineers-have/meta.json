@@ -1,0 +1,445 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/5-skills-all-10x-engineers-have",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 138715343,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-11-10T14:01:39.458Z",
+  "updated_at": "2024-01-08T06:31:20.789Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "5-skills-all-10x-engineers-have",
+  "social_title": null,
+  "subtitle": "With actionable tips on how to develop them",
+  "teaser_post_eligible": true,
+  "title": "5 Skills the Best Engineers I Know Have in Common",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 15,
+  "reactions": {
+    "❤": 236
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "from-microsoft-intern-to-meta-staff",
+  "next_post_slug": "top-tech-company-engineering-blog",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!EEvR!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa2d548d3-5ed4-486d-acd3-9fcc7a288633_1280x720.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "With actionable tips on how to develop them",
+  "body_html": "<p>👋<em> Hi, this is&nbsp;<a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a>&nbsp;with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 30,000 readers this week </em>🙏<em> </em>🎉</p><p><em>This week, I’m writing about what we can learn from the best engineers I know. If you find the post helpful, please share it with your friends and coworkers. Enjoy!</em></p><div><hr></div><p>I’ve been lucky to work with a handful of incredible engineers, each impactful in unique ways:</p><ul><li><p>An industry-leading expert who solves problems that no one else can</p></li><li><p>An architect who is a tech lead among tech leads</p></li><li><p>A code machine who produces more impactful code than an entire team of engineers</p></li></ul><p>Even though their working styles are so different, these engineers all have the same 5 skills in common. I’ll go over these and provide some actionable tips on how you can develop these skills too.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!EEvR!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa2d548d3-5ed4-486d-acd3-9fcc7a288633_1280x720.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!EEvR!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa2d548d3-5ed4-486d-acd3-9fcc7a288633_1280x720.png 424w, https://substackcdn.com/image/fetch/$s_!EEvR!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa2d548d3-5ed4-486d-acd3-9fcc7a288633_1280x720.png 848w, https://substackcdn.com/image/fetch/$s_!EEvR!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa2d548d3-5ed4-486d-acd3-9fcc7a288633_1280x720.png 1272w, https://substackcdn.com/image/fetch/$s_!EEvR!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa2d548d3-5ed4-486d-acd3-9fcc7a288633_1280x720.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!EEvR!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa2d548d3-5ed4-486d-acd3-9fcc7a288633_1280x720.png\" width=\"547\" height=\"307.6875\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/a2d548d3-5ed4-486d-acd3-9fcc7a288633_1280x720.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:720,&quot;width&quot;:1280,&quot;resizeWidth&quot;:547,&quot;bytes&quot;:null,&quot;alt&quot;:&quot;Happy birthday Linus Torvalds, here's a peek at the linux world  headquaters... : r/linuxmasterrace&quot;,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"Happy birthday Linus Torvalds, here's a peek at the linux world  headquaters... : r/linuxmasterrace\" title=\"Happy birthday Linus Torvalds, here's a peek at the linux world  headquaters... : r/linuxmasterrace\" srcset=\"https://substackcdn.com/image/fetch/$s_!EEvR!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa2d548d3-5ed4-486d-acd3-9fcc7a288633_1280x720.png 424w, https://substackcdn.com/image/fetch/$s_!EEvR!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa2d548d3-5ed4-486d-acd3-9fcc7a288633_1280x720.png 848w, https://substackcdn.com/image/fetch/$s_!EEvR!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa2d548d3-5ed4-486d-acd3-9fcc7a288633_1280x720.png 1272w, https://substackcdn.com/image/fetch/$s_!EEvR!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa2d548d3-5ed4-486d-acd3-9fcc7a288633_1280x720.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">Linus Torvalds (creator of Linux and Git): some engineers are built different</figcaption></figure></div><h3>1) Code ROI</h3><p><strong>All these engineers have a strong sense of the return on investment (ROI) of their code</strong>. This understanding guides them to have much more impact with their limited time. They are often hard to reach unless you’re working on something they think is high ROI. They aren’t trying to be mean; it is out of necessity to have more impact.</p><p>To develop this skill:</p><ul><li><p><strong>Think about the “why” behind your work</strong> - <a href=\"https://www.developing.dev/p/protect-your-time\">Understand the cost and benefit of potential projects</a>. You can discuss the ROI of potential work with your tech lead or manager for feedback since they should have a good sense of this. Getting involved in your team’s project roadmapping and prioritization is a concrete opportunity to practice this.</p></li></ul><h3>2) Technical Breadth And Depth</h3><p>There’s a lot of discussion about whether it’s better to be a specialist or a generalist. <strong>These engineers don’t choose. They have both incredible technical breadth and depth.</strong></p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!KCEe!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F14f9f78d-dbd2-4feb-be4e-63c3cf99a5d1_732x363.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!KCEe!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F14f9f78d-dbd2-4feb-be4e-63c3cf99a5d1_732x363.png 424w, https://substackcdn.com/image/fetch/$s_!KCEe!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F14f9f78d-dbd2-4feb-be4e-63c3cf99a5d1_732x363.png 848w, https://substackcdn.com/image/fetch/$s_!KCEe!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F14f9f78d-dbd2-4feb-be4e-63c3cf99a5d1_732x363.png 1272w, https://substackcdn.com/image/fetch/$s_!KCEe!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F14f9f78d-dbd2-4feb-be4e-63c3cf99a5d1_732x363.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!KCEe!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F14f9f78d-dbd2-4feb-be4e-63c3cf99a5d1_732x363.png\" width=\"575\" height=\"285.14344262295083\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/14f9f78d-dbd2-4feb-be4e-63c3cf99a5d1_732x363.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:363,&quot;width&quot;:732,&quot;resizeWidth&quot;:575,&quot;bytes&quot;:151605,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!KCEe!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F14f9f78d-dbd2-4feb-be4e-63c3cf99a5d1_732x363.png 424w, https://substackcdn.com/image/fetch/$s_!KCEe!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F14f9f78d-dbd2-4feb-be4e-63c3cf99a5d1_732x363.png 848w, https://substackcdn.com/image/fetch/$s_!KCEe!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F14f9f78d-dbd2-4feb-be4e-63c3cf99a5d1_732x363.png 1272w, https://substackcdn.com/image/fetch/$s_!KCEe!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F14f9f78d-dbd2-4feb-be4e-63c3cf99a5d1_732x363.png 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">These engineers have broad and deep “T-shaped” skills</figcaption></figure></div><p>Their depth allows them to solve problems that few others can. There are plenty of examples of this but to me, one of the most obvious examples is during outages. For the most severe issues that are difficult to diagnose, you might have dozens of engineers all looking into the problem. It is often the top engineers that find the fix.</p><p>Their breadth helps them quickly understand new systems they haven’t seen before. This is worth its weight in gold at big tech companies since the code base is too large to know deeply.</p><p>To develop this skill:</p><ul><li><p><strong>Follow your curiosity</strong> - In industry, there is no structured learning. I’ve found that curiosity is a great teacher since it helps you learn on the job. When I encounter something I don’t know, I ask questions out of personal interest. This habit has helped me grow my understanding faster over time.</p></li><li><p><strong>Work with strong engineers</strong> - You learn technical skills best by working with other strong engineers. There’s so much context that you can pick up by asking technical questions and seeing how others solve problems.</p></li></ul><h3>3) Influence Without Authority</h3><p><strong>These engineers all influence others without authority</strong>. Their strong communication skills coupled with their understanding of code ROI and excellent technical skills help them guide others.</p><p>Their succinct, clear reasoning is usually debate-winning. They take complex topics and explain them simply. This makes it easy for them to influence others.</p><p>To develop this skill:</p><ul><li><p><strong>Prioritize writing and speaking</strong> - Take every opportunity you have to practice. Each time you do, reflect on what you could do better. For instance, if I explain something and see it fall flat, I’ll think about how I can explain it more clearly next time.</p></li><li><p><strong>Learn to sell</strong> -  <a href=\"https://www.amazon.com/How-win-Friends-Influence-People/dp/8189297813\">“How To Win Friends And Influence People”</a> by Dale Carnegie is a good start if you’re looking for a general resource<em>. </em>The book is full of great content that can help you learn this skill:</p></li></ul><blockquote><p><em>“The only way on earth to influence other people is to talk about what they want and show them how to get it” - Dale Carnegie</em></p></blockquote><h3>4) Uplifting Others</h3><p><strong>These engineers make everyone around them better</strong>. They are a force multiplier. There are many ways they grow others aside from 1:1 mentorship:</p><ul><li><p>Knowledge Sharing - Writing wikis, giving presentations, contributing to Q&amp;A groups</p></li><li><p>Collaboration - Growing others while working with them (e.g. code reviews, design reviews, discussions)</p></li><li><p>Building Tools - Automating common processes or making it much easier to debug regressions</p></li></ul><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!RHLi!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!RHLi!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png 424w, https://substackcdn.com/image/fetch/$s_!RHLi!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png 848w, https://substackcdn.com/image/fetch/$s_!RHLi!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png 1272w, https://substackcdn.com/image/fetch/$s_!RHLi!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!RHLi!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png\" width=\"535\" height=\"434.7460595446585\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/cc6d2675-c3ea-4572-821d-bdde99363909_571x464.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:464,&quot;width&quot;:571,&quot;resizeWidth&quot;:535,&quot;bytes&quot;:null,&quot;alt&quot;:&quot;Is It Worth the Time?&quot;,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"Is It Worth the Time?\" title=\"Is It Worth the Time?\" srcset=\"https://substackcdn.com/image/fetch/$s_!RHLi!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png 424w, https://substackcdn.com/image/fetch/$s_!RHLi!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png 848w, https://substackcdn.com/image/fetch/$s_!RHLi!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png 1272w, https://substackcdn.com/image/fetch/$s_!RHLi!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">Tools can help uplift everyone around you (Credit: XKCD 1205)</figcaption></figure></div><p>To develop this skill:</p><ul><li><p><strong>Build tools that everyone can use</strong> - If you see a pattern of everyone solving a problem manually, consider building tooling to <a href=\"https://www.developing.dev/p/tools-of-the-trade\">simplify that workflow and spread it to maximize its usefulness</a>.</p></li><li><p><strong>Share your expertise </strong>- Look for opportunities to spread your knowledge and provide feedback. Code review is one of the best ways to get started.</p></li></ul><h3>5) Ownership Mentality</h3><p><strong>All these engineers have a strong sense of ownership</strong>. They take responsibility for the large initiatives they lead. They don’t care who does the work, just that it gets done right. This mindset lets them scale themselves through delegation. They do what is needed (even if it isn’t writing code).</p><p>To develop this skill:</p><ul><li><p><strong>Think like an owner</strong> - Own your projects end-to-end. Put your name on it and act like your reputation is on the line. Do whatever it takes for the project to succeed.</p></li></ul><div><hr></div><p>Being intentional about learning these skills will help you grow faster. If you have opportunities to work with an incredible engineer consider taking it. You don’t need to receive formal mentorship from these engineers to learn a lot. Strong engineers become even stronger just by asking them technical questions and <a href=\"https://www.developing.dev/p/why-i-stayed-at-meta-when-all-my\">seeing how they work</a>. </p><p>If you found this useful, <strong>please share it with a friend and consider subscribing if you haven’t already</strong>. Also, if you have feedback about how I can make the content better, <a href=\"https://forms.gle/TDAiBbh8UAxgXgjS6\">please share it here</a> 🙏</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 30000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 30,000 readers this week 🙏 🎉",
+  "wordcount": 989,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "5a4683e9-1121-4159-b2d7-6ca77779173f",
+      "publication_id": 1340878,
+      "name": "Career",
+      "slug": "career",
+      "hidden": false
+    },
+    {
+      "id": "7944911a-7d9b-49e5-a951-df44d652b086",
+      "publication_id": 1340878,
+      "name": "Soft Skills",
+      "slug": "soft-skills",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        209.4642857142857,
+        109.28571428571429,
+        45.53571428571429
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        23,
+        12,
+        5
+      ],
+      "population": 553
+    },
+    "LightVibrant": {
+      "rgb": [
+        231.32142857142858,
+        179.22857142857143,
+        146.07857142857142
+      ],
+      "population": 0
+    },
+    "Muted": {
+      "rgb": [
+        164,
+        108,
+        92
+      ],
+      "population": 2
+    },
+    "DarkMuted": {
+      "rgb": [
+        78,
+        71,
+        57
+      ],
+      "population": 214
+    },
+    "LightMuted": {
+      "rgb": [
+        166,
+        188,
+        183
+      ],
+      "population": 9
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 236,
+  "comment_count": 16,
+  "child_comment_count": 8,
+  "audio_items": [
+    {
+      "post_id": 138715343,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/138715343/tts/1a948043-5605-470a-a200-65e2a61acd47/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 43444878,
+      "body": "> Build tools that everyone can use - If you see a pattern of everyone solving a problem manually, consider building tooling to simplify that workflow and spread it to maximize its usefulness.\n\nBig fan of this one. Restacked with a quote",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "> Build tools that everyone can use - If you see a pattern of everyone solving a problem manually, consider building tooling to simplify that workflow and spread it to maximize its usefulness."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Big fan of this one. Restacked with a quote"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 138715343,
+      "user_id": 58854493,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-11-10T23:32:38.197Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Jordan Cutler",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/670bb162-5a63-4fd2-8253-f98c28d446a7_1168x1168.jpeg",
+      "handle": "jordancutler",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 5
+      },
+      "reaction_count": 5,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "jordancutler",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "High Growth Engineer",
+          "id": 1504485,
+          "base_url": "https://read.highgrowthengineer.com"
+        }
+      },
+      "user_bestseller_tier": 100,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": 100,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "bestseller",
+          "tier": 100
+        },
+        "subscriber": null
+      },
+      "score": 10,
+      "children_count": 2,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "2 replies by Ryan Peterman and others"
+    },
+    {
+      "id": 43432711,
+      "body": "I really like the Ownership advice. I have heard many times about “taking ownership of the work”, and I did have an idea of what is meant by that, but I think this is the first time I have heard a comprehensive explanation of what it really means.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I really like the Ownership advice. I have heard many times about “taking ownership of the work”, and I did have an idea of what is meant by that, but I think this is the first time I have heard a comprehensive explanation of what it really means."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 138715343,
+      "user_id": 108578925,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-11-10T19:37:52.520Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Stefan Spiric",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/3a760146-a960-4cae-9f67-6968f8dbc2c2_1536x2048.jpeg",
+      "handle": "sspiric",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 3
+      },
+      "reaction_count": 3,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "sspiric",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Journey to IT",
+          "id": 2096496,
+          "base_url": "https://sspiric.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": false,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 8,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "3 replies by Ryan Peterman and others"
+    }
+  ]
+}

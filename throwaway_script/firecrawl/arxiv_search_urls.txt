@@ -1,0 +1,56 @@
+# Arxiv search URLs — bypass our IP's arxiv API ban by going through Firecrawl.
+# 50 results per page; 3 pages per query = up to 150 matches per term.
+# Each line is one URL = one Firecrawl crawl job (limit=1, depth=0).
+
+# Meta / FAIR / Meta AI / Facebook AI Research
+https://arxiv.org/search/?searchtype=all&query=Meta+AI&start=0&size=50
+https://arxiv.org/search/?searchtype=all&query=Meta+AI&start=50&size=50
+https://arxiv.org/search/?searchtype=all&query=Meta+AI&start=100&size=50
+https://arxiv.org/search/?searchtype=all&query=FAIR&start=0&size=50
+https://arxiv.org/search/?searchtype=all&query=FAIR&start=50&size=50
+https://arxiv.org/search/?searchtype=all&query=Facebook+AI+Research&start=0&size=50
+https://arxiv.org/search/?searchtype=all&query=Facebook+AI+Research&start=50&size=50
+https://arxiv.org/search/?searchtype=all&query=Meta+Platforms&start=0&size=50
+
+# LinkedIn
+https://arxiv.org/search/?searchtype=all&query=LinkedIn&start=0&size=50
+https://arxiv.org/search/?searchtype=all&query=LinkedIn&start=50&size=50
+https://arxiv.org/search/?searchtype=all&query=LinkedIn+AI&start=0&size=50
+
+# Instacart
+https://arxiv.org/search/?searchtype=all&query=Instacart&start=0&size=50
+
+# Microsoft Research (the lame Firecrawl org)
+https://arxiv.org/search/?searchtype=all&query=Microsoft+Research&start=0&size=50
+https://arxiv.org/search/?searchtype=all&query=Microsoft+Research&start=50&size=50
+https://arxiv.org/search/?searchtype=all&query=Microsoft+Research&start=100&size=50
+
+# NVIDIA Research
+https://arxiv.org/search/?searchtype=all&query=NVIDIA+Research&start=0&size=50
+https://arxiv.org/search/?searchtype=all&query=NVIDIA+Research&start=50&size=50
+
+# Allen Institute / AllenAI
+https://arxiv.org/search/?searchtype=all&query=Allen+Institute+for+AI&start=0&size=50
+https://arxiv.org/search/?searchtype=all&query=Allen+Institute+for+AI&start=50&size=50
+
+# Snowflake AI Research
+https://arxiv.org/search/?searchtype=all&query=Snowflake&start=0&size=50
+
+# Apple ML Research (no Firecrawl crawl earlier — just the index)
+https://arxiv.org/search/?searchtype=all&query=Apple&start=0&size=50
+https://arxiv.org/search/?searchtype=all&query=Apple+ML+Research&start=0&size=50
+
+# Tsinghua NLP (THUNLP)
+https://arxiv.org/search/?searchtype=all&query=Tsinghua+NLP&start=0&size=50
+
+# Baidu Research / ERNIE
+https://arxiv.org/search/?searchtype=all&query=Baidu+Research&start=0&size=50
+https://arxiv.org/search/?searchtype=all&query=Baidu+Research&start=50&size=50
+
+# Alibaba DAMO
+https://arxiv.org/search/?searchtype=all&query=Alibaba+DAMO&start=0&size=50
+https://arxiv.org/search/?searchtype=all&query=Alibaba+DAMO&start=50&size=50
+
+# DeepSeek
+https://arxiv.org/search/?searchtype=all&query=DeepSeek&start=0&size=50
+https://arxiv.org/search/?searchtype=all&query=DeepSeek&start=50&size=50

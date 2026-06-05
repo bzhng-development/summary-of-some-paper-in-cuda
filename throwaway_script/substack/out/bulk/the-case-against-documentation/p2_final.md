@@ -1,0 +1,25 @@
+Here are the takeaways from this Ryan Peterman essay on the case against documenting code:
+
+**The real desire: getting things done, not documents**
+
+No one actually wants documentation, Peterman argues—what they want is the ability to get things done. Sometimes documenting code helps engineers move faster, but often it does not. Before reaching for pitchforks, he clarifies that written communication is incredibly valuable for software engineers, and he is a big fan of documenting information *outside* the codebase—updates, launches, decisions, designs. But because writing as a whole is often so valuable, engineers "blindly document the code itself when it isn’t the best use of time."
+
+**The hidden costs of code documentation**
+
+Documentation about code "must be up to date to be useful." But code changes so often that keeping documentation fresh is expensive. Since software engineering is collaborative, "you need everyone to update the documentation"—and it's already hard enough to get one person to remember, let alone an entire team. There's also a structural problem: writing documentation about code creates "a separate branch of information far from where it is needed," adding a new cost for people to find that information. If documentation isn't easy to find, it gets lost and becomes useless. Peterman says this isn't uncommon in his experience: there's often a general push to increase documentation coverage, but "the wikis people write aren’t read and eventually become outdated." In those cases, the documentation wasn't even a neutral contribution—"it was actually overall negative since we wasted time on something useless."
+
+**The ROI framework for when to document**
+
+Engineers need to think about the ROI of everything they do, and documentation is no exception. Peterman outlines cases where the benefits of documenting code can outweigh the costs. First: **documentation that doesn't change often** gets more readership over its lifetime and costs less to maintain—high-level system diagrams about code are a prime example. Second: **documentation that many people will need** scales in impact with the number of people who read it; documenting a popular API or library is well worth the time if thousands of engineers need it. Third: **documentation you already have**—Peterman is a big fan of writing for clearer thinking, so if you already write for yourself, publishing it for others "can be worth it since it’s near zero cost with some benefit."
+
+**Inline documentation as the preferred default**
+
+Aside from those cases, Peterman's favorite documentation is "inline with the code." It's much easier to keep up to date and find when it's next to the code it describes. He is not saying engineers shouldn't write—writing is one of the most efficient ways to share information. He's saying that writing about *detailed code* often isn't worth the time, and engineers should be mindful of when they do. "Who wants to manage static code documentation that just mirrors the codebase anyway? I’d rather get things done."
+
+**The LLM future**
+
+He closes with a forward-looking note: he's hopeful that one day engineers could "chat with the codebase and get up-to-date, simple explanations," and given the improvements in LLMs, "I don’t think this is far off."
+
+---
+
+Peterman's **ROI framework** turns a reflexive engineering impulse—"we need more documentation"—into a deliberate calculation. His three-pronged test (infrequent change, broad audience, zero-cost repurposing) channels the same pragmatism as his opening diagnosis: what people actually want is the ability to get things done, not a document. The capstone LLM vision extends that logic to its natural conclusion—if inline documentation is the only low-friction default today, an AI that eliminates the "separate branch of information" problem entirely would make the whole cost-benefit debate obsolete.

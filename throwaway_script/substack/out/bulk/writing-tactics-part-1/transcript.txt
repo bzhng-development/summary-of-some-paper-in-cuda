@@ -1,0 +1,58 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 61,000 readers this week 🙏 🎉
+
+This week I’m sharing part one of a series of writing tips that I learned only through trial and error. Hope it is helpful; enjoy!
+
+Writing is the job for software engineers. Almost everything we do uses writing. Yet, we aren’t taught much about how to be good at it. You learn as you go and hope that what little you learned in school is enough.
+
+The thing is, writing for work and writing for your English class is so different. In school, we’re often rewarded for difficult-to-understand writing.
+
+If you want to be effective at work, your writing can’t be that way. Here are three tactics that improved my writing which I learned only through trial and error.
+
+1) Make the first line interesting - If you want someone to read what you write, you have to show them why they should care immediately. You need to know your audience well to do this. Here are some examples of what I’d share in the first line:
+
+  - Example 1 (Sharing launch results): I would share the metric movements that the audience cares about.
+
+Example 1 (Sharing launch results): I would share the metric movements that the audience cares about.
+
+  - Example 2 (Asking for collaboration): I would highlight the expected outcomes from the work that are most important to the audience.
+
+Example 2 (Asking for collaboration): I would highlight the expected outcomes from the work that are most important to the audience.
+
+  - Example 3 (Raising awareness for a problem): I would explain the severity of the problem in a way the audience understands.
+
+Example 3 (Raising awareness for a problem): I would explain the severity of the problem in a way the audience understands.
+
+You can think of this like a “hook”, but much less sensational in the work context.
+
+2) Make your ask clear -  If you want your audience to take action, don’t bury your ask somewhere in the middle of your message. You should either share it first thing or at the end when they have the relevant context to understand your ask. Here’s an example:
+
+The longer your writing is, the more important this is since your reader is more likely to miss your ask.
+
+3) Write simply - The goal of writing is to be understood by the reader. The more simple your writing is the more your ideas will get through to your audience.
+
+I aim to write at a 6th-grade level (like this post is) as measured by the free web app, Hemingway. If I can remove a word and preserve meaning, I do. If I can replace a complex word or phrase with a simple one, I do.
+
+To check if you’re writing simply, try putting your writing in Hemingway.
+
+I have many more tactics to share for longer-form writing. When I think of longer-form writing I mean:
+
+  - Engineering proposals and designs
+
+Engineering proposals and designs
+
+  - Strategy and direction docs
+
+Strategy and direction docs
+
+  - Launch or learning posts
+
+Launch or learning posts
+
+  - Workstream and team updates
+
+Workstream and team updates
+
+I had too many tactics to share for one post so I decided to save it for next week. If you feel like your teammates don’t read your longer writing, consider subscribing if you haven’t already. Next week’s post should fix that.
+
+Thanks for reading,
+Ryan Peterman

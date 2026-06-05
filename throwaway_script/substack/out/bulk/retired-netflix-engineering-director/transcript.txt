@@ -1,0 +1,499 @@
+David Ronca joined Netflix in 2007 and grew to an engineering director there. Later he joined Meta as a Director and transitioned to a Principal engineer working on video technologies. Now he’s retired and was graciously willing to share his career story with us. I asked him for everything he learned in his 36 year career.
+
+Check out the episode wherever you get your podcasts: YouTube, Spotify, Apple Podcasts.
+
+
+## Timestamps
+
+
+00:00:40 - How Netflix was different
+
+00:08:01 - The legendary Netflix culture memo
+
+00:18:54 - How to hire engineers well
+
+00:30:52 - The strongest engineer he’s ever met
+
+00:33:02 - Joining Meta
+
+00:50:52 - Near death experience
+
+00:59:04 - Where he learned the most
+
+01:04:09 - Book that impacted his career most
+
+01:11:33 - Advice for his younger self
+
+
+## Transcript
+
+
+
+## 00:00:40 — How Netflix was different
+
+
+Ryan:
+
+[00:00:40] So about Netflix, how did it differ from the other companies you had worked at?
+
+David:
+
+[00:00:53] Every company I worked at before Netflix. Well, I can’t really talk much about Hughes Aircraft, GM, Hughes, but starting with like the IBM and moving through even these smaller companies, we had these Primadonnas, right? They have may be really smart, but they can be really difficult to work with. People yell at you, they whatever. And the company’s value they would actually build. I mean I worked at a company in the 90s.
+
+[00:01:24] This apparently the most critical engineer. Oh, if we lose him, we’re toast. The guy’s cubicle was so full of junk, the walls were bulging out. He was like a pack rat. And he wouldn’t engage with anybody and he would work all night and fix problems. He was always the hero. And the managers, they did, had no understanding what he did or whatever, but all they knew is if he quits, we’re in trouble.
+
+[00:01:49] Well, he quit, right? And guess what? The company didn’t die, right? Once he was out of the way, he wanted to do something else. Everybody else moved in. They actually had other people understand, just nobody could work with this guy. And he established himself as the center of gravity for this one big area of our system. I think it was the storage. I can’t remember the part of it. And I had this kind of same thing at Inter Video.
+
+[00:02:13] I had some colleagues, I had some really, really good colleagues that actually helped form my technical. They gave me my technical education. But there were some people that were really, really hard to work with and scream at you and yell at you and they would be wrong and they could never admit it, you know, and you know, the customers, you know, customers have a problem. We try to tell them like their code is wrong and they just, they respond with screaming and yelling at you.
+
+[00:02:37] And I got to Netflix and it’s like, I don’t have anybody like that, you know, and it was written in the culture deck. They don’t hire brilliant jerks. Right. If you’re a person who’s always going off the rails, who’s yelling and screaming, who’s difficult to work with, who makes yourself unapproachable, they’re going to let you go. And they don’t care how smart you are or how what level of contribution because they realize, and I, you know, this, this was revolutionary in 2000, in the early 2000s.
+
+[00:03:07] You know, somebody who grows up in meta. Yeah. Your point is, I mean, because that’s weight modern, you know, the, the fang companies, at least the ones I know, Google, Netflix, meta. That’s the way they work now. But that wasn’t like that. So it was, I was like, wow. That was the first thing. And then the second thing during my interview, Patty McCord, who was a chief people officer who inter at that time was a very small company, interviewed everybody and had to bless every hire.
+
+[00:03:35] You think about that. And, and, and I learned, I will say I learned more from Patty, I think even than Reed as far as being a good leader and being a really like a good collaborative teammate. But during our interview, she said something that just floored me. She says, we don’t value 24. 7 work here and if you just come in and work all the time, we’re not going to be impressed. And it was like, if you want to impress us, blow us away with what you can do in an eight hour day.
+
+[00:04:03] And, and I also, you know, and she’s like, but also let us, you know, like, we like people that, like, if they’re laying in bed at night and they can’t sleep, odds are they’re thinking about one of their problems at Netflix that they’re trying to fix. These are the people we want. And I’m just like, wow. And, and so I got into Netflix and, and that, I will say that was absolutely true. That, that I did see people fall into that 24 7 trap.
+
+[00:04:27] And, and you know, when people work like that, one, you feel it’s a compulsive need, you know, because you’re, you know, you don’t have a team to support you. Everything, like, if I stop everything, the company’s going to fail. And two, but then you hate it because you’re, you know, and, and I just remember there was a meeting and he was like, I’m just working all the time. I can’t work like this anymore.
+
+[00:04:46] And Patty was in the meeting and she says, hey, first, I want to thank you for everything you’ve done to try to help us be successful and not fail and that you’re even willing to work 24 7. Now. The second thing I have to say is, don’t do this again. You need to figure out, you’re a manager, you’re a leader. You need to figure out how to set your team up so that you don’t have to work all the time.
+
+[00:05:08] And if you want to be successful here, you have to do that. That’s just, that was unthinkable in 2008, 2009. And I even had a, you know, similar situation later at Netflix because, you know, we were still working on the, you know, a lot of, you know, continuous build deployment. These things didn’t exist, right? Things that everybody takes for granted. They didn’t really, they were just coming out, you know, Google, other companies were just getting these in place.
+
+[00:05:33] And we had some serious stability issues when we tried to go to continuous deployment. And, and I was over talking to it and he was a phenomenal engineer. I still engaged with a guy, we both retired, but, but I was over talking to him. I said to him, by the weekend, he goes, well, it must be nice having weekends off. I said, what do you mean? We have. If we quit, if we stop working, you know, these systems go down, we can’t keep them running.
+
+[00:05:56] And it was, you know, the other people that he worked with all kind of came out and I feel like I’m gonna, you know, I gotta get out of here, right? But I left and I set up a one on one with him the following week. And I got in a room with him and I said, you need to take a vacation. He’s like, I can’t. Or, you know, if we don’t, we’re just heating. And I told him straight up, I said, if this company cannot survive without you here on the clock, we got a problem.
+
+[00:06:10] You need to take a vacation. And I don’t care what happens, if things break, they break. Take your vacation. And. And he did. He went and took a week off and he came back and, you know, refreshed. He had been with his family and, you know, and, and the other people on that team took time off and they were able actually rather quickly to stabilize the system because they quit trying to do what the manager was telling them they needed to do.
+
+[00:06:52] They decided this is how we’re going to stabilize it. And then all of a sudden, this team that was killing themselves just by forcing themselves to take time off was actually able to come back, refresh, think about the problem, not think about how to keep the systems running. And they were actually able to have that time off. So that was part of that. I mean, that was fundamental piece of Netflix culture.
+
+[00:07:12] Patty told me, we all have lives. See, I, I don’t want to work all weekend. I want to go home. I want to enjoy my life, you know. And so I really did appreciate that. And I will say also, Netflix was built with strong and visionary leaders. Reed Hastings had a vision from early 90s or for late 90s, and he said if, if I wanted to do like DVDs by mail, this would be called DVDs by mail dot com. It’s called Netflix.
+
+[00:07:41] Because DVD by mail for him was a stepping stone to what he believed was the future was streaming video. And he didn’t know how it was going to happen. He, Reid’s not a video expert, but he built a team out of really good leaders and a really good, small team of really good engineers. And it’s like, we’re going to solve this problem.
+
+
+## 00:08:01 — The legendary Netflix culture memo
+
+
+Ryan:
+
+[00:08:01] How did Netflix culture change as a company grew?
+
+David:
+
+[00:08:05] You know, obviously, the, the, the Netflix Culture Memo, I think is something of legends, right? People talk about it and I, what I would have to say about. There’s a few things I would say about that. First of all, for me personally, because people would ask others, is this how it is at Netflix? And they would say, yeah. They would ask me, I say, no, it’s what we aspire to be. The Culture Memo is aspirational.
+
+Ryan:
+
+[00:08:27] What is the culture memo?
+
+David:
+
+[00:08:30] Oh, it’s like, it’s like the original. It was like some slides, like 15 slides, talking about, we don’t hire brilliant jerks. We want really smart people. We want to inspire people to sail the seas. We don’t want to tell them how to build a ship, right? We, we, you know, we, you know, we, we pay to hop a market. We, we, you know, we have a keeper’s test, which, you know, basically we’re aggressive at firing people.
+
+[00:08:55] We’re not afraid to make mistakes. Those were kind of all baked into the Culture Memo, but it was, you know, putting that out when it was put out, you know, in like 2007. 8. The original culture, it was. That stack was actually pretty revolutionary at the time. A lot of that, you know, freedom of responsibility, the whole. The ability of hiring really good people and not staying out of their way, giving them the context of what needs to be done, helping them understand why it matters, and then expecting them to go and execute on that without you micromanaging them, you know, trust, basically.
+
+[00:09:25] Trust, freedom, responsibility, trust. And, you know, and so these were all really, really key parts of the Netflix culture. And I think as a small company, if what enabled Netflix to be successful where others, other companies didn’t, was that culture built around exceptional talent. Not just engineers. Everybody I worked with at Netflix was exceptional, right? The marketing people, the, the, the content people, product, every hr.
+
+[00:09:57] I mean, and they were all learning. I was learning from everybody, right? I learned how to build a good team through my HR partners. They weren’t just, you know, giving me resumes and, and scheduling interviews, right? They were challenging me on my higher, no hire decisions. They were, you know, pushing, you know, so I think that was fundamental. I did notice as the company was growing that, that that culture was not scaling well.
+
+[00:10:26] And I’ll give you a good example. One thing Netflix didn’t, wasn’t really big on was individual achievement. Everything was one as a team. Everything we did was a team. Nobody ever said, for example, when we shipped the PS3, that revolutionary rule breaker, you know, we did something so crazy, Sony, the DVD division at Sony, saw what we were doing and said, please stop. We didn’t design the PS3 to do this, please stop.
+
+[00:10:52] But we didn’t stop. We broke the rule. We, we delivered a system. In the end, they didn’t say, hey, Scott, Wu and David were the, you know, and Mitch were the, were the foundational engineers that made this all possible. It was Netflix 1, you know, and at the time that was really good. But as things got bigger, this all gets lost, right? And, and I feel like as the company got bigger and instead of doing one or two things, you starting to do many things.
+
+[00:11:24] Individual contributions, which are still huge. I mean, engineering, that’s the way engineering works. We’re starting to get lost, right? And if you don’t credit individuals for great engineering work, who gets the credit? So leaders. And, and I realized that that was something I struggled with. We didn’t have levels. All engineers were equal. There was only an engineer, senior software engineer, period.
+
+[00:11:49] You could make your title anything you wanted. You could call yourself the, you know, software engineering, video guru. You could call yourself, you know, whatever. You couldn’t put manager, director, VP or chief in your title if you weren’t one of those. But other than that, your business card could say anything you wanted. But there was only one software engineering level and As a small company with just senior people has worked, but as we started hiring more juniors, when you, as teams grow, you’re going to have really strong engineers, you’re going to have good engineers and then you’re going to have weak engineers.
+
+[00:12:26] And if you don’t have a system in place that can understand that and, and, and recognize and, and objectively determine who’s who, then it you start having challenges with your best people. It ultimately not having a good objective process for recognizing wins, achievements and rewarding those wins and achievements ultimately impacts your best people who end up leaving. So that was something I was struggling with.
+
+[00:12:51] I, I had, was trying to argue they do have levels now. At the time, like by the late teens, I was arguing like we really need levels because we have really senior engineers and we’ve got juniors. We have people who understand our system from one end to the other and can do incredible work. And we have other, they’re good engineers, but they’re just learning. And, and so I think these were some of the aspects that didn’t scale.
+
+[00:13:14] Other things, like I mentioned in the early days, Patty McCord, who’s one of the great influencers in my life, interviewed almost every single hire that come in the company. Obviously you can’t keep doing that. Reed Hastings have like these really small one on ones with new, like four new hires at a time. He would sit and give you like an hour of his time to ask questions, to talk of, share about you, who you were and what excited you about Netflix.
+
+[00:13:39] Obviously you couldn’t do that. So eventually Reid would show up with a couple other leaders with 100 people in the room or whatever, you know, and eventually I think they probably couldn’t even do that. So these are, these are all challenges to scale where, you know, but, you know, success, right. Success means that, you know, success means a small company becomes a big company if that’s how you measure success.
+
+[00:14:02] And success at Netflix was measured in, you know, building this product that’s going to reach the world. So success means you’re going to be big. And it means that things that were easy or worked well at a small company don’t necessarily grow with you. So you have to make those adjustments. I haven’t been there for six years. I’m sure, I know they brought levels and I’m sure they’ve done a lot of work to change that.
+
+[00:14:23] But when I left, I felt the culture was struggling with a culture memo that was perfect for a very small, aggressive, engineering focused company.
+
+Ryan:
+
+[00:14:32] If everyone is the same level, how did they Compensate people differently or, or, you know, I imagine someone who’s a new grad that joins Netflix compared to industry veteran video expert.
+
+David:
+
+[00:14:44] Right? Well, I mean, at the time, Netflix generally didn’t hire new grads. I will say generally, because I found lots of clever ways to break rules and, and work around, you know, around that. But generally speaking, and, and they had this concept of personal top of market. Right. So if I were. And they also had this interesting thing in their culture memo that they encourage people to interview often.
+
+[00:15:12] So if I got a job, I’ll just put it out there. My starting salary when I joined Netflix, which at the time was a good starting salary, was 175k a year. Somebody may think, wow, you know, you’re 15 years in, that’s all you got. But I mean, you know, but at the time 2007, that was a really solid starting salary. If a year later I would have interviewed Google and they would have offered me 200,000, I would have gone and told my manager, hey, I got this offer for 200,000.
+
+[00:15:39] My manager would have said, had a major choice, go work at Google or we’re going to give you pay raise. Right, because your top of market, your personal top of market has now moved. And somebody else who came in at 175May never, May not move that way. But also over time, you know, this was incumbent on us as leaders, which I took very serious. And the managers that worked with me is understanding where the market is, understanding where offers are, who’s getting offers.
+
+[00:16:13] How much is Google paying? Right. Meta. You know, Meta was late to the video game, but by 20, it was Facebook at the time, by 2015, Netflix was very aggressive. I’m sorry, Meta was very aggressive building a video team. How much were they offering our people who was interviewing? You know, if somebody, you know, we understood their skill level, went and got an interview from one of these other companies and got an offer that was twice what we were paying everybody.
+
+[00:16:35] That means we have to adjust our compensation twice, Right? That’s the way it worked. But again, in the early days, it worked well. But as you get more and more people, that becomes muddied. And it becomes muddied in several ways. One way is that, and it’s unsustainable. Let’s say an engineer who is one of your great engineers did get this offer at 2XR comp. And we reviewed it at a senior leader level and said, yeah, we really need this person and this is our market, let’s pay them.
+
+[00:17:08] Three years later, this engineer is Making more than almost everybody else, still contributing at that level. But because there’s no performance review, there’s no, there’s no. A leader could look and say, why is this person making three times this person? Because all they see is numbers. They have no context. And that’s where the system started breaking. And. And then we would have like, you know, hey, you know, I’ll just say this.
+
+[00:17:29] We had a. Some engineers, some that we interviewed and offered jobs at X and they all got competing offers at Facebook or like five of them at 1. 2x and we’re in a room. And I said, well, the culture member says we adjust our offer to 1. 2. Well, you know, it was. They didn’t understand. We didn’t have baked into our system, didn’t have understanding of how compensation worked like that. We didn’t have a concept of leveling.
+
+[00:17:58] And so all of a sudden nobody could rationalize that. 1. 2x. Now they have the leveling. And I think that they would very. Oh, you got an offer, an IC6 at Google. Okay, we understand. And by the way, we can all go out to, you know, levels, FYI, and see what that range is. And okay, we can adjust you. But we didn’t have that back then. So that’s where things got really challenging. And as a leader who, you know, I valued like building a team and keeping a good team and paying them, you know, market right, I didn’t want to overpay anybody.
+
+[00:18:31] I got really difficult. I had a lot of disagreements with my leadership and tried to explain to them, hey, here’s my spreadsheets year over year. Here’s all the work we did, here’s the offers we were seeing coming in, and I do believe they fix that problem. Actually, they have ranges. Like every you, as you’re a large company, you have to have ranges. You, you can’t do any different than that. So they did fix that problem.
+
+
+## 00:18:54 — How to hire engineers well
+
+
+Ryan:
+
+[00:18:54] After I left, you hired a ton of software engineers at Netflix and also I’m sure at Meta as well. How do you identify really strong software engineers in the hiring process?
+
+David:
+
+[00:19:05] So this is interesting, actually. I’ve had success hiring all the way up until Meta. Meta is a big company like Google and Amazon and others, Microsoft. They, because they bring so many people in and they need to have some structure and accountability and they build a system, an interviewing system where you get to smaller companies and you’re actually now me and three people on my team plus HR are interviewing somebody I want to hire.
+
+[00:19:36] Right? That’s not the way it Works. I don’t know about Netflix anymore. That’s the way it worked when I was there. But you know, that’s not the way it works at Meta because they just, the company’s too big and they hire too many people and they need to know that they’re giving fair and consistent standards for hiring. Right. So. But I’ve been very successful back when, when I was literally making the hire, no hire decisions.
+
+[00:20:01] And it’s curious, I’ll give a couple examples. So in the late 1990s on that first really good project, we interviewed a woman actually, and I was the last one to interview her. And she had been working in like an automated train software system, building automated train automation software, engine, driverless trains. And our 45 minute interview went an hour and a half and she had two whiteboards covered with this system and we’re walking through state transitions and I’m just blown away by like, this is one of the best systems minds I’ve ever sat and worked with and her understanding and the ability to explain these, this complex, incredibly complex, the distributed system, not for scale, but it was distributed in terms of the way that everything fit together.
+
+[00:20:55] The pieces all interacted well. The other people gave her effectively leetcode. She was okay. I gave her string version. It was okay, it worked. But it wasn’t. They didn’t want to hire. And I told my boss and I said, I want to hire. My boss pushed back. Ironically, you know, my boss was also woman, but she was concerned. Well, these people are kind of lukewarm. I said, look, this is one of the best systems engineers I’ve ever talked to.
+
+[00:21:19] She understands complexity. We’re struggling. All these great engineers we have, we’re struggling with the integration of all these disparate systems we’re bringing together. We need her and we hired her. And she freaking killed it, right? Absolutely killed it. And, and that’s gone on. I’ve always felt like when I’m hiring in small companies for roles for people on my team, generally speaking, my batting average is very close to a thousand.
+
+[00:21:46] And I think it’s because this is going to be controversial. I personally don’t love leetcode because I don’t think it really tells you much about it. It tells you how fast somebody can write code for a problem that they probably practiced a hundred times, right? Because people go, but. But I will say on the other side of that, when you’re hiring at the volume that these large companies like Meta and Google do, you really don’t have any choice.
+
+[00:22:11] But leetcode does not tell you anything about an engineer. And as I mentioned before, engineering, first of all, I don’t think about engineering like software engineers, right. I personally believe all engineering disciplines are all built on the same foundation. And I’ve mentioned this earlier, we were talking that foundation is the ability to understand complex systems, a strong technical intuition, and the ability to make decisions absent good decisions, absent enough data to tell you it’s the right decision.
+
+[00:22:43] That’s intuition. And I’ve seen really, really good engineers move into software and be phenomenally successful. And I’ve seen engineers who nail the LEET code and these canned system design. They’ve, you know, they practice all, you know, you know, type ahead, Google type whatever the things we like give them. They nail these interviews and they get in and their engineering work is terrible. And, and it’s like they’re not.
+
+[00:23:11] I look at their, their review packets and the feedback and I’m like, this person is not making good engineering decisions. The quality of their work is really bad. So I will simply say that if you have that strong foundational engineering ability, then, then you can learn software and be a phenomenal software engineer. But I don’t care how much you learn about coding, if you don’t have a good engineering foundation that might, it’s.
+
+[00:23:36] And you’re born with it. It’s like a musician, right? You can, I like to play guitar, but I don’t have that foundational talent that would make me a phenomenal guy. I’m a good guitar player, I practice a lot, but I’ll never be great. So engineering is something the foundational of engineering, you’re born with it, you have it or you don’t. And I think a lot of people get engineering that don’t necessarily have that.
+
+[00:23:58] And when I recognize that mindset and realize that I’m talking to a good engineer, I don’t care that their software is a little subpar because I feel like I can help them with that. I can’t teach them how to make good decisions. I’ll give you a really good example. This is going to blow you away. So I was taking some classes, some graduate level classes at San Jose State and then one class I took my project partner, I had two partners is kind of funny because this was just right before I joined Meta.
+
+[00:24:30] So here I am in my 50s and I’ve got people in their 20s, but this woman joined my team and she was just finishing her master’s in civil engineering, I believe was working in wastewater treatment and she decided she wanted to move to Software. And this was her first class because you could go into the software engineering program at San Jose State without the undergraduate requirements and you could catch up on those requirements over time by taking.
+
+[00:24:56] Basically they said you can start taking master level, but you can’t graduate until you complete these batch, these undergraduate level foundational classes, Data structures and program. She was incredibly smart, incredibly focused, and her understanding of like her the analytical mind or mastery of statistics. And I just like. And I was telling, you know, one of my colleagues at Netflix, I just, I want to hire her.
+
+[00:25:25] I don’t know how to do it, but I want to hire her. And, and I finally convinced one of my managers say we should look at her. And maybe we had this idea where we didn’t really have anybody who was like a date. We didn’t have our own dedicated de right or ds. So we thought, well, let’s bring her in to help us with the data analytics. So we gave her a video software engineering problem as a take home assignment.
+
+[00:25:47] She had never really written code, she had never worked on video. Took her three weeks and she came back and it’s like, well, she made some rookie mistakes, but damn, you know, it’s like, and, and so everybody was like kind of impressed. And it’s like, well, we know she’s not a good software engineer. What do we need to close the deal? And I suggested, let’s have her come in and teach us something.
+
+[00:26:10] All she knew was wastewater treatment because she worked at the Santa Clara county wastewater facility. So she came in and spent two hours on a whiteboard. And I’ve realized halfway through, this is a freaking state machine. And it’s not a, it’s a very complex state machine. And I was just like. And we’re all just, I mean, two hours, we’re all enthralled. Everybody just totally got into it. But we got out and one of the managers who would have been the hiring manager, what the hell does sewage treatment have to do with software?
+
+[00:26:39] And I told him, I said, look, she’s a damn good engineer and she’s already demonstrated mastery of like engineering statistics and I think we can teach her how to code. And he hired her. He was grumbling and I ran into him. Ironically, after I joined Meta, we had an at scale event and he was there and he hit David, can I talk to you? He pulled me aside, he said, she’s killing it. It’s like, how did you know?
+
+[00:27:06] I said, I can’t believe I was so wrong. How did you know? And I just told him straight up when you see a brilliant engineering mind, everything else doesn’t matter how fast they can solve leetcode, whatever do can they build like a Google type ahead, you know, scalable solution or whatever. Because these things can all be learned. They can be learned in a very short time. But you can’t teach that.
+
+[00:27:27] And you have that young mind, hungry, willing to work hard and, and willing to make, you know, able to make smart decisions. So that’s kind of how I approached hiring back when I was, you know, when I was actually hiring people to bring in to work for me. That doesn’t work, that doesn’t scale. Right? You can’t do that at Meta. You can’t do that at Netflix today or Google maybe Netflix, I don’t know.
+
+[00:27:49] You can’t do it at Meta. Google. Just a legal and, and, and you know, policy problems, you know, everything you’d have to worry about just, it would break down really badly. But you know, so we have to have the system, we have to have. So basically it’s like, hey, we’re going to give you a bar. And if you meet this bar, you know, higher. No, higher. Yes. Okay, level. This is what we can see from what we’re in.
+
+[00:28:14] You know, and I’ve had people that they were sick somewhere else and they, they said, well, I got an offer of five at Meta. I was like, look better to come in under. And I said if you come, if you come to Meta as a five and start immediately executing as a six, you’re going to be blown away by your bonuses, your multipliers, your RSU refreshment. You’re going to be blown away by the way you get treated by coming in and really demonstrating that you’re under level.
+
+[00:28:39] But if you get higher at that higher level and you come in and you’re struggling, you would have been a really good five. But you’re struggling to execute at that sixth level. It’s just not going to work because there is no way to fix that, right? If you get hired in a company like Meta or Google or I know probably any of the faang companies and you end up being over leveled, they don’t have a way for somebody, well, okay, you can leave or we’ll put you to a six because we hired you as a seven, there’s no way to fix that problem.
+
+[00:29:06] So when in doubt, go low and work hard and get that quick promotion, get those bonus and RSU multipliers and you know, prove your mettle.
+
+Ryan:
+
+[00:29:16] You, you mentioned in identifying the, the engineering skillset, that fundamental Engineering skill set. How do you, how do you identify that? Like is there a question you ask or is there certain things you need to see?
+
+David:
+
+[00:29:30] I think it’s you interview to the person, right? Not to the process. So if you know we have a master’s civil engineer who’s expert in wastewater treatment and it’s like it’s a hard engineering problem and if you can demonstrate mastery of that problem and you can explain it to engineers that know nothing and you know, to the point where those of us who got it realized that like this is just a finite state machine, right.
+
+[00:30:01] I mean after all what is what I mean what is almost engine. Any engineering I know when you get into structure and everything a little different, but so many systems, mechanical systems, right. You know, engines, right. Or whatever, they all end up kind of in some way connecting back to like states and transitions. And so I think when you see again we’re told we brought this person in as effectively would be like a new hire, a junior.
+
+[00:30:26] We had a role like as a data analyst or something. But so we, we had an. If we would have brought them in as a full on software engineer with these expectations up here, they would have failed. So again that’s when you’re at a smaller company you, you create flexibility and you can actually hire and, and build people up.
+
+
+## 00:30:52 — The strongest engineer he’s ever met
+
+
+Ryan:
+
+[00:30:52] Is there examples of the strongest engineers you worked with and what made them strong at Netflix?
+
+David:
+
+[00:31:00] I’m simply going to say the absolute best engineer, strongest engineer I’ve ever worked with is Giannis Cats of netis. I’m generally going to try to avoid names, but I got to put him out. I met him in 2000 in her video. I brought him in. He left the industry and was working as a professor in Greece teaching signal processing. And I brought him in during the summer break to, to help. I was working on this was in 2010.
+
+[00:31:27] I was working on some ideas around parallel encoding and the. The work we did gave birth to content based encoding which is now how the entire industry is working that we wrote an early patent on that. He went back to school but we convinced him to join us at Netflix a couple years later. He took that one level further to now the model for encoding for both Meta and Netflix, which is called convex all encoding, which is actually mathematically delivering the highest possible quality for a given bandwidth capability.
+
+[00:32:04] And he and I work together at Inter Video, Netflix and Meta. He’s an engineer’s engineer and one of the most brilliant people I’ve ever known. He actually developed a model for the basically for Kodak evaluation. It’s a cost benefit model. For this amount of energy you get this amount of Kodak efficiency and, and, which is revolutionary because he’s very much academic. And you know, and, you know, you always heard the joke, in theory, theory and practice are the same.
+
+[00:32:38] In practice, they’re very different. So his brilliance, I think, was really bringing this academic world and forcing it into the practical world where we can actually make decisions based on not what some hypothetical, you know, you know, two videos you compress can do, but actually, you know, what happens when we run this test against 10,000 videos or a million videos, or a billion videos.
+
+
+## 00:33:02 — Joining Meta
+
+
+Ryan:
+
+[00:33:02] You’ve mentioned Meta a lot at this point. Maybe we should go to that. I’m kind of curious. What’s the story behind you getting recruited to Meta or working at Meta?
+
+David:
+
+[00:33:13] Sure. So as I mentioned earlier, the Netflix culture deck, the early one, said that we really should interview often so we understand our market value. Right. And I had an outreach from Meta, and I don’t remember who it was, but it was like 2018, I think 2017, late 2017, I think it was late 2017. And I told my wife, I said, yeah, you know, Facebook, it was Facebook at the time. Facebook wants to interview me.
+
+[00:33:42] I said, I don’t want to work there, but I haven’t interviewed in like 12 years. I think I need to interview or 10 years, whatever. So I went and interviewed and I, I kind of went over, I will say, honestly, a bit full of myself because, like, you would hear me. We built Netflix. We built the highest scale encoding platform in the world, whatever. And, and I got to the interviews and I was whiteboarding everything out.
+
+[00:34:09] I remember one guy, they were good interviews, but this one guy said, david, you have to understand, Facebook cannot solve their video scale problem with CPUs. And I just, like, I walked away and I emailed him back later. I was like, you floored me. Right? I, I never realized. And, and so I, I, I, I turned. Eventually I got an offer and I, I turned it down. I just wasn’t ready at the time. But I had, I had reached out to this guy and I just told him, you know, I thank you for like, you know, letting me know that I was very narrow in how I understood the world of video because I had no concept.
+
+[00:34:48] Right. And I want to talk about this, about Facebook’s Metascale in a little bit. I had no understanding or concept. Shortly after that, Giannis, who was in Netflix, pulled me aside and said, hey, I got this offer from Facebook. And we sat and talked about, he was talking about the asic, he was talking about all these things he was going to work on. And I, I saw a passion in him that I hadn’t seen in a little while.
+
+[00:35:15] And, and he had done some really good work at Netflix. But I don’t think that the culture, again, is not built around individual contributions. I don’t think he ever, you know, was getting the joy and I think the reward and recognition, remember, recognition is not for an engineer. Is not your name in lights. Sometimes it could be as simple as like a senior executive saying, hey, this is really good work this person did.
+
+[00:35:40] And I’m not saying they didn’t do that at Netflix. I’m just saying it like we’re talking about this. Meta is very intentional about individual credit. So. And I think he felt like the problems weren’t big enough for him and he was, he just, I just look. And I was like, wow, this is amazing. You know, he’s like, aren’t you going to try to talk me out of it? I was like, honest, you’re my friend, right?
+
+[00:36:03] Is it? And I, as an employer, as your boss, I don’t want to lose you. But as your friend, I’m like, how can you say no? And I’m not even going to try because, you know, because I care about and I just, I wish I could tell you going there would be the wrong decision. And so through that process, I started with a company I was only interviewing just to work on my, you know, interview muscle. And in the end I was just looking across the aisle and thinking, man, that’s freaking hard problem.
+
+[00:36:32] And I had a good, solid team doing well. I had a leader lined up ready to take my place and just the way things kind of worked out. And 2019, I ended up leaving Netflix and word got out and Facebook reached out to me very quickly. I had to re interview because the gap had been too long. But I got a job offer and, and I took it. I was excited and I came in really, really excited about that role. But I, but I will have to say, like, you know, it’s really easy if you have leadership skills and talent, kind of that innate talent to be a leader.
+
+[00:37:14] It’s really easy to grow organically, right? The encoding technology team In Netflix was one person, me, and then it was two, and then 3, 4, 5, 6. Then I need a manager. 7, 8, 10. Eventually I had a director under me and, and a handful of managers and, you know, 55 people, what total? And you, you know, everybody, you’ve grown into that role. You’ve built trust. I came to a well functioning team.
+
+[00:37:39] I was given responsibility for 55, 60 people that had the video processing team and they didn’t know me from anybody. And I feel like I came in like one of the first lessons I got and I knew, we all knew that we had problems. Everybody knew Facebook video platform, there were some quality problems. The scale had been met, the scale challenge had been met, which is a, the hardest problem. And they were looking for somebody to help them kind of let’s, you know, can we be a better video experience.
+
+[00:38:08] I remember early meeting I started talking about some of the things I saw that maybe need to be worked on. And I got feedback like David, you know, first of all, because I told everybody I really value and appreciate direct and candid feedback, don’t ever be afraid to give me feedback. And I was talking about something and one of my people on my team the next week at one on one said, David, you say you like candid feedback.
+
+[00:38:32] Can I be candid? I said, yeah. He said, yeah, you’ve been here two weeks, you’re already telling us what we need to do. And, and, and then we were talked about a little bit. And I said, so what I think I hear you saying is I need to shut up and work on building trust. And that’s what I had never, that’s a muscle I had never ever developed before because I built trust by working with people and growing over time and just coming in as a senior leader, as a director and you know, and they’re asking, the company’s asking, we need you to, to do change, you know, to help us, you know, improve.
+
+[00:39:08] This is all. But you can’t just come in at the same and start. And I didn’t. And also I will say that, you know, I, part of that was ignorance because I didn’t really even fully understand I knew what some problems they were having. But I, I, so I, that kind of, I stepped back. I realized, look, first and foremost being a leader is about relationships. Ultimately we’re an engineering team, we have to make good engineering decisions.
+
+[00:39:31] But if the, if the managers reporting to me don’t trust me, we go nowhere and I fail. And I realize it. So that was really good feedback in the moment or near the moment. And, and I spent a lot of time trying to sit, listen, build trust and, and, and I feel I was very successful in that over the time. You know, I’ve been told even now, you know, like the team, you know, there was a lot of respect there.
+
+[00:39:57] They knew I respected Them, even if they were struggling or needed feedback, they knew I was going to give it to them. But, but, but, you know, they, they knew that I was going to tell them like it was and I was going to be honest with them. And, and so that was my first lesson. Like, it’s really hard stepping in as a leader of a large team that’s already doing well. If it’s a broken team, your job is to unbreak it.
+
+[00:40:19] Right. But if it’s a team that’s actually executing well, your job is to not break it first and then help it move forward second. And I jumped in to move forward. So that, that was a really good experience for me. I really feel like, I mean, my saddest thing about Meta is that it was a last job because I feel like if I were to go take another full time job at an engineering company at a larger leadership role today, the value, the skills I learned at Meta, I mean I would just come in as such a better organizational and engineering leader.
+
+[00:40:52] But I’m just kind of past the point of really wanting to take on that level of responsibility. So the only thing I wish I could have done, you know, if there was, I wouldn’t get, wouldn’t trade my Netflix experience, but there was somehow like maybe I could have had these two in parallel or something. It just the way it worked out or if all this would have happened but happened 10 years earlier, then maybe I’d be like, hey, I’m, you know, I’m 55 and I’m going to leave Med and I’m going to go join this other company to really help them, you know, build this engineering.
+
+[00:41:18] Org. But because I learned a lot. I think I learned the most about engineering leadership not at Netflix, but at Meta because of the, the challenge of the role. Yeah.
+
+Ryan:
+
+[00:41:30] I’m curious, how do you, when you come in as such a senior leader, you mentioned building trust. What does that mean concretely? Like what do you do if you’re coming in as a senior leader to build trust with the existing team?
+
+David:
+
+[00:41:43] I think first of all, taking the time, and I did spend a lot of time in one on ones, but you know, you don’t want to get over your skis ahead of your skis. So really spending, you know, first of all, this is a very technical role or video processing even for the director. These decisions are being made. You have to understand at some level why you’re doing what they’re doing, otherwise, you know, they may not be successful.
+
+[00:42:14] But you know, it really involved spending a lot of time in one on ones and talking and asking questions and making notes and understanding the fundamentals of the system, the interactions, understand the roles, the team, the people. I mean, one of the first decisions I had to do was like, because they reorganized when they brought me in and oh yeah, you need a manager for this team. I, you know, it’s an up level manager and you can promote or you can hire and you know, and here I am having to make a decision and I have mentors I don’t know or I can hire from externally and I’m just like, and that’s like ultimately I, and, and some people, why don’t you just promote one of your managers?
+
+[00:42:56] And I’m like, well, I don’t know them. You know, I don’t just want to make a decision because it’s a politically correct. So I, I sat on that decision, I got into that trust building mode. I spent some time talking to them. Finally I said, okay, now. And they were right. There was already a manager on the team that would have been the right manager for the role. Because I told my boss, well, if you thought he was the right one, why didn’t you promote him before you hired me?
+
+[00:43:19] Because now you’re asking me to own a decision that I can’t. That I don’t know. But I did take the time and it was a difficult relationship at first with that manager because I think he kind of felt like this was his role and why isn’t he giving it to me? He’s just going to hire somebody else. I have to quit. But we spent a few, a little time together and I, then I had a one on one that said, you know, I, I apologize for the time, but I just can’t make a decision.
+
+[00:43:42] This is like huge, right? It’s your future, it’s my future, everything. And I don’t care what people tell me, I need to understand. But I said, but I do believe at this point I can say with confidence, you are the right person for this role and I want to move you into this role and that kind of, you know, and then, you know, by the time he left Meta to do something new, we had gotten past, you know, all the trust issues.
+
+[00:44:05] He understood who I was, you know, you know, I don’t walk on water. But he knew, like he, he no longer assumed the worst. He always, well, wait a minute, I know I can trust David if I’m understanding this, I know that’s not. And he would tell me, hey, you said this what you mean? And so we ended up having A very good trust relationship. Right. And it was really just all that was about slowing down.
+
+[00:44:24] Right. Not making any rash decisions, not getting ahead of yourself, not telling the team what they need to do, and, you know, just like, absorb, absorb, absorb. And I feel like even like if I could go Back to my 2019, David, just joining Meta, I would. Even the investment I made was, I don’t feel was adequate. I was like you that first six months. I should have just told my boss, I’m in school, and if there’s a critical decision, you’re not going to have to make it together.
+
+[00:44:54] Because I need to understand better what my team is doing. I need to know the people better. And. And so I would spend even more time both technical and people understanding that. But I. I do feel like that early feedback kind of helped me correct and got me to a place where I was successful.
+
+Ryan:
+
+[00:45:14] I see at Meta, you mentioned the scale was really unique. I’m curious, is there any favorite work or favorite project that you did at Meta?
+
+David:
+
+[00:45:26] There’s a couple things that I talk. I already talked about the scale, bringing that Netflix quality into the Meta scale, which we were successful. The second thing really we have to talk about is Covid. So you remember my world at Meta. I joined in late July 2019. By March, nobody was coming to the office, not even nine months into my job. We’re all working from home. And to make matters worse, you know, we.
+
+[00:45:57] The video for. I think it was all of Facebook, but especially video. New Year’s Eve was like. Like, we started planning for New Year’s Eve in the summer because every New Year’s Eve, we would see this huge spike in traffic for 24 hours. You just like, we know, you know. And I guess before I joined, perhaps New Year’s Eve was a system breaking, but by then, everybody was planning to make sure we were successful in New Year’s eve.
+
+[00:46:23] Well, by April 2020, every freaking day it was New Year’s Eve in terms of video upload quantity or volume, in terms of streams, Live, this life, every system we had, and we’re watching these systems slowly bleeding out, right? Because we had never run at that kind of sustained load. We had some race conditions and all these things. And I’m just like, the whole freaking world, you know, the Prime Minister of India was addressing his country regularly using Facebook live streaming, and the whole world is like, maintaining their sanity and continuity and connection using our apps.
+
+[00:47:00] And so that was just a huge, huge. I mean, I was terrified. They did. The weight, you know, the weight of that Realizing I realized that the connection was a lot more than video, but video was like huge. And, and so. But, you know, but we all, you know, from our homes, we all got in and put our heads down and we, we found all these problems. We ironed out the wrinkles in our system. We resolved these race conditions and got to where we were chugging along at New Year’s Eve every day.
+
+[00:47:29] And the systems, after about a month, systems were all running, metrics were holding. Everything was really good. And so that was really proud of that. And I think when I joined Facebook, I didn’t really understand the value proposition of the company. Now I had Facebook account and I shared pictures and social and yeah, some videos now and then I didn’t really understand because I was feeling like it was a very kind of like, I.
+
+[00:47:57] My us centric view of the company and it’s just a social app that we all share our stuff on. And I learned in relatively short order. First of all, I understood what it means. If your customer base is three and a half billion people, that means that half the world is on your platform. It means that. And again, I’m in no way disrespecting Netflix. Phenomenal company, phenomenal product. But Netflix has 300 million people.
+
+[00:48:29] So you could roughly say that’s the top 5% income in terms of income of the world. The wealthiest 5%. Meta has the wealthiest 50%. And that wealthy is kind of a loaded term because at the bottom you’re talking about people making six to eight dollars a day and there and, and Instagram and WhatsApp in particular, or Facebook. This is their lifeblood. You have little mom and pop stores all through India, you know, and, you know, I’ll be in a Uber.
+
+[00:49:02] And the driver, it was actually very early on, I was going to a business meeting in Seattle, and the Uber driver, you know, where do you work? I said Facebook. He’s. Oh, my gosh, I love Facebook. You know, he’s from Somalia. You know, my family, we’re all across the world. And if it weren’t for WhatsApp, we could not even. We would totally lose touch. But WhatsApp keeps us connected. And I’m just like.
+
+[00:49:27] So it was this realization that unfolded over time of what a phenomenal product and product this was, but not face just Facebook, a company, but how important our work was. Because again, when people talk about social in the US that, you know, I don’t care if it’s TikTok or, or Facebook or Instagram or, they always kind of talk about the Good and bad side of this, you know, fake news, whatever, bad video, whatever.
+
+[00:49:52] But we are totally oblivious to how we are improving the lives of people in the rest of the world. And when I learned that, I just, I realized it’s like, you know, I’ve always loved doing what I do, but I’ve, you know, all of a sudden the work I do is making a difference. I realize nobody’s going to in India’s going to say, wow, David Ronke really changed my life. But in a small piece, right, that, you know, they will say that the company Meta changed their life.
+
+[00:50:20] Gave them a business where they could support their family, gave them a platform where they could share social videos and make money, you know, and improve their standard living, you know, gave them a way to stay in touch with their family, distribute around the world. They will say the company made a difference in their lives. And I really liked being a part of that. I, I really, at the end of the day that, and I try to explain this to people who don’t work for the company or they’re griping about this or that or, you know, whatever.
+
+[00:50:43] I suppose you just don’t understand, right, how good it feels to know, right, you’re making in a small, small way, you’re actually making a difference in the world.
+
+
+## 00:50:52 — Near death experience
+
+
+Ryan:
+
+[00:50:52] Coming to the end of the interview, I wanted to do some reflections on your career. I think first question I’m kind of curious about is when it comes to work, life balance throughout your career, how did that change throughout the different roles you had?
+
+David:
+
+[00:51:07] I had the first really visionary executive that I was working for in the late 90s. You know, she gave us, she sold us on something we were passionate about. And we all worked hard. And I was working hard not because the expectation was there, but because we were trying to catch up. And we did. But when I went to the startup, the expectation was when I was at Inter Video, it was a 247 expectation. And I was going to work usually at 10, 10:30 in the morning.
+
+[00:51:41] Coming home, usually an early night would be ten at night. A late night would be like sometimes two or three in the morning. And you oftentimes seven days a week. And you know, we tried to get to the ipo and then we got the ipo, but we got to get these, these new wins, bundling wins to get revenue so that our stock price will be up or whatever in January of 24 or 2004. I started feeling ill on a Sunday and was not getting better through the week.
+
+[00:52:17] On that Friday, I went to an emergency room. I was having a serious, serious problem. My wife took me to the emergency room where I was immediately diagnosed. Even before they had proven it, the doctor told me this is colon cancer. And I was like, my digestive system was blocked and it creates a very catastrophic quick death situation. So I just, I basically just fell off from a health perspective in one week.
+
+[00:52:49] I had been driving myself, driving, push, push, push, and boom. I just fell off a cliff. And I woke up, I was in the hospital Saturday, Um, and I was on machines and they had gotten me stable and they were going to take, it took a week to get me physically strong enough to have a surgery to remove the cancer. Um, and I’m laying in there in the hospital and I know this kind of sounds cliche, but I was a dad.
+
+[00:53:14] I had a two year old, a four year old and a seven year old. And when you work those kind of hours, you know, my, my, my, my older, my daughter knew me reasonably well. We had had some time and some relationship. My oldest son we have, but my youngest didn’t even know who I was. I mean, he knew who I was, but I was just a guy who come in, you know, and you’re sitting there literally thinking you’re at the end of your life.
+
+[00:53:40] Because I was, I was stage three. It had lymph node metastasis. When I finally got out, I had two surgeries, chemotherapy. But when I get out of the hospital three weeks later, I was in for three weeks and multiple surgeries and everything to recover. My five year survival prognosis was about 25%. And so while I was in the hospital reflecting, I realized that like, like this is wrong, right? And I, you know, this was only four years into inner video.
+
+[00:54:09] And so when I came out it was like, I can’t do this anymore. And I told my boss in her video, look, I, you know, I still want to work here, but I can’t do this. And even, and I realized it not just because I was sick, this is you simply, if you’re working in a company where they put those demands on you and those expectations that if you’re not there late, you’re going to get fired, the best thing you can do is leave, right?
+
+[00:54:32] And they were actually using work hours to compensate for really bad leadership. So I actually did some of my best engineering at Inter Video after I got out of the hospital because I had to get back, ramp back up to full time. But I have work life balance thrust upon me and from that point forward it became something that I was passionate about that I was never going to be a leader that put expectations on people that you kill yourself for the job, you know, and literally that’s what we were doing.
+
+[00:55:02] Even though most people don’t die, they’re, they’re, they’re, they’re selling their life, they’re trading their life, their experiences, their children, whatever, anything else they could have for a job. And there’s no job that’s worth that. And that’s where I appreciate when I got the Netflix, you know, that was a shock for me, for them to tell me in the interview that we don’t value 27 word, 24.
+
+[00:55:23] 7 word. And, and if you come in and work that way, we’re probably, that doesn’t mean you’re going to be successful. But if you come in and make really good decisions in the time you’re here and go work, enjoy your weekends and your time away, we’re going to love you. I’m just like, wow. And I realize that, so that’s now part of my DNA. And I think that what I would like to say is for everybody else that happened to be watching this, don’t wait till you get cancer or have a heart attack to wait for you to realize work life balance is, is, is, you know, critical.
+
+[00:55:56] Bake it into your DNA at an early age. Learn how to take time off, take vacation, leave your company alone for a week, whether it’s going to kill them or not, and they can’t survive without you for seven days. That’s not your problem, that’s their problem. And the only way you can make them understand that problem is for you to leave and make them face that problem and fix it. And so, and, and, and then I, I, and I understand like, because, you know, having worked at Meta, at Netflix, these are performance oriented companies and a lot of people I think feel like, well, you know, you have to work.
+
+[00:56:28] If you don’t work hard, if you don’t work all the time. But I think what we’re doing is, we’re misunderstanding, right? Remember, there’s a poster at Meta that I just love. It’s a rocking horse. It is a picture of a silhouetted rocking horse and it says, don’t mistake motion for progress. And I think that in order to have work life balance, we need to understand about our role and we need to work with your boss on this.
+
+[00:56:58] What are the most important things I need to do? What are the biggest impacts I can deliver, deliver to Netflix or Meta or Google? What are the things that really, really matter? And the other stuff, just let your boss know, I’m not going to do this and if it matters to you, I don’t have time to do it. And if it matters, we have to get somebody else or you have to help me adjust my priorities so that I can get it done.
+
+[00:57:19] The worst thing you can do is simply like if your boss is not giving you reasonable goals and not planning giving you clear context around what’s expected for a review cycle, the worst thing you can do is just try to, you know, do everything there because you end up doing work that maybe wasn’t that important anyway. And so we do have to own our own. You know, to a certain extent I realize this is for somebody who just got out of college, so maybe a little hard to think of, but you really do have to learn how to own your time and manage your time and make decisions because you can’t do everything.
+
+[00:57:51] It as a in out of work, you may want to, you know, do marathons every week and do all this other stuff and whatever. You can’t do everything. You have to start picking the things that really matter. It’s the same way in work. And I do believe, you know, as engineers, you know, anybody’s working in a, in an environment like Google or a faang company, there are going to be times where we have to put our head down and crunch.
+
+[00:58:15] It may mean working weekends, it may mean working late in the evenings, but that has to be the exception. Not, not the rule. It has to be the exception. You know, you know, you’re getting up, you’ve been working on something all, all half you’ve been got your head down. Now you’ve got, you know, you’re getting to the end, you’re about to roll this feature out. You may have to spend a little extra time getting it out.
+
+[00:58:35] It’s like, okay, so I’ll plan for it. Like, I know that. Hey, and you know, like in, like, like sometime May, June, I’m going to have to get my head down. I may have to work a lot to get this across the finish line, but then I’m going to pull back out and then I’ll take a vacation or what. You know, you have to have that mindset. And again, you always have to make sure your manager is giving you clear context on what really matters and focus on those things.
+
+[00:58:57] And I think you find work, life balance happens even at a challenging high performance company like Netflix or Meta.
+
+
+## 00:59:04 — Where he learned the most
+
+
+Ryan:
+
+[00:59:04] When you look back on all the companies that you worked on, I’m curious, which one do you think you Learned the most at or which one you know taught you the most and why.
+
+David:
+
+[00:59:15] My last four jobs each did their piece. The first job of first of the four turned me into a full fledged high performance software engineer. I mean performance by the problems you solve, not by the hours you work. The second job gave me a really good video foundation. Netflix, you know, was a zero to one right. People who were at Facebook from 20082012 understand if they’re still here, understand how you know that early company where you’re building a zero to one product versus you know, working at a mature company.
+
+[00:59:48] So I, I, you know I think I learned a lot about leadership, about hiring, firing and, and, and context setting context and executing and cross functional. These things I all learned at Netflix and brought to Meta. What I came to Meta lacking was an understanding of objective like planning reviews and performance and having an objective process. And I, I, I mean PSC time was both like the most dreaded time of the year for me and my favorite time of the year right Is one of the things I really and I, I, I mean this because you know Meta is over indexed on individual credit and the whole like you know you’re everybody writes their self reviews and their manager turns it into a review, a performance packet, it brings in feedback and you know, lines up things with goals and, and then that’s brought into a large group and of what we call calibrations where you’re, you know, people will challenge, right?
+
+[01:01:07] It’s because every manager thinks their team is the best team on the planet and their engineers are the best engineers on the planet and that the reality is where other managers, you’re convincing other managers not through arguments or you know, the pushing hard but through data convincing them that this engineer deserves this level and, and that they were the ones to get credit. And we would argue a lot wait, this project, who worked on this project, who did what, who gets the credit?
+
+[01:01:37] And like that’s it’s something we take so seriously and, and to me was so important is, is like taking the time and having the conversations across a larger team of leaders and understanding how individual engineers, how they impacted, how their impact landed, how they move the needle, how they, you know, how they brought other engineers through, how they led projects and making and getting that credit down on paper.
+
+[01:02:06] When, when you leave Meta the one thing that you get to bring with you is every single performance review package you was ever written. Everything I did at Meta, every negative feedback you need to get better, every great win is all cast in stone. Not only do I have that. 2000 years from now when they’re unearthing like they find Meta hard drives, they find my stuff, they’re going to know what I did at Meta, right?
+
+[01:02:30] That’s how important Meta takes individual achievement. And I think that to me it’s one of the best things about the company. There’s a lot of great things about Meta. I feel like I had always heard horror stories about oh, the PSE performance curves, everything else. And then I got into Meta, I was like, this really matters. And so at the end of the day, being able to the greatest joy I ever had was having one of my direct reports and handing them a redefines expectations rating.
+
+[01:03:02] There’s nothing as a leader. It doesn’t matter that my rating was me. It’s all I had like 2 res on my team over like over the course of a year. I mean this is like, and, and I have ges and, but even the ones that were not doing well and I had to give them like, hey, you know, they’re below expectation, you know, trying to work with them to get back up. That, that all is so important. It gets back to the people thing.
+
+[01:03:24] Right. And so I really value that work. That’s what I learned at Meta more than I, I learned a lot. I learned, I used to think scale was, you know, I read books and took classes and you know, xyz, you know, sharding, partitioning and microservices and I get the Meta in all those books. These guys don’t know what, they’re good books. They really didn’t know what they were talking about. Nobody understands scale at that level except for a few companies that are dealing with like, you know, billions of users and all the.
+
+[01:03:52] So anyway, these are the two big things I learned and to me the most valuable one and the one that I think that I got from Meta, that I would bring to the next job if I was to take a full time job, was how to establish a system for objective planning, review and performance.
+
+
+## 01:04:09 — Book that impacted his career most
+
+
+Ryan:
+
+[01:04:09] Is there a top book that had an impact on your career? And if so, what is it?
+
+David:
+
+[01:04:14] Yeah, so I’m really going to date myself here but the book that I immediately came to mind when I saw this question was 12 secrets to Microsoft Success. This book came out in the late 90s and there was some really, there was really some radical thinking. I mean, you know, I mean we look at Microsoft as a very different company that was in the 90s. In the 90s everybody thought Microsoft was own the world and everybody’s, you know, Windows everywhere.
+
+[01:04:40] But there was, there was some really radical thinking at that company, right. And they’re baked into their culture, right? The, the concept of betting the company, right. And I saw that at Netflix, right? Amazon, Meta, right? You see, I. Not ne. It’s not like you’re doing a casino bet all in, but you see a big opportunity, you’re literally betting the company on it. The whole thing of like, you know, let’s quit saying failure is bad, right?
+
+[01:05:10] There is such a thing as good failure, right? And you expect it. And if a company’s executing well and healthy things are going to fail, projects are going to fail, people are going to fail, engineers are going to be working on something, it’s not going to work out the way they want it. And, and the takeaway from that, right, you can fail on a big engineering investment in Meta. It’s not that you fail, it’s how you fail, what you learned and what you bring forward so that people can see that, yeah, this was a rational bet, was a reasonable bet, and they did it and it didn’t work.
+
+[01:05:39] And they’ve really handled it well. They managed the risk, they got out early. So you can, failure can be success, right? If you. Based on how you manage it. Microsoft was the first company to publicly state a policy of hiring the top 5%. Their target was to hire the top 5% of all software engineers in the world. And they set up their interview and screening, which is kind of a predecessor to what we do now at the faang companies.
+
+[01:06:08] And I think that that was really revolutionary. Dogfooding, right? The term dogfooding was invented by Microsoft. They talk about that in the book right before people would work on projects that products they never saw, they never ran, they never tested, they didn’t experience bugs. When Bill Gates forced everybody on the NT team, that whole company is going to shift to NT Server. When NT Server was failing badly, put all the bugs in this os in the, in the like 95, 96 in front of the entire company.
+
+[01:06:37] And all of a sudden this, this operating system that couldn’t ship started getting fixed, moving, moving, moving. And then the crazy thing that they talked about in that book was somewhere between Windows 95 and, and when the book was written, when Microsoft was growing leaps over bounds, Bill Gates instituted a company wide hiring freeze.
+
+[01:07:02] And, and it’s like what, you know, shocks you? Well, he felt they were hiring too many people too fast and they were investing too much money in things that didn’t matter. And if you, you is you’re too old for this probably. But Encarta Bob, if you remember Microsoft Bob, these silly little animated icons, all these silly things that Microsoft was doing that were pointless. And as soon as he instituted a hiring freeze, he forced his executives to start killing projects and putting the people on stuff that matter because he felt like hiring was getting out of control.
+
+[01:07:36] Like, we’re hiring too many people, we’re just putting them everywhere. People are working on things that don’t matter. We’re losing control of the company. And he instituted a hiring freeze that basically they ended up cutting like the bottom 20, which I should have done anyway, you know, healthy businesses, and we’re actually much better at that now. Meta’s pretty aggressive at cutting, you know, projects that aren’t proving out that didn’t happen back then, right?
+
+[01:08:01] Companies, like once you’ve got this established team and people and your little thing, things just didn’t get cut. So that was pretty radical. So I think, you know, Microsoft introduced some engineering leadership concepts that really, I don’t believe existed before Microsoft. And you know, Amazon, Google, as much as we all tried, Netflix, much as we all tried in the early days and not be evil like Microsoft, we ended up taking a lot of their.
+
+[01:08:32] That was Google’s motto, by the way, don’t be evil. Because Microsoft was considered the evil empire, the dark side, you know, whatever. But we all took. They actually were the ones that kind of established some of the early, like model for modern engineering. You know, Microsoft brought us some of these engineering. Amazon brought us the concept of, you know, rather than having very expensive, highly reliable hardware, let’s have really cheap hardware and design around failures, you know.
+
+[01:09:04] And so these things we all kind of Google brought, we all picked that up and it all kind of worked together. But I feel like Microsoft was the first one. And that book I read just stuck with me all the time. Even when I see like before 2022 and the big crash, I was just looking, I was like, we can’t keep hiring people at this rate. It doesn’t, the math doesn’t work right. It wasn’t just us, it was everybody.
+
+[01:09:27] Because during COVID we were all like, yeah, we’re growing higher, higher, higher. And everybody accelerated their hiring. But it’s like nobody decelerated and it’s like, boom. All of a sudden we had that contraction and boom. So everybody had to reset. So I think that had all the FAANG leaders read the 12 secrets to Microsoft success, they would have recognized in like late 21 that the hiring was out of control and Maybe we need to slow it down.
+
+Ryan:
+
+[01:09:54] When you look back on your career, is there anything you regret that maybe other people could learn from?
+
+David:
+
+[01:10:04] A few regrets. I think my early years, I think my first six years out of school, which was actually a long time, was wasted at very large failing companies. The, even if the, like General Motors spun off Hughes, but Hughes failed. IBM sold off the division I was in to Siemens, but that division failed. I mean, I think that, that, that the only regret I think would be like, you know, making, I was making a good salary, I got an easy job, whatever.
+
+[01:10:35] Not really thinking about, like I was only thinking in the moment and I, I really feel like I kind of wasted that time. I wasn’t really thinking about growth and I do think we need to think about growth. We don’t need to stress about it, we don’t need to be like ambitious, like I’m going to be a vice president and like 10 years or whatever. But we as software engineers especially, I’m only talking about software engineering now, not leadership.
+
+[01:10:59] Everything we do is going to be obsolete five years from now, right? When I joined Meta, the boot camp, the whole, the, the whole system for the, the dev environment, everything is completely replaced. I went through boot camp as a director who was pretty proficient. And when I go to ic, it’s like, oh, what is this? Everything’s changed, you know, so everything’s going to be obsolete. They’re getting new technologies and the only way, and this is what I believe I have been successful at, you know, is always pushing forward and trying to stay to the edge and always learning more, learning new things, new engineering skills.
+
+
+## 01:11:33 — Advice for his younger self
+
+
+Ryan:
+
+[01:11:33] And the last thing I want to ask is if you could give yourself advice at the beginning of your career, knowing what you know now, what would you say?
+
+David:
+
+[01:11:42] Try to work on hard problems, right? If you’re work, if your job is as an engineer, if your job is not difficult, you’re not growing. So, you know, maybe if you been working on something and it was really hard, now it’s kind of flatlined. Enjoy a little bit of rest, think about it. And then, you know, and always speaking like if you’re a Meta, for example, where it’s very easy to move, if you’ve gotten to where you’re feeling your current role is not very challenging, there’s so much going on at the company, go find something else.
+
+[01:12:10] Get back into a hard problem, right? And, and, and push yourself forward because it’s the hard work, the hard problems that move us forward, right, and, and help us grow. And then I think you know, to a young engineer joining companies, the size of the company is irrelevant sometimes everybody should work for a small company at some point in their life. I believe startups, everybody should try a startup, right?
+
+[01:12:38] Especially it’s easier when you’re younger than when you’re, when you’re older. But be careful not to get too enamored by the technology if you join a small company, a startup, or even a big company, like, like, you know, meta. I mean, Mark is an incredibly visionary leader, right? And you know, he’s navigating this world and trying to make decisions and keep the company focused, right? So. And Reed Hastings was an incredibly visionary leader, right?
+
+[01:13:09] But Reed Hastings was a visionary leader in 1999 when Netflix had four people. So really what you want to do is make sure you’re working for visionary leaders. And not just visionary, they need to be able to execute as well. So vision is good, but if you can’t execute against that vision, you go nowhere. So any company you’re working at, make sure your leadership is really looking forward, thinking forward.
+
+[01:13:35] And again, to read Hastings Point, you know, making you dream of sailing the seas and not just, you know, cutting lumber for a ship. Again, work, life, balance. You’re out of school, you just are your new job, you need to plan, be intentional about not working, about taking time off, about making sure you’re, you’re, you have a life. Work, life, balance, right? It’s work, it’s life. Their intention.
+
+[01:14:02] We have to work to have a life, but we have to live in order to work. And so you want to try to keep the balance is trying to keep those two where one doesn’t dominate the other. And, and, and actually you find as an engineer, because we love working on problems, when you get to that place, you’re actually doing really good work. You love what you’re doing, but you’re also enjoying time off. You know, you’re enjoying your family or whatever it is you like to do in your time off.
+
+[01:14:25] And the last thing I will say, which is complete, this is for anybody, when you get out of college, when you’re early in your career, this is the last thing I would have talked to myself about, is your financial planning should start on day one. Because what’s going to happen, not just an engineer, but anybody who’s successful as a, as a, you know, as a technical leader, a contributor, a leader is over time you’re going to make more money.
+
+[01:14:57] And if you don’t have a thoughtful plan about, about how you’re going to allocate Your spending, living expenses, car, recreation, short term savings, long term savings. Then as you make more money, it’s just you’re not going to know where it’s going and you’re going to miss the biggest opportunity you have, and that’s that. To bake into your DNA, this whole model of spending, saving spending and thoughtful financial management.
+
+[01:15:24] And if you’re thoughtful in your 20s, with just small regular contributions to long term savings and managing your budget and not getting over your skis in terms of, of extended credit or debt by the time you’re in your early 40s, you won’t necessarily be able to retire unless you got lucky like joined a Facebook or Netflix early on. But you’ll be financially independent to the point where you don’t.
+
+[01:15:54] Money’s not an issue anymore and you could take a lesser paying job, you wouldn’t have to worry about what about the mortgage, what about, you know, the college or what about this or that. But it all starts from your first day on the job. So the last thing I will say is, is, is be really, really smart and thoughtful about your finances from day one and make sure you’re ready like when you’re getting into your late 40s and early 50s, that you’re actually feeling pretty good about your financial future.
+
+[01:16:21] Like, hey, I could retire or if I lost my job, we’d be okay, right? I could go do something else at half my salary and we’d be okay because we’ve, we’ve set ourselves up for that. But if you get into your 50s and you haven’t planned, it’s not, your 401k alone is not going to do it right. If you have, and Social Security is certainly not going to do, if you haven’t planned, then you get in this situation, it’s an unfortunate situation where a lot of people I know have found themselves where you’re kind of stuck and you’re having trouble getting new jobs, you can’t work at the, with the energy level you used to have and you’re not sure, you know.
+
+[01:16:52] You know, my joke was always that if I didn’t get retirement right, I’d be a greeter at Walmart, you know, but it’s not really a joke, right? But, but you know, you’d be surprised how many engineers have been working and making a good living, you know, and they’re now in their 50s and they have not had any rational plan for retirement and they’re in no position to retire. And there’s really, as an engineer, there’s no reason for that if you, if you’re a good engineer and you’re gainfully employed for 30, 35 years, there’s no reason why you should not retire very comfortably.
+
+Ryan:
+
+[01:17:25] All right, well, thank you so much for your time today, David. I really appreciate you sharing your career story.
+
+David:
+
+[01:17:31] It’s been a great conversation. Ryan, thanks for having interest in feeling like I have something valuable to share. So thanks a lot.
+
+Ryan:
+
+[01:17:38] Absolutely. And is there anything you want to direct people’s attention to? Not at the end of the conversation.
+
+David:
+
+[01:17:45] You can find me on LinkedIn and I’m happy to have, especially for younger people. I’m not a financial planner and I’m not going to plan your finances, but I have about 10 slides I put together to give you a starter. And if somebody wanted to talk about finances, I would give them a few my thoughts on how you could start making smart financial decisions as a, as a new graduate, you know, young and even if you’re in your 40s and start early 50s and starting to stress out about your prospects for retirement, I could talk to you about that.
+
+[01:18:15] If you’re working, you know, if you’re a people leader and you want to talk about performance planning, reviews, hiring, firing, happy to have those conversations. If you’re an engineer, happy to have those conversations with you talking about your career growth.

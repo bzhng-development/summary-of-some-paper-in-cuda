@@ -1,0 +1,54 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your continued readership, we crossed 7,000 readers this week 🙏 🎉
+
+I’m starting a “FAANG Career Ladder” series where I’ll compare IC levels from Junior (L3) all the way to Principal (L8) at FAANG-like companies. The highest levels are pretty interesting!
+
+I’m hoping this will be a useful reference for folks to understand the differences between each level. Here’s the L3 vs L4 article; enjoy!
+
+L3 and L4 engineers are the most similar on the IC ladder. The differences come from the stronger technical skills L4s are expected to have. This allows them to handle more scope with less guidance. Here’s how FAANG-like companies judge L3 vs L4 engineers.
+
+
+## Scope & Impact
+
+
+The main difference between these levels is in the size of the scope that they can handle independently. Here’s a rule of thumb:
+
+  - L3 - Can handle individual tasks (<2 weeks of work) with minimal guidance
+
+L3 - Can handle individual tasks (<2 weeks of work) with minimal guidance
+
+  - L4 - Can handle medium-to-large features (<2 months of work) with minimal guidance
+
+L4 - Can handle medium-to-large features (<2 months of work) with minimal guidance
+
+Both levels are not expected to come up with these projects. Senior engineers (L5) often set the initial direction and delegate to L3/L4 engineers.
+
+Because L4 engineers drive full features, they are expected to do project management for them. This means they should break the project down into tasks, set reasonable timelines, and keep stakeholders updated.
+
+“With minimal guidance” here doesn’t mean that L3/L4 engineers can’t ask others for help. It just means that they unblock themselves and make consistent progress. Asking great questions is one of the most effective ways to unblock yourself.
+
+
+## Engineering Craft
+
+
+Both L3 and L4 engineers are expected to ship solid, well-tested code. The biggest difference here is that L4s are expected to take initiative in improving the codebase, contributing to production excellence, and owning the health of what they build. Here are a few examples of what L4s are expected to do:
+
+  - Improving the codebase -  They leave code in a better state than when they found it. They initiate refactoring and code cleanups. They give thoughtful code reviews.
+
+Improving the codebase -  They leave code in a better state than when they found it. They initiate refactoring and code cleanups. They give thoughtful code reviews.
+
+  - Contributing to production excellence - They participate in the team’s oncall and help debug production breakages.
+
+Contributing to production excellence - They participate in the team’s oncall and help debug production breakages.
+
+  - Own the health of what they build - They add test coverage. They add logging and build dashboards that help them monitor correctness.
+
+Own the health of what they build - They add test coverage. They add logging and build dashboards that help them monitor correctness.
+
+L3 engineers do some of these when directed to but L4 engineers should be proposing and doing these things without guidance.
+
+If you’re an L3 engineer looking to grow to L4, take on some medium-to-large sized features, then deliver it with the expected level of engineering craft. If you do that you’ll get promoted quickly (~6-12 months).
+
+I am thinking about writing a “speedrunner’s guide” on getting the L3 → L4 promotion as fast as possible. Since I went from L3 → L6 in 3 years, I’ll be able to share some unique perspective here. If you’re interested in that let me know by liking the post or dropping a comment. Your feedback will help me decide what to write next.
+
+Thanks for reading,
+Ryan Peterman

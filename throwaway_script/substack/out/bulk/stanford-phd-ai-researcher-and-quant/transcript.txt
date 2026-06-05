@@ -1,0 +1,541 @@
+In this episode, I talked to Nimit Sohani, a Stanford PhD and AI Researcher at Cartesia who previously worked as a quant at Citadel. We discussed the differences between AI research and quant careers, including work-life balance and the value of a PhD in these fields. Nimit also shared what he’s currently working on and offered advice for those looking to transition into AI research.
+
+Check out the episode wherever you get your podcasts: YouTube, Spotify, Apple Podcasts.
+
+
+## Timestamps
+
+
+00:00:45 - Do you need a PhD?
+
+00:06:25 - Research taste and finding problems
+
+00:09:04 - Why become a quant
+
+00:12:01 - What quants do
+
+00:14:53 - How quants and SWEs collaborate
+
+00:16:29 - Quant vs tech culture
+
+00:26:39 - Quant firm tier list
+
+00:27:56 - Quant insider trading and perf culture
+
+00:30:53 - Going back to AI research
+
+00:35:08 - Who the top competitors are in voice AI
+
+00:39:22 - AI startups vs big labs
+
+00:42:08 - State space models vs transformers
+
+00:49:33 - AI labs: research or product?
+
+00:52:38 - Advice for SWEs who want to try AI research
+
+00:56:48 - Advice for younger self
+
+
+## Transcript
+
+
+
+## 00:00:45 — Do you need a PhD?
+
+
+Ryan:
+
+[00:00:45] Here’S the full episode. When you think about the opportunities that are not available to you without a PhD, what comes to mind?
+
+Nimit:
+
+[00:00:58] Yeah, so I think, you know, there’s not really too many opportunities that are, you know, actually unavailable to, to people without a PhD. But some of them just get a lot easier with PhDs. I mean, so academia is an obvious one that does require a PhD. That was never something I was super interested in for a lot of reasons. But I think some re. Some roles that are definitely a PhD opens a lot of doors to are kind of the two that I’ve had experience with.
+
+[00:01:32] One is sort of doing industry research in AI like I’m doing now or back in the day there were a few different. Industry research in computer science or mathematics was a little bit more diverse, but more and more people are converging towards AI. So I’ll just say like AI research is one of them where having a PhD helps or not that you, you know, a lot of people do AI research without a PhD, but you know, the type and shape of the role can look kind of different.
+
+[00:02:01] And another one is quantitative finance. So again, a lot of people go into quant, you know, out of undergrad, but Certainly having a PhD like opens you up to, you know, some, some sort of different opportunities and it can be a lot easier to get your foot in the door there.
+
+Ryan:
+
+[00:02:17] So if we think concretely, let’s say I was going for an AI researcher role or something like that. Are you saying the PhD helps you in that first step of filtering or does it help somewhere else in the process in getting one of those roles?
+
+Nimit:
+
+[00:02:32] Yeah, so I think it’s both. So certainly it’s a lot easier to get an interview if you’ve differentiated yourself from the pack in some Way, just applying for AI research role at a top firm can be difficult if you don’t have whatever the right schools on your resume, the right internships, the right connections, whatever. But it’s certainly doable. And then I guess, I think less Transactionally doing the PhD can develop a key critical skill set that can help you along your path towards becoming a great AI researcher.
+
+[00:03:16] But of course there is an argument for being thrown into the fire as well and just kind of learning on the job. And that’s certainly an option that works for many people. I think there are some things that are harder to do in industry than in academia, like kind of the more exploratory first principles like fundamental research, without necessarily a direct application. You know, industry definitely skews a lot heavier towards the applied side of things.
+
+[00:03:46] But I think like having that fundamental background can be very valuable depending on what kind of research you’re targeting.
+
+Ryan:
+
+[00:03:52] You mentioned the type and the shape of the role could be different if you had a PhD versus not. Could you give a example of what you mean?
+
+Nimit:
+
+[00:04:00] If you’re working on more like engineering heavy stuff in AI, so, you know, building, you know, training or evaluation infrastructure, you know, working on like, you know, data processing, things like that. Those are not things like a PhD is really necessary for at all. I’d say if you want to do more like sort of pie in the sky type stuff like, you know, architecture, design, things like that, a PhD can be, you know, can be helpful there because, you know, you have more time to kind of explore directions that may not pay off in the short term.
+
+[00:04:36] But you know, again, there are, there are examples of people being successful in, you know, without a PhD, with or without a PhD in both, both domains. So I think like, if your only goal is to be an AI researcher and you’re not super, you know, tied to the, you know, the particular type of work you do, you just really want to get into the field. A PhD is definitely not necessary. But I think like, if you’re, if you’re still in the sort of exploration phase of your career and you want to find a problem that really draws your interest, then a PhD can be a good way to do that.
+
+Ryan:
+
+[00:05:15] You mentioned the PhD skill set or something that you kind of develop when you get a PhD. What is that skill set?
+
+Nimit:
+
+[00:05:23] I would say 90% of the battle in research is actually finding the right problems. So you have to find a problem that is interesting, it’s meaningful, that people are actually going to care if you solve it. You have to sometimes convince people it’s interesting because they might not have thought about it the same way. And then you have to execute and you need to make sure it’s a problem that’s appropriately scoped, that is actually tractable for you to make progress on.
+
+[00:05:51] So I think all of those things were not skills that I had had developed. You know, it was more, you know, just, just like execution was, was my strength. And so definitely that was a, you know, big learning process for Me during the PhD is like that sort of like research taste and problem selection. And this is something that, you know, just like being immersed in the field, you know, really helps with.
+
+[00:06:15] You know, once you’ve read enough papers, you know, talked to enough people, you kind of get a sense of the patterns and trends that are going on in the, in the field.
+
+
+## 00:06:25 — Research taste and finding problems
+
+
+Ryan:
+
+[00:06:25] You mentioned the research taste and finding the right problems. If you could kind of condense what you Learned in your PhD, is there maybe some top tips that kind of lead to you finding the right problems?
+
+Nimit:
+
+[00:06:38] I would say the main things that I find useful are just keeping abreast of the current literature, just reading as many papers as you can. And it doesn’t have to be reading them end to end, just skimming abstracts, you know, seeing what’s going on, what are people thinking about. And yeah, I think the other thing is just working your way up. So, you know, initially, earlier in your career, you want to attack like, you know, very small sub problems that are, you know, that you’re reasonably likely to make progress on.
+
+[00:07:12] Right. So one example, you know, example of this can be like you take a method and you try to extend it to some like, you know, special case or something like slightly different from the original application. And then as you go on and as you mature as a researcher, you can start tackling bigger and bigger problems. So not just kind of extending previous work, but maybe coming up with totally new ideas, things like that.
+
+[00:07:38] So I think there’s a gradual stage of maturation as a researcher and I think some people do try to skip those steps and I think that’s generally inadvisable.
+
+Ryan:
+
+[00:07:47] You mentioned keeping abreast of the literature. What’s the go-to spot for you to find the right AI research papers to read?
+
+Nimit:
+
+[00:07:58] Honestly, Twitter is one of the, probably the main way that I keep up with papers. I think if you follow enough good people on X, I guess your feed becomes pretty curated to that. So that’s usually the first way I find out about stuff, obviously just talking to people, coworkers and so on. But yeah, I think X is my go to. So I try to. I try to curate my feed in such a way that it’s. It’s mostly, yeah, machine learning papers and pictures of cute animals.
+
+Ryan:
+
+[00:08:30] Do you have a good starting point for someone who just wants to plug in?
+
+Nimit:
+
+[00:08:34] I pretty much, like, you know, started with following people I knew from Stanford and, you know, elsewhere, you know, professors whose papers I’d read, like, you know, prominent people at big labs and so on. And then like, anytime, you know, they tweet a paper, they like a paper or something like that, if it’s. If it’s interesting to me, I just click on that and I, you know, follow all the people, you know, tagged in or associated with that work.
+
+[00:08:58] And that’s. Yeah, so I sort of grew my follow list organically via that and Understand.
+
+
+## 00:09:04 — Why become a quant
+
+
+Ryan:
+
+[00:09:04] After your PhD, you became a quantitative researcher at Citadel. Where were you in your career and why did you decide to become a quant?
+
+Nimit:
+
+[00:09:13] Yeah, I joined Citadel securities after graduation from my PhD, and so they’re. Yeah, so basically I had actually interned there right before the summer, right before graduating, and I liked it a lot. Reason I decided to intern just kind of. I wanted to see what else was out there. I had. I had a few friends who had interned at Citadel, at Citadel securities, and, you know, enjoyed it or at other quant firms.
+
+[00:09:40] And I was just kind of curious. You know, by that point, I’d been working in AI research for like four to five years. And yeah, like I said, I was. Generally, when I entered my PhD, I was interested in careers in which I could apply my interests in mathematics and computation. And so I think the three major careers of that form at the time were machine learning research, which I already had experience with, you know, quantitative finance, and then the last one maybe quantum computing, but, you know, it was a much smaller sort of domain and one I had no experience with, although that one’s also kind of blowing up these days.
+
+[00:10:21] So, yeah, quant finance. I was just. Just kind of curious and, you know, I’d heard good things. And so I decided to intern and I ended up liking it a lot. I think it was, you know, refreshing in some ways. Um, you know, like I said, the PhD is a grind, you know, you can burn out at various points. And it was kind of a fresh, fresh set of problems. Totally different environment.
+
+Ryan:
+
+[00:10:46] Well, it’s funny that you say that the grind of the PhD, you kind of took a break to become a cloud Citadel, because I’ve heard that the. The work culture is Pretty intense at these finance companies. Is that the case?
+
+Nimit:
+
+[00:10:59] Yeah. So that is the reputation. But I think that definitely varies a lot based on the team you’re on, the firm you’re at. Yeah, I personally I had a pretty great work life balance, as funny as that might sound as a quant, you know, I think one reason is that, you know, traders typically will work, you know, trading hours or whatever locale they’re in. You know, of course there are markets all over the world, you know, apac, you know, Europe and so on.
+
+[00:11:30] But in the us, US traders are typically working around US trading hours and of course a little bit before and after just to prepare and stuff. And so I think that generally has a sort of trickle down effect on the culture where most people are just kind of really clustered, working around trading hours and then don’t take their work home too much. So even though the work can be done at any time, I think it just, that is sort of how the office culture operates.
+
+
+## 00:12:01 — What quants do
+
+
+Ryan:
+
+[00:12:01] Yeah. When it comes to quantitative finance or quant work, how would you describe the work?
+
+Nimit:
+
+[00:12:06] It really, really depends a lot on both the team you’re on, like the sector you focus on, whether you’re at a hedge fund or a market maker, whether you’re like front office or back office quant, and of course the company. And so some quants will spend all their time just like on alpha generation, so generating new trading strategies and back testing them and so on and putting them into practice and monetizing them.
+
+[00:12:37] Well, some people will focus just on the alpha, some people will focus on the monetization. Or you can be a risk quant. So you’re basically not necessarily generating strategies at all, but just trying to come up with metrics to capture risk and avoid that, reduce risk without reducing, you know, cutting into profits. You might be, you might be doing like data analysis. So you might have like a ton of like historical like trade data and stuff and analyzing them in various ways and so on.
+
+[00:13:09] So yeah, I think, yeah, yeah, like I said, like, you know, hedge fund versus market making, they’re, they’re actually very different problems. So I think the thing that unifies all of them is really, you know, having a strong math background like in.
+
+Ryan:
+
+[00:13:25] The day to day, let’s say, you know, your, your project that you’re currently working on, like what would that look like? What would the shape of that problem look like? And how does math concretely play a role?
+
+Nimit:
+
+[00:13:36] You know, depending on what sector you’re in, you know, there’s a lot of different math that will come into play. I mean, you know, the sort of the backbone of finance is stochastic calculus. So I think that comes up almost everywhere. But then there are other things like numerical optimization, numerical interpolation, things like that. Machine learning, of course, is now more and more firms are getting really deep into the deep learning space, even establishing their own research arms that do LLM type research and stuff like that, numerical linear algebra.
+
+[00:14:15] So there’s a lot of different math and it’s actually very like, it’s actually very diverse in terms of what people are always trying to come up with ways to apply different fields of math to quant. I think some of it is just for fun, kind of because quants are such a mathy intellectual bunch, but there is actually a lot that underpins the entire field. So yeah, I mean, I think, yeah, stochastic. Stochastic calculus is probably the most unifying part.
+
+[00:14:48] Like that’s kind of the, you know, Finance 101 type math.
+
+
+## 00:14:53 — How quants and SWEs collaborate
+
+
+Ryan:
+
+[00:14:53] So you mentioned coding a lot as a quant. And I have had some friends who were swe at Citadel and these various companies understand the roles are quite different. How do quants and swez typically collaborate at these companies?
+
+Nimit:
+
+[00:15:08] Really depends a lot on the company. You know, some, some companies, like, you know, Jane street for instance, like the number of people who are called quants is actually very small and you know, traders themselves are quite technical and like implement a lot of stuff. And then of course they have like software engineers as well. Whereas Citadel I think is a more quant forward firm. So I think, you know, you know, quants might be, if not the largest, like percentage of employees, like it might be like about equal in terms of the technical stuff.
+
+[00:15:36] And so yeah, I think there can be a lot of overlap in what a quantitative researcher and what a software engineer does and also between a quant and a trader. So yeah, it kind of just depends. At some firms I think it’s more divorced where quants are really doing the strategy work and then it’s kind of handed off to software engineers to implement. But at other firms I think you might do a bit of both because, you know, of course, like the person, like if they have the implementational skills, the person best posed to like actually implement something is the person who like understands all the reasons and edge cases and things like that.
+
+[00:16:22] And so, yeah, like I said, I did a ton of coding mostly in C, also some Python.
+
+
+## 00:16:29 — Quant vs tech culture
+
+
+Ryan:
+
+[00:16:29] If you were to compare and contrast finance and tech generally across these roles, what comes to mind?
+
+Nimit:
+
+[00:16:37] So I think a lot of the Skill set, first of all, is actually quite similar. Yeah, like I said, math and computer science were my main interests, and I wanted a job that would leverage both of them. And I think that’s been the case in quant and that’s also been the case in AI research that I’ve done. And so I knew nothing about finance before I joined Citadel securities, but I read a few textbooks that were recommended by people and that was really all I needed.
+
+[00:17:09] And yeah, from there I just drew upon my sort of technical skills. And I think AI research is a lot of the same way. I think if you have really strong fundamentals, you can pick up the rest. So, yeah, in terms of technical skills, I don’t think it was really a rough transition either going, you know, going either way. I think, you know, obviously the, you know, culture is different. You know, SF versus New York, those kind of things.
+
+[00:17:39] Yeah, work. Work hours, I would say. Yeah. I think, you know, quant actually probably has a better work life balance than AI. You know, particularly the level of competition in AI right now. Like, you know, it’s just a very competitive space. And so one of the ways you can gain a comparative advantage is just like by outworking your competition. And that kind of is, you know, what happens in, in practice a lot, A lot of places.
+
+[00:18:05] I know a lot of people who are just like, working around the clock.
+
+Ryan:
+
+[00:18:08] I’ve heard insane stories about the comp structures at quantitative finance firms. Is that all true? Like, is it heavily bonus weighted? And, um, I’ve also heard stuff about garden leave.
+
+Nimit:
+
+[00:18:22] So. Yeah, in terms of comp. Yeah. I think one thing is like, you know, there’s not really standardized levels like there are in tech. You know, you, you can’t just sit, you know, it’s not like someone is just like IC5 and you kind of know, like, what, you know, kind of pay bands. They’re. They. They what, what they’re making. It’s. It’s. Yeah, I think comp is really driven by a few things, you know, how the company does that year, how your team does that year.
+
+[00:18:47] If you are really on, like, the alpha side of things, like, you know, how you, how your particular strategies did that year. And then of course, there’s like, other things that play into it, like seniority, both in terms of, you know, hierarchy, if you’re at one of the firms that, you know, does have a kind of explicit hierarchy, or in terms of like, you know, just like tenure at the firm or years of experience, things like that.
+
+[00:19:08] And so, yeah, I think, you know, quant firms I think are more secretive and partly because of the relative lack of standardization. So it is kind of opaque in terms of how those factors actually combine for your final comp. But yeah, I think it can be very bonus driven if you’re really on the alpha side of things and that attracts some people to that kind of thing where they really would just want, they want to be as exposed as possible to I guess like the fruits of their labor.
+
+[00:19:40] But it is, you know, the downside is it can be much riskier business as well. So yeah, it’s just more variable. But like if you’re you know, more back office type thing, I think the comp is you know, probably a little bit more deterministic if you’re not, you know, directly tied to alpha generation.
+
+Ryan:
+
+[00:19:56] Yeah, it’s interesting I mean because we were talking about AI research versus quants and obviously being a quant is famous for earning a lot if you have generated a lot of alpha. I hear compensation like easily in the millions for, for a lot of these people. But at the same time AI research also popped off too.
+
+Nimit:
+
+[00:20:18] You know, if you’re in the top 1% of either of these firms, you’re going to do very well. Yeah, I mean, yeah, they’re kind of crazy. Yeah, I mean these, these things really do exist where people are making like NBA player salaries and stuff I think you know, for the, for the median case. Yeah, it’s still, it’s still very good. But I think, yeah, it’s, it’s not, not exactly that outlandish. Yeah, sorry, you, you also mentioned stuff about NDAs and stuff and, and garden leave so, or sorry, non competes.
+
+[00:20:49] I guess so. Yeah, I think, you know, so finance firms are, are very, you know, they’re very serious about this sort of thing. You know, unlike in tech. You know one thing I was surprised by, by culturally is how tight lipped people are in finance. Even within a firm there’s things that you can and cannot share across teams or people might just want to be more secretive because they’re protective of their alphas and so if you know what they’re doing, you can reimplement a similar thing and take over some of their alpha because what makes it alpha is that it’s, you know, secret.
+
+[00:21:28] If, if more, the more people know who know about it like the less profitable it’s going to be for any individual. And so yeah, I think it’s, you know, quite secretive. You know, even, even the firms that are, you know, have a reputation for being more open are, are actually quite Secretive versus in tech. You know, people talk about things all the time and so it was a bit jarring for me returning it to tech and like hearing like people, you know, talk about what they’re doing in like a, you know, very open way.
+
+[00:21:53] It was like, wow, like you’re just going to tell me that for free. So yeah, a non compete is probably the most notorious part of this is yes, a lot of firms will have a clause in the contract you sign at the beginning stating that you cannot work for a competitor for a period of time after you leave the firm. And this period of time is typically decided by the company when you leave. But it can be anywhere from, well, it can be zero up to two years.
+
+[00:22:23] I think I’ve heard even up to three years for some places. But I think that’s rare. I think the norm is, I would say the norm is like six months to two years. And so yeah, during this period you’re basically just paid to not work. Yeah, it’s called garden leave because I guess you sit at home and garden or whatever. And it’s actually, I mean it’s actually a quite interesting thing. It creates interesting incentives for some people because you are typically compensated quite well during this garden leave period.
+
+[00:22:51] So it’s not necessarily a, you know, it’s not necessarily a downside for some people. And yeah, basically idea is like, you know, you won’t, you know, leak ideas to your competitors and you know, by the time your garden leave is over, you know, if you have some special alphas or trading strategies, you know, two years down the line they’re probably not even relevant anymore. So it doesn’t even matter.
+
+Ryan:
+
+[00:23:14] You mentioned the secrecy within in quantitative finance and I see a natural incentive here to kind of be hostile or I guess competing within the firm. Because my alpha is my alpha, I’m not going to help you. Did you ever feel that or see stories of that?
+
+Nimit:
+
+[00:23:35] Yeah, no, it’s definitely a thing. You know, people are, yeah, I think a lot of people are, you know, reluctant or even forbidden to talk about any details basically of what they, what they do. You know, some people that’s, you know, some people, you know, won’t even, don’t even like say what sector you know, they work on, you know, at least across companies and stuff like that. So yeah, I think that that’s definitely a thing.
+
+[00:24:01] You know, some firms are set up where it’s like basically pods. So you know, one pod is just responsible for basically all of their P and L and then the firm takes a cut and so, you know, different pods might be working on, you know, very similar things, unknowingly. Right. But they’re not sharing any of the information. And there is some logic behind this because the idea is you want to have uncorrelated, you know, uncorrelated returns.
+
+[00:24:28] So if all the pods are like, you know, talking to each other, sharing ideas, you know, chances are they’re going to start doing very similar things. And then, you know, that exposes you to risk where, you know, what if the thing you’re doing is actually wrong and you know, you can wipe out not just one pod, but an entire team of them. Whereas if people are working independently, then, you know, that’s, that’s not, that’s less of a risk.
+
+Ryan:
+
+[00:24:50] Earlier you mentioned the top 1% of AI researchers and quants are going to do extraordinarily well. I’m curious what sets the top 1% of AI researchers and quants apart from the rest?
+
+Nimit:
+
+[00:25:04] There are a lot of things. I think there are different ways to get to that point as well. Can be raw technical skill. Like some people are just really, really good at what they do. Able to, you know, the prototypical, like 10, 10x engineer, that kind of thing. And they just have, you know, a better, a higher level of intuition and, or execution speed, stuff like that. You know, of course there’s politics involved, like, you know, people who are better at playing the political game can, you know, rise up in the ranks.
+
+[00:25:35] I think in Quantum, one thing is that it’s harder to game the system because there are kind of hard metrics that it’s easier to evaluate how someone does. Especially if you’re alphaquant. It’s quite clear if you implement a strategy and you make the firm a ton of money, that’s obviously going to be recognized. I think in AI it can be a little bit harder, but of course the analog might be you publish a seminal paper, you make a true breakthrough in the field.
+
+[00:26:06] You know, you, you make, you know, the models much better than. Yeah, that, that sort of thing. So, yeah, I think it’s. Yeah, I guess it’s probably similar to, you know, other domains. It’s just a combination of skill and like, you know, playing, playing the game. And I think being in the right place at the right time has a lot to do with it. You know, both in quant, in terms of seeing something before other people do and then like making, taking advantage, capitalizing on market trends and, and, and turning that into a profit or an AI, you know, like having the right idea at the Right time.
+
+
+## 00:26:39 — Quant firm tier list
+
+
+Ryan:
+
+[00:26:39] When it comes to quant firms, I’m kind of curious. There’s all these tier lists out there. What are the top firms and why.
+
+Nimit:
+
+[00:26:47] Rentech, like we talked about, is one of the sort of mythical firms in the space. You know, you can’t really argue with their returns, the historical returns over like a, you know, 20 year, 30 year period. It’s pretty insane. So, you know, Rentech is maybe, you know, the gold standard, you know, depending on who you ask. Then there are other firms like, you know, some of the slightly big, bigger ones like you know, Jane Street, Citadel Jump Trading, Hudson River, I think those are generally very well regarded firms.
+
+[00:27:16] And you know, having that kind of thing on your resume can definitely be, you know, an asset to, to future quant rules and things like that. So yeah, very good firms I think. You know, great technical talent, great returns obviously. And then there are some elite smaller ones similar to Rentech. Smaller, more secretive, less well known, but still very, very excellent returns. So yeah, TGS is one, it’s in Southern California.
+
+[00:27:46] Yeah, XTX is another one of the newer firms. I think Radix is another newer firm that’s in that boat. So yeah.
+
+
+## 00:27:56 — Quant insider trading and perf culture
+
+
+Ryan:
+
+[00:27:56] Are there any stories you working in the space that you think might be interesting?
+
+Nimit:
+
+[00:28:00] You know, finance firms do not mess around. So you hear stories about like, you know, people just doing, you know, dumb things like you know, traders or quants having like an internal WhatsApp group where they, you know, talk about strategies and they’re like, like so as a quant you have like trading restrictions. You have to get all trades pre approved. And so of course if you’re, you know, someone who works in equities or something, you know, you probably are not going to be able to trade those tickers at all.
+
+[00:28:27] But you know, people try to get around it with their little WhatsApp groups or whatever, like telling their friends to, you know, buy these, buy these stocks or something with the profits or whatever. If that happens and you get found out, you know they’re going to go after you, you’ll get fired obviously, there’ll be lawsuits, you can, you can even go to jail. Yeah, there’s like a, a few stories about this because it is, it is against the law.
+
+[00:28:52] And so yeah, heard, heard horror stories about this. That’s one of the things they tell you about in training actually is like, yeah, do not do this similar with like non competes, you know, people going to competitors or starting their own thing or something and like getting accused of taking strategies and stuff like that. Yeah, the all these firms have like, elite legal teams and. Yeah, just not something you want to mess with.
+
+Ryan:
+
+[00:29:17] I’ve heard that in quantitative finance that it’s kind of intense sometimes or rather people may get fired very often. Did you ever have, like, you just were working with someone that kind of disappeared?
+
+Nimit:
+
+[00:29:32] Yeah, yeah. I mean, yes, that. That does happen. Yeah. I think it’s interesting in quant because like I said, yeah, comp is a function of many things among. Among which is seniority. And so I think your job security can actually be kind of U shaped because senior quants, like, you know, even if they’re very good, they just get very expensive after a while because that’s sort of what the market rate is for for senior quants.
+
+[00:29:58] And so, you know, even. Even a good quant, you know, can stop being worth it after a while. Whereas like earlier career quants, you know, you can, you know, they might be very good and also not command, you know, as high of a salary. So, yeah, the job shape is not. Not usually like kind of like an inverse parabola almost. And yeah, I mean, people certainly get fired. It’s a quant in general, I think, has a culture of, you know, well, one is like upper out and two is like, you know, just trimming the low performers.
+
+[00:30:29] And again, I think this can become, you know, especially easy if you’re like, more on the alpha side. Like, if you’re just not making money, like, it can be pretty clear. But in general, even for like, you know, engineers. Yeah, I think there is this kind of culture. Yeah. Traders, of course, it’s. Yeah. Since they’re, you know, making trades and stuff, again, it’s like, very easy to monitor. So I think that can be even more.
+
+[00:30:51] More brutal.
+
+
+## 00:30:53 — Going back to AI research
+
+
+Ryan:
+
+[00:30:53] Why did you leave Citadel to join Cartesia?
+
+Nimit:
+
+[00:30:57] When I joined Citadel, it was partly because I was just interested in learning about a new problem domain and like, you know, learning some. Learning some new stuff, you know, learning about finance in general, I think was also, like, kind of interesting to me. And yeah, I think, you know, I became more financially literate as a result of things and stuff like that. Like, it was, it was. It was a great learning experience for me and I was kind of optimizing for like, growth potential partially as well.
+
+[00:31:21] But yeah, I mean, by that point, you know, I’d been at Citadel for, you know, a couple years and was. Yeah, I think, you know, like, it’s sort of like your growth, you know, at most places will kind of like accelerate for a bit and then like sort of taper off So I think there was still a lot more to be learned had I decided to continue on that path. But I saw what was going on in the field of AI when I graduated.
+
+[00:31:46] Actually, it was right before ChatGPT came out. And so I think a lot had changed even since I joined Citadel. And I heard that the founders of Cartesia were starting this company. And for context, I knew all of them from my PhD at Stanford. They were actually all in Chris Ray’s lab with me. I knew Albert pretty well and so, yeah, I had tons of respect for them. They’re great researchers. I worked pretty closely with some of them.
+
+[00:32:13] Albert was a good friend of mine, knew the other guys. And so it just seemed like a great opportunity and a great time to get back into the field of AI when things were sort of taking off. And I thought it would be great in terms of personal and technical growth. Also, the opportunity to join a small startup was definitely something that was interested in me and kind of like shaped the company and the culture, you know, as one of the earlier employees.
+
+[00:32:40] And so, yeah, it was really. Yeah, I think, yeah, it was all about, all about growth, getting back into AI. And I think like, you know, there is like a, definitely a different risk profile. I think when I graduated my PhD, I was kind of more like risk averse. You know, Quant was like a, you know, stable, you know, lucrative opportunity that, you know, was the right choice for me at that time. Now that it had sort of established myself a little bit, gotten some of that stability, I thought it was, you know, opportune time to take a risk.
+
+Ryan:
+
+[00:33:13] Cartesia, I guess if you could give us some context on the primary problem the company solving and just like what the company’s about.
+
+Nimit:
+
+[00:33:22] Yeah, we are a voice AI company. You know, our current mission is to build sort of the next generation of voice AI and a platform for that. So what that means is we do. Our flagship product is Text to speech. We also have products around Speech to text, Voice agents and stuff like that. And yeah, I think we believe voice AI is the future. It’s actually one of the fastest growing areas of AI. People are using voice AI in many applications, call centers being one of the predominant ones, but also a bunch of applications and entertainment, a bunch of companions, a bunch of different things.
+
+[00:34:03] And so that’s kind of the product set we’re building. And yeah, in terms of why do we choose Voice? So I think Voice is actually a very interesting test bed for a lot of research ideas that we’re exploring. So we also have A sort of research arm of the company that focuses on kind of longer term research around long context, around multimodality, things like continual learning and memory, test time, compute.
+
+[00:34:37] And in general, overall even higher level goals to build real time systems that are truly intelligent and that you can interact with and that can learn from experience. And so I think, you know, building these voice agents, you know, speech to speech models and so on, is, you know, it requires you to kind of, you know, solve some of these problems for the, you know, sort of eventual idea of like a kind of like always on assistant, personal assistant.
+
+
+## 00:35:08 — Who the top competitors are in voice AI
+
+
+Ryan:
+
+[00:35:08] When it comes to this voice AI space. Who are the top competitors?
+
+Nimit:
+
+[00:35:13] So our main competitor is a company called 11 Labs. They’re you know, another voice AI company basically. And yeah, so they, I think had about a 18th month head start on us. Yeah, I actually used to play with 11 labs, you know, long before Cartesia was ever a thing. Just like kind of make like, you know, fun videos and whatnot. And so yeah, it’s, you know, very, very similar company. I think, you know, where Cartesia stands out, I think is, you know, we have sort of a focus on things like latency.
+
+[00:35:50] So low latency is really important for a lot of voice AI applications for naturalness, like the conversation we’re having now, you can’t afford to have a second pause in between each turn of the conversation that just really breaks the illusion and immersion. And so latency is really important for a lot of our customers. We’re continuing to try to push the boundary of sequence modeling and stuff to get better and better quality without compromising on latency and then going into more end to end systems as well.
+
+[00:36:29] So right now the way voice agents are typically implemented is you have a speech to text system that transcribes some text, then you feed this into a language modeling backbone and then you have a text to speech system that will take the text that is output by the language model and speak the result. But this has a lot of problems in terms of latency, again in terms of naturalness, because it’s kind of not an end to end system.
+
+[00:36:55] So there’s a lot of loss in between each of these components and so on. And so yeah, that’s one thing that we’re trying to build towards. But even right now, I would say, you know, even if you just look at our text to speech products, I think, you know, we’re definitely right up there as, you know, one of the leaders in the space. I think, yeah, you know, 11 wins on some languages. We Win on some.
+
+[00:37:18] You know, I would say we have like better voice cloning, things like that. So yeah, we’re trying to become number one in everything. But yeah, I think, you know, like I said, voice AI is a very fast growing space and so a lot of people are jumping into the space. But I think the pie is very large.
+
+Ryan:
+
+[00:37:34] What does it look like if cartesia completely destroys 11 labs?
+
+Nimit:
+
+[00:37:39] I think we already win in terms of things like latency, in terms of cost. I think if we can conclusively win in terms of quality, not just for a subset of tasks and not just for a subset of things, but there are many things that people care about. For text to speech quality, there’s just adhering to the transcript. So actually reading what is put in front of the model, which can be surprisingly hard, especially if you have different languages, especially if special characters, repetitions, whatever, all models struggle with this.
+
+[00:38:11] But there’s also naturalness. Does it really sound like a person saying this or does it sound robotic? Of course, a lot of applications actually care about naturalness even more than just transcript fidelity. And then of course there are all the speed and things like that. And then there are features like voice cloning, accent localization, so taking my voice and making it have a different accent, things like that, controllability, speed, emotion, things like that.
+
+[00:38:42] And so yeah, like I said, I think we have better quality in some areas, maybe worse than in some others. We like to get to number one in as many categories as possible. And so I think that’s, that’s sort of the thing, right? Like, you know, switching costs exist even in AI, I think, you know, depending on the size of the customer, like some customers are reluctant to switch over from, you know, one thing to the other.
+
+[00:39:06] You know, obviously startups can be more nimble, but you know, when, when you’re talking about enterprise scale, you know, this matters and, but like if you are, you know, conclusively show that you’re better in every way, then I guess like at some point it becomes hard to, hard to argue for not switching.
+
+
+## 00:39:22 — AI startups vs big labs
+
+
+Ryan:
+
+[00:39:22] I imagine you could have worked at a big lab, OpenAI, anthropic, et cetera. What’s the main difference in working in an AI startup versus one of these big AI labs?
+
+Nimit:
+
+[00:39:32] Big labs have obviously amazing resources. They have all the compute in the world, tons of researchers and so on. I think one thing is that the flip side of that is that I think big labs can sometimes be more averse to out of the box ideas and a little bit more susceptible to groupthink. Or overarching trends in the field and less willing to take a risk on something different. And then that makes sense, right?
+
+[00:40:01] Because with these great resources, there’s a lot of cost to investigating new ideas that don’t turn out well. Whereas as a startup I think you’re a bit more nimble, you’re able to be a little bit more exploratory if you do it strategically and sort of challenged the orthodoxy in that way. And so that was one of the things like I mentioned that drew me to Cartesia. Albert has a lot of interesting ideas that I think don’t necessarily go with the accepted grain.
+
+[00:40:40] Around the time Mamba came out, people were kind of of the opinion, a lot of people were of the opinion that sequence modeling was kind of a solved problem and all you need is skills like you just take the transformer recipe and you just scale it further and further. Yeah, I mean, Albert showed that, you know, that’s not necessarily the case, right, with Mamba, that you can actually get real advantages in terms of things like, you know, efficiency, computational efficiency, but also like, even in terms of just like raw quality, you know, state space models can be advantageous for a lot of classes of problems.
+
+[00:41:14] Or like things like hybrid models where you take some state safe model layers, some transformer layers, things like that. Another more recent work that we put out at Cartesia was this idea of H nets where so yeah, for context, the way that text modeling is usually done is you take raw text, sequence of characters or UTF 8 bytes or whatever and then you compress it or you represent it as these things called tokens, which are basically little pieces of words or subwords and then you run modeling over that.
+
+[00:41:45] So it’s like a two stage pipeline. We showed that if you actually just go from the raw characters and you kind of learn this tokenization, you learn how to draw these boundaries in between groups of letters instead you can actually get better performance. And so, yeah, that’s the kind of thing, I think challenging accepted ideas, that’s the kind of thing that appealed to me.
+
+
+## 00:42:08 — State space models vs transformers
+
+
+Ryan:
+
+[00:42:08] For context, you mentioned state space models versus transformer. Could you just give a quick primer.
+
+Nimit:
+
+[00:42:13] I guess, without going into too much, I guess, technical detail? Basically the main challenge of Transformers is that the memory that they use at inference time grows linearly with the sequence length. Because what they do is they will take each token and store a representation of it in what’s called the KV cache, the key value cache. And so as your sequence grows longer and longer, you’re still storing all of this information in context in your memory.
+
+[00:42:45] And so for very long sequences this can get prohibitive both in terms of computational costs and in terms of memory. SSMs are different because instead of storing everything into everything in this uncompressed way, they take that information and they compress it. So the size of the state is fixed. And so as a result the cost of doing a certain step doesn’t change with the length of the sequence and the amount of information you have to keep in memory does not grow with the sequence length.
+
+[00:43:18] And so kind of an intuition, our co founder Albert Gu has a great blog on this, is that SSMs are kind of like a brain. The human brain also does not store an unbounded amount of context. It takes in information and it processes it and keeps it in this fixed size state, which is our brain. Of course you can simulate having an unbounded state via use of external tools like writing stuff down and so on, but the core primitive remains fixed, whereas transformers are more like a database where you can kind of recall anything in the context.
+
+[00:43:53] And so I think both of these approaches are complementary. Right? And yeah, so you know, we’re currently exploring kind of, you know, extensions of that analogy. But yeah, I would say that’s kind of the, you know, high level thing.
+
+Ryan:
+
+[00:44:09] Is the sequence just the input. So the longer the prompt, the longer the sequence and therefore more memory consumption at inference.
+
+Nimit:
+
+[00:44:16] That’s right. So the sequence is the prompt plus the response. So you know, as the model is generating the response, you know the context, you know, the context includes what has been generated so far. Right. So you can refer back to what you yourself have said and you’ll figure out what is, you know, what is the next appropriate token to say. And so this can get obviously especially large for multi turn conversations where now the context includes everything that has been said in the entire conversation up to that point.
+
+[00:44:43] And so beyond a point, as I’m sure we’ve all had experience with, if you’re chatting with these language models, it sort of ceases to be that useful maybe after tens or something of turns. And you know, it can be best to start a new conversation. But the challenge was that and you know, of course companies are doing things to try and sort of address or band aid this, you know, for instance, like ChatGPT now like saves some like global context in between conversations and stuff like that.
+
+[00:45:13] But it doesn’t really truly learn from, you know, from your personal proclivities and preferences and like the things you’ve asked in the past. Like there is some semblance of this, of course, but I wouldn’t say that it’s like, you know, truly personal yet in terms of like an actual agent that is like kind of learning and growing every day.
+
+Ryan:
+
+[00:45:34] Yeah, you know, I’ve been using cloud code a bunch and I noticed occasionally it does this thing it says it’s compacting or something like that. I imagine it’s taking the multi turn conversation. I don’t know what it’s doing. Just maybe summarizing it and restoring it.
+
+Nimit:
+
+[00:45:49] Yep. Yeah, there are all, there are all sorts of different ways to kind of compress the KB cache, either sort of mechanistically or kind of doing like a, you know, textual summaries or things like that there. Yeah, this is a pretty active area of research as well.
+
+Ryan:
+
+[00:46:04] You mentioned that the state space models, they have a compressed representation of the KV cache or. And so I’m curious, does that have a trade off in terms of the quality of inference? Is it lossy?
+
+Nimit:
+
+[00:46:19] Yeah. So there are certainly trade offs. Yeah, I think depending on the task. So for very recall heavy or fact based tasks, pure SSM models can lag transformers because the ability of transformers to do this kind of exact in context recall turns out to be very helpful for this kind of task. Whereas for, for other tasks that don’t require this type of thing, SSMs can scale just as well or better as transformers.
+
+[00:46:52] Even for a fixed parameter budget, let alone inference budget, you can kind of get the best of both worlds. A lot of people have shown this by doing a hybrid model. So you just basically interleave state space model and transformer layers with some ratios. And so yeah, Nvidia has put out stuff like this. Even the Quinn, the latest Quinn models follow the strategy as well. So yeah, I think the cutting edge I would say for text is probably in these hybrid models, at least in terms of what’s out there for open source.
+
+[00:47:26] But the interesting thing is that for other modalities like audio, it actually makes a lot of sense to have this compression as an explicit inductive bias. So using SSMS for audio has proven very useful for us. We found that it actually improves performance. It’s kind of almost a free lunch, you know, you get improved performance and improved quality and improved performance inference time. And the reason is that sort of like if you think about what these models are doing, you know, audio is, you know, depending on how you represent it is a very like, you know, there’s very little information contained in any one like you know, time, step or token if you will.
+
+[00:48:10] Of audio. It’s like a frame of, depending on what you’re doing, like 10 milliseconds to 100 milliseconds. And so one frame to the next doesn’t really vary that much. And so compressing these into a sort of fixed size state can actually makes a lot of sense. As opposed to text, which is a much sort of densely informational modality one word to the next. There is actually a ton of information contained in each of those tokens.
+
+[00:48:38] And so you know, compression is less, you know, it’s kind of already like pre compressed if you’re using a token level representation. But yeah, even so, I think, you know, hybrid models, I would say hybrid models I think are the future in that regard.
+
+Ryan:
+
+[00:48:55] I see. Okay, so it’s because the modality itself has, I guess, redundancy in the data. That means that this lossiness is actually an asset rather than a problem.
+
+Nimit:
+
+[00:49:08] Exactly, yeah. So yeah, I think there’s a lot of interplay between modality and architecture. It’s definitely not something you cannot design your architecture independently of your data. And so yeah, kind of this co design and thinking about multimodality from a fundamental level, this is one of the research problems that I mentioned that kind of drives a lot of the work we do here.
+
+
+## 00:49:33 — AI labs: research or product?
+
+
+Ryan:
+
+[00:49:33] When you think about companies that focus on product versus research, what pattern do you think is most effective?
+
+Nimit:
+
+[00:49:43] So I think, you know, personally, and this is one of, you know, also one of the reasons I decided to join Cartesia, I think it is very important to have have both. I think like, so there are, you know, several startups popping out recently that are really, you know, focused on core research and not don’t even necessarily have an idea of how to productionize it or turn that into a product or revenue stream.
+
+[00:50:09] I think I personally am fairly skeptical of this approach. I think for a few reasons. I think first of all big labs have tons of resources and also have large teams focused on this sort of thing. I think ultimately the goal of a company is to make money. And so I think eventually, if you are a company of this form, you need to eventually deliver massively outsized returns at some point. So I think you’re taking a big risk where it can kind of be all or nothing type thing.
+
+[00:50:47] I think the flip side of a sort of product only company that’s built on AI models that are built by other people. I think that is like risky in the sense that you don’t have as much of a moat. So you know, like we saw this with, you know, the initial ChatGPT or you know, going from GPT3 or GPT4. Right. A lot of these wrapper companies kind of just got made obsolete by the fact that the base models improved so much that they could often just do what the wrapper was trying to do by themselves with, without very much scaffolding.
+
+[00:51:21] And so it became kind of thing you can just build in house rather than needing another company to post process the output of these models. I think being in the intersection is actually quite valuable for many reasons. I think having a product, a real product that customers use is something that can drive the research so you see firsthand the issues and you can use that to drive your next iteration of modeling, try and fix these issues not as a band aid, but from the ground up at the model level itself.
+
+[00:52:01] And so I think having control over the models is very important when you’re building an AI product. Which is not to say that there’s no room for any non research company. I think it just, it has to be in the right kind of space. And so yeah, I think Cartesia is a great blend of research and product. I would say we’re first and foremost a product company, but we want to build the best products we can and we believe that that requires us to actually solve some of these fundamental research problems.
+
+[00:52:36] In order to do that.
+
+
+## 00:52:38 — Advice for SWEs who want to try AI research
+
+
+Ryan:
+
+[00:52:38] I think there’s a lot of people who want to get into AI research. I mean, I was just talking with a friend today who’s a SWE and he’s saying I don’t think software engineering is going to be around in n years or something like that. So he’s been investigating and I’m curious, do you have any advice for someone who is technical and wants to move into AI research?
+
+Nimit:
+
+[00:53:00] My philosophy has always been to try and build up my technical skills as much as possible. I think if your fundamentals are good enough, at some point the opportunities will just come to you rather than the other way around. And so I would say just focus on getting as good as you can at coding. At AI, read tons of papers. I think math skills and math intuition are really important. And so that’s what I’ve kind of been optimizing for ever since undergrad when I realized what I wanted to do was at least some combination of math and computer science.
+
+[00:53:37] And so I’ve always more focused on kind of building up those fundamentals. And I think that is the way to get your foot in the door. I think like bigger companies it can be a bit harder to pivot. You know, teams or what you work on. And so for, for someone like that, I think switching like teams or companies can, can be like, you know, sort of the only path forward. I think you, you can kind of get siloed in a little bit if you’re at a bigger company sometimes.
+
+[00:54:04] Although I do think, you know, some companies are better about it. And you know, I have seen people transition from sweze to research and stuff like that. So I think, you know, this is one of the areas where getting a sort of qualification on your resume can be useful, like getting a master’s in AI at least, or something like that can help when you’re looking to make a sort of lateral career change like that.
+
+Ryan:
+
+[00:54:30] You’re saying there’s kind of two common paths. One would be get more education and use that qualification to kind of pivot directly into AI research or go to a startup where you can kind of like mold yourself into an AI research role.
+
+Nimit:
+
+[00:54:46] That’s kind of right. But I think even if you want to go to a startup, right, and you want to, but you want to sort of switch from a SWE track to AI track, like there’s gotta be some, there’s gotta be something behind it, right? Like you have to have some evidence of a skill set, whether it’s like sort of, you know, organically grown or from, you know, from, from schooling. But I think it can probably be a lot easier to get your foot in the door if you have some evidence of it on your resume.
+
+Ryan:
+
+[00:55:14] So like, let’s say you were, you hired at Cartesia and then that person comes to you and he’s like, hey, I want to do more AI research. In that case, is that something where it’s like just flip a switch and next project is AI research project?
+
+Nimit:
+
+[00:55:32] This has actually happened in Cartesia itself. We have had people transition roles like that. So I think it is definitely easier at a startup which can be a bit more flexible just because everyone kind of knows everyone. And so you can get a sense of whether this might be an appropriate career change just by knowing the person for a while. And so, yeah, I mean, we’ve actually done, you know, people have done this in, in Cartesia with, with, you know, a lot of success.
+
+Ryan:
+
+[00:56:02] Do you have a biggest regret when you look back on your whole career?
+
+Nimit:
+
+[00:56:06] I mean, I, I think I often overthink things and I think I have spent a lot of time regretting, you know, past decisions that turned out not to matter in the end. And I kind of regret the amount of time I spent regretting other things. So, you know, I try, I try to learn from that now. You know, I, I think like, you know, don’t sweat the small stuff. Like, you know, you know, minor setbacks happen and they happen.
+
+[00:56:26] But I think, you know, there’s a risk of, you know, putting too much stress on yourself and you’re like beating yourself up and stuff like that. And those are just like, not productive ways to spend your time and they don’t make anyone feel good. And so I think, yeah, I try, you know, I try not to regret stuff because, yeah, I think it’s just not, not a super good use of time.
+
+
+## 00:56:48 — Advice for younger self
+
+
+Ryan:
+
+[00:56:48] If you had to go back in time and you could give yourself some advice when you’re just entering the industry, what would you say?
+
+Nimit:
+
+[00:56:56] Focus on building the deep technical skills. Yeah. Don’t waste time with sort of trifling stuff or spreading yourself too thin. Yeah, just focus on what you want to focus on. I guess basically the skills that you want to leverage in your day job. Just do those and get good at those. And that’s where you should spend all your time at work. Um, and yeah, you make it sound so simple. Maybe it is. You know, it, it is, it is a simple, it’s kind of a simple recipe that’s very hard to follow.
+
+[00:57:31] Right. Like, it’s very hard to maintain that discipline. Uh, it’s kind of like, you know, you know, what’s the secret to being healthier? It’s, you know, exercising, eating right. And those are things that are just very much easier said than done. Um, but yeah, I think that it is, it is that simple. Awesome. Cool.

@@ -1,0 +1,25 @@
+Here are the takeaways from this Ryan Peterman interview (the host turns the mic on himself to explain why he stayed at Meta for 5+ years when all his college friends left):
+
+**An Engineer Who Never Broke Anything**
+
+Ryan started at Meta in 2018 alongside five friends from college. Over time, they followed the common industry advice—switch jobs often to grow your career and compensation—while Ryan staying put became "more and more unusual." A major reason was his manager, Lukas Camra. When you're a new grad, you look up to experienced engineers, and Lukas was the tech lead everyone admired. "Rumor has it, that Lukas never broke production in all his years as an engineer at Meta, though that might just be team folklore." Lukas exceeded expectations as a manager because he was a sharp engineer himself—"he knew how to help engineers grow fast." Looking back after five years of working with him, Ryan says "it is obvious why my team has been so stable." Getting lucky with a manager like that makes you want to stay a little bit, but five years requires more.
+
+**What a "10x Engineer" Really Looks Like**
+
+The second gravitational force was a peer: Haixia Shi, an IC who writes and reviews more code than anyone in the org. Haixia is the de facto video domain specialist for Instagram—"kind of a big deal for an app where video is a central part of the user experience"—and because of his domain expertise, he receives the most questions yet is also the most responsive. He "consistently solves problems that many Staff engineers can't," and his main project work often has industry influence. Ryan swears the description isn't an exaggeration: "I've seen Haixia Shi do this half over half since I started working with him."
+
+Ryan never received formal mentorship from Haixia, but "I didn't need to. Engineering excellence radiates from him." Strong engineers become even stronger just by asking him technical questions and seeing how he solves problems. "Having peers like this makes coming to work delightful and is one of the key contributors to my engineering career growth." This is the **radiating excellence** effect—where proximity to an exceptional IC raises everyone's bar without formal structures.
+
+**The Virtuous Cycle of Staying Put**
+
+Staying at Meta longer than any of his friends helped Ryan grow into a Staff Engineer (L6) in three years. Domain knowledge allowed him to deliver more in less time: "I was able to move fast because I was so familiar with our tooling, tech stack, and organizational processes." Beyond raw speed, staying long built **organizational trust**—"people knew I was a person who could consistently get the job done." As his skills grew, people gave him more responsibility. As he delivered on that, people trusted him with even more scope. This **virtuous cycle** gave him momentum that helped him grow at a faster and faster rate. The longer he stayed, the more the flywheel compounded.
+
+**How Long Should You Stay?**
+
+Ryan polled over 1,200 people on Twitter. Almost everyone agrees one year is too short—onboarding consumes much of that time, leaving little to utilize your knowledge. Past that, it depends. "If your job is treating you well and offers growth opportunities then there's no reason you shouldn't stay longer than 4 years." At the same time, leaving fast is smart if you're stagnating—he left his first job after 8 months and "in hindsight, it was a great decision."
+
+Meta runs a regular team health survey that asks "how long do you plan to stay at the company?" The funny thing: Ryan doesn't think he's ever answered that he'd stay longer than two years, even though he loves his work. "Yet, here I am 5 years later." The meta-lesson is that **staying isn't something you plan at the outset but rather something you regularly check in on**—a recurring evaluation, not a one-time commitment. At the end of the day, "how long you should stay is a case-by-case decision," which is why it's important to have mentors you can confide in for career decisions like these.
+
+---
+
+Ryan's narrative threads his **radiating excellence** effect and his **virtuous cycle** of trust together: the exceptional people around him (Lukas, Haixia) weren't just reasons to stay—they were the initial conditions that kicked off the compounding flywheel of domain knowledge, delivery speed, and organizational trust. His observation that **staying isn't something you plan at the outset** cuts against the standard "job-hop every two years" script without being dogmatic—it's a stance that says evaluate your own flywheel honestly, and if the virtuous cycle is spinning, there's no magic expiration date on letting it run.

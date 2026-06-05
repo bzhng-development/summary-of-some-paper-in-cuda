@@ -1,0 +1,471 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/engineering-career-stories-jordan",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 130322360,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-06-23T13:01:39.979Z",
+  "updated_at": "2023-12-15T12:53:54.039Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "engineering-career-stories-jordan",
+  "social_title": null,
+  "subtitle": "Learning from feedback and becoming a domain expert",
+  "teaser_post_eligible": true,
+  "title": "New Grad to Senior Engineer in 2 years: Jordan Cutler",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 9,
+  "reactions": {
+    "❤": 56
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "finding-staff-level-scope",
+  "next_post_slug": "resilience-through-retrospection",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!kIs_!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fafdb833a-51b7-45a4-bb13-7ce1f15b77f2_914x404.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Learning from feedback and becoming a domain expert",
+  "body_html": "<p><em>👋 Hi, this is <a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a> with another edition of my weekly newsletter. Each week, I write about software engineering, big tech/startups and career growth. </em></p><p><em>I’m starting a periodic series of guest posts I’m calling “Engineering Career Stories” that feature engineers with noteworthy career trajectories. The goal of each story is to give readers insight into what has worked so you can learn from others’ experience.&nbsp;</em></p><p><em>Today’s post comes from <a href=\"https://www.linkedin.com/in/jordancutler1/\">Jordan Cutler</a>, who is a front-end specialist that grew from junior (L3) to senior (L5) in 2 years at Gusto. His story has learnings that work well for growth to senior.&nbsp;</em></p><p><em>For more from Jordan, you can follow him on <a href=\"https://www.linkedin.com/in/jordancutler1/\">LinkedIn</a>. He also writes a great newsletter, <a href=\"https://careercutler.substack.com/\">High Growth Engineer</a></em>,<em> about software engineering career growth.</em></p><div><hr></div><div class=\"captioned-image-container\"><figure><a class=\"image-link image2\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!kIs_!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fafdb833a-51b7-45a4-bb13-7ce1f15b77f2_914x404.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!kIs_!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fafdb833a-51b7-45a4-bb13-7ce1f15b77f2_914x404.png 424w, https://substackcdn.com/image/fetch/$s_!kIs_!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fafdb833a-51b7-45a4-bb13-7ce1f15b77f2_914x404.png 848w, https://substackcdn.com/image/fetch/$s_!kIs_!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fafdb833a-51b7-45a4-bb13-7ce1f15b77f2_914x404.png 1272w, https://substackcdn.com/image/fetch/$s_!kIs_!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fafdb833a-51b7-45a4-bb13-7ce1f15b77f2_914x404.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!kIs_!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fafdb833a-51b7-45a4-bb13-7ce1f15b77f2_914x404.png\" width=\"506\" height=\"223.6586433260394\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/afdb833a-51b7-45a4-bb13-7ce1f15b77f2_914x404.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:404,&quot;width&quot;:914,&quot;resizeWidth&quot;:506,&quot;bytes&quot;:30936,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!kIs_!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fafdb833a-51b7-45a4-bb13-7ce1f15b77f2_914x404.png 424w, https://substackcdn.com/image/fetch/$s_!kIs_!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fafdb833a-51b7-45a4-bb13-7ce1f15b77f2_914x404.png 848w, https://substackcdn.com/image/fetch/$s_!kIs_!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fafdb833a-51b7-45a4-bb13-7ce1f15b77f2_914x404.png 1272w, https://substackcdn.com/image/fetch/$s_!kIs_!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fafdb833a-51b7-45a4-bb13-7ce1f15b77f2_914x404.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div></div></div></a></figure></div><p>It was my first week at my first job and I broke production.</p><p>I also just started this job after wondering if I would even get a tech job given that I didn’t get a return offer as an intern at Twitter.</p><p>This is the story of how I went from <em>that</em>—to the youngest Senior Engineer at Gusto among 200+ engineers.</p><p><strong>Before we start… a quick glossary:</strong></p><p>I’ll use FAANG leveling to describe the transitions. I started out as a junior engineer (L3) and was promoted to senior engineer (L5) after 2 promotions.</p><h2><strong>2019 - L3 SWE on Financial Products</strong></h2><p>Just starting out, I 100% had imposter syndrome. Not getting the return offer from Twitter really messed with me and made me feel like the same thing would happen again and I’d get fired after a few months.</p><p>The main lesson I learned from not getting the return offer is that it’s <strong>incredibly important </strong>to be a contributing member of the team and to show you are a “sponge” for growth from the people around you. At the time, I was so focused on my intern project that I didn’t take feedback and wasn’t a great team player. I even pushed back on some Staff engineers’ suggestions as an intern.</p><p>So starting out at Gusto I made some major changes to prevent that from happening again by:</p><ul><li><p>Asking for feedback a lot from my manager and teammates</p></li><li><p>Scheduling pairing sessions with everyone on the team and really embracing Gusto’s culture.</p></li><li><p>Making the team better any way I could, like documenting what I learned and improving onboarding for future members, recommending process improvements to my manager–bringing solutions and doing the work for him</p></li></ul><p>These changes laid the groundwork for me to perform well at my level. On top of that, one thing that really helped set me up for promotion early was taking initiative on problems that affected the entire team.</p><p>For example, I noticed a very slow part of our process that was frustrating for all the engineers on the team. We’d need to spend at least 10 minutes loading our local dev environment with data to test our changes every time. I remember going to my manager with a Google doc of an idea for speeding up the process to 5 seconds instead of 10 minutes. It was the messiest 1-page Google doc you could imagine but it got the point across.&nbsp;</p><p>My manager took that to our PM, got it prioritized, and because I had suggested it, they let me lead the project. It was an amazing opportunity to lead a project on my own, work cross-functionally with other teams, and provide a big productivity boost to our entire team. After completing it, I presented ‌it in our company all-hands which helped me gain visibility across the company. The CTO even came up to me afterward saying it was a great presentation, which was mind-blowing 🤯 for me at the time. The tool proved to have massive value and was used for years.</p><p><strong>The lesson here is that I probably wouldn’t have had this opportunity so early on if I wasn’t looking for ways to make the team better.</strong> Or if I had only stuck to my assigned work.</p><p>Having that experience helped my manager make a promotion case for me that got me to L4 within 1 year.</p><h2><strong>2020 - L4 SWE on Financial Products</strong></h2><p>After the promotion the first year, my manager made it clear early on that I shouldn’t expect a promotion so soon again.</p><p>This kept my expectations in check but I still was determined to do as best I could.</p><p>A primary driver for my growth this year was the way I got feedback from my manager. Every 6 weeks we’d check in on the expectations of the next level. We color-coded the expectations with green, yellow, and red based on my strengths and areas of growth. By doing this, my manager was able to easily find opportunities to help me turn the reds to yellows and yellows to greens. If all the attributes of the next level were green for 3-6 months, then we’d look to make a promotion case.&nbsp;</p><p>Following this process, I looked for ways that I could help the team while also lining up with the expectations of the next level. <strong>I’d definitely recommend something similar to this process for anyone looking to get clear feedback for growth and having their manager looking for opportunities for you.</strong></p><p>Looking back on the promotion to senior, I think there were 3 major contributors:</p><ol><li><p>Continuing to excel, ship, and lead team project work successfully with minimal bugs. Overall, I became very <strong>reliable</strong>.</p></li><li><p>Becoming a <strong>domain expert</strong> so that teammates could come for advice and expertise, even those that were leveled above me. I was a GraphQL and frontend subject matter expert familiar with multiple product domain areas.</p></li><li><p><strong>Making the team more effective</strong> through proposed initiatives or improved team processes. I led an API re-architecture that was adopted across multiple teams to colocate database ORM queries. Additionally, I tried to make on-call more enjoyable by updating processes around error tracking and fixing root cause issues with persistent annoying error notifications.</p></li></ol><p>Becoming a domain expert is one of the top pieces of advice I would give to anyone looking to get to the senior level. It helped me tremendously.</p><p>The way it happened was that our mobile team was looking to adopt and try out GraphQL. I saw it as an opportunity to get involved in something new and interesting, so I asked my manager if I could reimburse a GraphQL learning book and a Udemy course, and I began my learning. I read the book overnight and learned a ton about API design using GraphQL.&nbsp;</p><p>Reading that book allowed me to be more involved in technical discussions and provide meaningful suggestions. Because of that, my team trusted me to redesign all our APIs using GraphQL. This gave me a new ownership area of the code and made me a subject matter expert in a new technology area we were exploring.</p><p><strong>Once you’re a subject matter expert, tons of opportunities will come your way. You’ll be asked for help with adopting new patterns, teaching others through presentations, and get asked to lead exciting projects.</strong></p><p>All of the above happened for me. And it made making a case for the second promotion to Senior (L5) much easier. As a senior engineer, you’re expected to have an area of ownership.&nbsp;</p><p>The final lesson to share is to be the main driver behind your career growth. The people around you will help, but you should be the one seeking mentorship, getting the answers you need from your manager, and learning from others what your areas of development are. Even though I was scared and unsure if I would get it at the time, the promotion to Senior only came because I sought what was needed and pushed for putting myself up for promotion. <strong>Be the main driver behind your growth.</strong></p><h2><strong>Conclusion</strong></h2><p>That promotion to Senior came about 2 years ago now. I went through a team swap to a more frontend-focused role and left Gusto about a year ago to join Qualified as a frontend specialist. My next goal is to get to Staff Engineer, which I’m hoping I can reach within the next few years.</p><p>As you can see, I wasn’t able to keep up the back-to-back promotions but it goes to show that everyone’s career path is different. So I encourage you to take my story, find what resonates and apply what makes sense for you in your situation.</p><p><em>Thank you, Jordan, for sharing this story with us. For more from Jordan, follow him on <a href=\"https://www.linkedin.com/in/jordancutler1/\">LinkedIn</a>, and check out his newsletter, <a href=\"https://careercutler.substack.com/\">High Growth Engineer</a>, a weekly newsletter with actionable advice for software engineers. Have a great weekend 👋</em></p><div><hr></div><p><strong>If you find this newsletter valuable, share it with a friend, and consider subscribing if you haven’t already</strong></p><p class=\"button-wrapper\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe now&quot;,&quot;action&quot;:null,&quot;class&quot;:null}\" data-component-name=\"ButtonCreateButton\"><a class=\"button primary\" href=\"https://www.developing.dev/subscribe?\"><span>Subscribe now</span></a></p><p><em>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></em></p>",
+  "truncated_body_text": "👋 Hi, this is Ryan with another edition of my weekly newsletter. Each week, I write about software engineering, big tech/startups and career growth.",
+  "wordcount": 1460,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "a2f82702-f657-459f-b972-84b24f8a3b62",
+      "publication_id": 1340878,
+      "name": "Engineering Career Stories",
+      "slug": "engineering-career-stories",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        127.5,
+        127.5,
+        127.5
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        66.3,
+        66.3,
+        66.3
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        188.7,
+        188.7,
+        188.7
+      ],
+      "population": 0
+    },
+    "Muted": {
+      "rgb": [
+        132,
+        132,
+        132
+      ],
+      "population": 36
+    },
+    "DarkMuted": {
+      "rgb": [
+        68,
+        68,
+        68
+      ],
+      "population": 25
+    },
+    "LightMuted": {
+      "rgb": [
+        188,
+        188,
+        188
+      ],
+      "population": 45
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 58854493,
+      "name": "Jordan Cutler",
+      "handle": "jordancutler",
+      "previous_name": null,
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/670bb162-5a63-4fd2-8253-f98c28d446a7_1168x1168.jpeg",
+      "bio": "Staff Software Engineer @ Pinterest. I help engineers fast-track their career through real-world, actionable advice. Author of High Growth Engineer newsletter (75k+ subscribers): https://read.highgrowthengineer.com/",
+      "profile_set_up_at": "2023-03-18T21:18:20.168Z",
+      "reader_installed_at": "2022-06-02T16:28:49.618Z",
+      "is_guest": true,
+      "bestseller_tier": 100,
+      "status": {
+        "bestsellerTier": 100,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "bestseller",
+          "tier": 100
+        },
+        "paidPublicationIds": [
+          458709,
+          25792,
+          1638029,
+          3918782
+        ],
+        "subscriber": null
+      },
+      "primaryPublicationId": 1504485,
+      "primaryPublicationName": "High Growth Engineer",
+      "primaryPublicationUrl": "https://read.highgrowthengineer.com",
+      "primaryPublicationSubscribeUrl": "https://read.highgrowthengineer.com/subscribe?"
+    },
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 56,
+  "comment_count": 4,
+  "child_comment_count": 2,
+  "audio_items": [
+    {
+      "post_id": 130322360,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/130322360/tts/a52dff39-e579-46d3-a70b-15526d39985d/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 17658931,
+      "body": "Thank you, Ryan for allowing me to share my story. \n\nIt was a pleasure working with you on this 🙏",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Thank you, Ryan for allowing me to share my story."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "It was a pleasure working with you on this 🙏"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 130322360,
+      "user_id": 58854493,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-06-23T13:27:58.903Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Jordan Cutler",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/670bb162-5a63-4fd2-8253-f98c28d446a7_1168x1168.jpeg",
+      "handle": "jordancutler",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 3
+      },
+      "reaction_count": 3,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "jordancutler",
+      "metadata": {
+        "is_author": true,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "High Growth Engineer",
+          "id": 1504485,
+          "base_url": "https://read.highgrowthengineer.com"
+        }
+      },
+      "user_bestseller_tier": 100,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": 100,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "bestseller",
+          "tier": 100
+        },
+        "subscriber": null
+      },
+      "score": 40,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    },
+    {
+      "id": 17674156,
+      "body": "How long does it take to be an expert in a subject?",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "How long does it take to be an expert in a subject?"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 130322360,
+      "user_id": 110102798,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-06-23T18:34:01.743Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Ivan H",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/cb620ac5-1a6c-4dce-86e1-8198fef618a5_474x532.jpeg",
+      "handle": "ivanh",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "ivanh",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "The Software & Data Spectrum",
+          "id": 1382820,
+          "base_url": "https://ivanh.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

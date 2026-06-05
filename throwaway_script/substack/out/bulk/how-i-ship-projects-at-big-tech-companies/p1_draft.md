@@ -1,0 +1,17 @@
+Here are the takeaways from this Ryan Peterman essay (a rebuttal to a viral Hacker News article about shipping projects at big tech companies):
+
+**The viral article and the optics-first philosophy**
+
+A piece titled “How I ship projects at big tech companies” hit the front page of Hacker News and split the community in half. Ryan highlights what he sees as its worst point: an emphasis on managing optics and pleasing leadership ahead of building things that actually work. He doesn't dismiss visibility entirely — "you should make your work visible" — but insists that "impact (and the reality of it) should always come before good optics." How people perceive your work should be a *byproduct* of doing work that matters, not the primary engine.
+
+**Why impact comes first**
+
+Top big tech companies, even the largest FAANG organizations, are not designed to reward people purely on optics. They are data-driven where possible and reward people who improve metrics that help the business. This makes career growth "less about making leadership happy and more about the concrete improvements you drive." A metrics-driven culture can be a double-edged sword, but it's generally good because metrics "help us seek truth" — especially when paired with critical thinking. Even for skeptics, there is a second, pragmatic reason to lead with impact: doing genuinely impactful work makes it *much easier* to market that work afterward. Trying to convince people your work is great when the results are bad is far harder — and risks hurting your credibility with colleagues who know what's going on. But the deepest reason for Ryan isn't strategic. "I do it because it is uninspiring to do work that doesn't matter just because someone said so. Do you really want to do work that doesn't make a difference but just makes your leadership happy? I don't."
+
+**Steering the ship as a Staff+ engineer**
+
+If you ship something users hate that makes no money, "you lack some of the most basic skills of a Staff+ engineer." Engineers should influence the direction of their organization to avoid work that isn't impactful. Management needs strong engineers to partner with them and help steer. In a healthy organization, you should be able to push back against management when they are wrong. Having the skills to do this is one of the ways you can have "a lot of leveraged impact" — imagine changing the direction of a large group of engineers from building something users hate to something genuinely beneficial. Much of the original article's logic is flawed, Ryan argues, even where its conclusions happen to be fine. He gives a concrete example: you shouldn't add a fallback mechanism because you want to build trust with leadership; you add it because it prevents user-facing breakages. "Trust is the byproduct." The through-line in the source piece that bothers him is that "almost everything he says is motivated by pleasing leadership."
+
+**When optics-first is the culture, leave**
+
+If your organization genuinely values pleasing leadership over impact, the right move is to switch teams. "Your career will grow faster in the long term if you go where people are prioritizing impact." Beyond career acceleration, doing work that matters is "much more fulfilling than pleasing people who may be wrong." The Hacker News response was split down the middle, and Ryan is genuinely curious which side readers fall on.

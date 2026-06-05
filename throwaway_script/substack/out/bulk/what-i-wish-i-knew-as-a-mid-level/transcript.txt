@@ -1,0 +1,50 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 36,000 readers this week 🙏 🎉
+
+This week, I’m sharing a mistake I made as I transitioned from junior → mid-level engineer. If you find the post helpful, please share it with your friends and coworkers. Enjoy!
+
+I made a subtle mistake shortly after being promoted to mid-level engineer. My performance seemed okay (Exceeds Rating), but a closer look showed that my career growth slowed because of a mistake in direction.
+
+
+## First Half @ Mid-Level
+
+
+After my promotion to mid-level engineer, I had opinions on what could be better in our codebase. I noticed a few large, incomplete migrations that left our codebase in a fragmented state. This slowed us down since we had to maintain two code paths instead of one. No one ever cleaned these up since technically everything still worked and completing the migration wasn’t exciting work.
+
+I took the initiative to finish these migrations myself. I did this because I felt like it was unacceptable for the codebase to be in that state. I wanted to make our lives easier and make the codebase something we could be proud of. Also, I genuinely enjoy clearing away old code and making the codebase better.
+
+This work was risky and time-consuming but a lot of fun for me.
+
+
+## The Problem
+
+
+That half, I got an “exceeds expectations” rating because of the volume of my contributions, but I wasn’t any closer to promotion. What worked to get me from junior→mid-level would not work for getting me to senior.
+
+The way to grow as an engineer is to develop the behaviors of the next level:
+
+  - Junior → Mid-level: Focusing on strong execution skills (full behaviors here)
+
+Junior → Mid-level: Focusing on strong execution skills (full behaviors here)
+
+  - Mid-level → Senior: Developing your team-level influence, direction, and scope (full behaviors here)
+
+Mid-level → Senior: Developing your team-level influence, direction, and scope (full behaviors here)
+
+In my first half as a mid-level engineer, I just did a ton of mid-level engineer work that wasn’t that impactful. I didn’t think about what work would matter most to the business as a senior engineer would. The work I did was more “nice to have” than “need to have”.
+
+Your career growth scales with your impact so it’s important to focus on it. This is a common problem for engineers trying to grow to the senior level. For instance,’s experience on what got him to senior is similar. Here’s the relevant passage from his story:
+
+
+## The Solution
+
+
+Always think about the “why” behind your work and make sure it aligns with what matters most to your team and company. It is easy to get sidetracked by interesting work that isn’t impactful.
+
+The fastest career growth comes by finding work that aligns with both your interests and what matters most to the company. The best engineers can quickly tell what work is most impactful. Discussing project prioritization with your manager and tech lead is the fastest way to develop this skill.
+
+Understanding what is impactful is a critical skill for software engineers. It’s important enough to deserve its own post. I’ll cover it in more detail in a future post.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already. Also, if you have feedback about how I can make the content better, please share it here 🙏
+
+Thanks for reading,
+Ryan Peterman

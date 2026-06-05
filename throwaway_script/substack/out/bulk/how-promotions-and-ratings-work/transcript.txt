@@ -1,0 +1,52 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups, and career growth. Thank you for your readership, we hit 40,000 readers this week 🙏 🎉
+
+This week, I’m sharing details on how promotions and ratings are decided in big tech, along with takeaways for engineers. If you find the post helpful, please share it with your friends and coworkers. Enjoy!
+
+If you know how promotions and ratings are decided you will get promoted faster. You can work backward to make sure you are doing the right things for your career growth.
+
+After going through years of performance reviews in big tech on both sides (being reviewed and reviewing), I’ll share how the process works along with some takeaways for engineers.
+
+
+## The Process
+
+
+In big tech, the managers and top engineers (Staff+) in your org collectively decide what ratings and promotions people get. The managers are all the recursive reports of your senior director. Here’s the process for determining your rating:
+
+  - Self-review - you write an exhaustive list of all the impact you’ve had in the last 6-12 months
+
+Self-review - you write an exhaustive list of all the impact you’ve had in the last 6-12 months
+
+  - Peer reviews - peers you requested feedback from write and submit it
+
+Peer reviews - peers you requested feedback from write and submit it
+
+  - Your manager writes your review - your manager aggregates everything and proposes a rating for you
+
+Your manager writes your review - your manager aggregates everything and proposes a rating for you
+
+  - Performance discussions (“calibrations”) - Your manager presents your review to the group of managers who make the final call. Your rating may change from what your manager proposed
+
+Performance discussions (“calibrations”) - Your manager presents your review to the group of managers who make the final call. Your rating may change from what your manager proposed
+
+The process for promotions is similar with a few differences. Promotion packets are longer and look across all your past work, not just the last 6-12 months. Also, promotion discussions focus on whether you have demonstrated the behaviors of the next level.
+
+
+## Takeaways for Engineers
+
+
+1) Your manager doesn’t have full control; they are just the messenger. I remember being confused when my manager couldn’t tell me what rating I was on track for. Now I understand it’s because they don’t know for sure. They can give their “uncalibrated” opinion, but without hearing what the forum of managers thinks it’s difficult to say.
+
+In practice, the more experienced your manager is, the more accurate their uncalibrated opinions are. They should be able to give you a general sense of your performance in advance. After calibrations, work with your manager to understand the feedback from the forum of managers. Their feedback will help you understand the gaps you have to the next level.
+
+2) It’s helpful to have higher-up engineers and managers vouching for you. If the people in the calibration sessions already think highly of your work, your manager will face less pushback when presenting it. In practice, the higher up the people vouching for you are, the more influence their opinion will have. That’s why you always hear the advice to be visible.
+
+Aside from being visible to these managers, it’s also great if you work with top engineers. If they can vouch for your technical skills, that’s a great supporting signal during promotion conversations.
+
+3) Understanding the process can help you structure your self-reviews. I wrote about this last week. Knowing the audience for your “brag list” should make your writing more effective.
+
+I didn’t know any of this until a few years into my career. I was less calculated with my career growth at first because of that. I just worked a lot of hours without a lot of focus. Once you know the process, everything is smoother since it helps work with your manager on your career growth.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already. Also, if you have feedback about how I can make the content better, please share it here 🙏
+
+Thanks for reading,
+Ryan Peterman

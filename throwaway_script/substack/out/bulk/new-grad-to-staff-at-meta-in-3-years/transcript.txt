@@ -1,0 +1,184 @@
+👋 Hi, this is Ryan with another edition of my weekly newsletter. Each week, I write about software engineering and career growth. ​​Thanks to your support, we’re getting close to 100k readers (92k now!)
+
+Today’s post is an engineering career story from Evan King who grew from a new grad to a Staff Engineer (IC6) at Meta in 3 years. He shares the top 6 principles that impacted his career most. It’s a great write-up, and I especially like the first two principles as I can relate that they were helpful for me too.
+
+Also if you end up liking the write up, I did a full interview with him on his career story. You can hear more detail about his promotions there.
+
+If you’re new to FAANG levels, here’s a side-by-side comparison from levels.fyi that shows his journey:
+
+For more from Evan, I recommend you follow him on LinkedIn. He’s now the co-founder of hellointerview.com which helps swe candidates prepare for interviews. I’ve had a few friends use their system design mock interviews and they tell me how it was much more effective than reviewing resources alone. If you have upcoming software engineering interviews, I recommend you check them out (I’m not sponsored).
+
+Here’s Evan:
+
+Junior to Staff at Meta in 3 years. That sentence raises eyebrows.
+
+I've dodged telling this story for years. Maybe it's the ex-athlete in me cringing at self-promotion, or maybe I'm just uncomfortable with attention I'm not sure I deserve. But after countless requests to share it, I figured it's worth putting out there—even if it makes me squirm.
+
+Let's start with the reality check: I hit the timing jackpot. Right org, explosive growth phase, and a manager who saw something in me before I saw it myself. If you're looking for a pure meritocratic story, this isn't it. Nobody lands promotions this fast without the stars aligning.
+
+Still, there were patterns and principles that emerged—insights that might be useful to others on their own paths.
+
+Looking back, six key principles had the largest effect on my career.
+
+First principle: Speed is your multiplier. Everyone talks about thinking bigger or making an impact, but none of that matters if you can't nail your core work faster than others. When you can complete your normal workload with 70% of your time, that extra 30% becomes your secret weapon. That's where the real growth happens.
+
+The second principle relies on the first: Keep your head up and your aperture wide. Use that extra bandwidth to operate like someone a level above you. As a junior dev, I studied what my teammates were doing, connecting dots they might have missed. At senior, I expanded that lens to sister teams. By Staff, I was thinking across entire organizations.
+
+Here's the third thing, and it's a liberating truth: No one has all the answers. Not your boss, not the VPs, not even the CEO. This isn't meant to dismiss their expertise—I've learned invaluable lessons from every leader I've worked with. But realizing this freed me to put my ideas out there without the paralyzing weight of needing to be right.
+
+The fourth principle grounds everything else: focus on problems, not technologies. You don't need to be the most technical, brilliant person in the room. What matters is seeing the simplest path to the goal. While others might get caught up in building elegant technical solutions, I learned that stepping back and questioning our basic assumptions often revealed much more simple solutions hiding in plain sight.
+
+Fifth: Build goodwill early and often. Remember that extra 30% of time you got back? Use it to help others. Support your cross functional partners, lend a hand to other engineers, and jump in when other functions need backup. These deposits in the “favor bank” compound over time.
+
+Finally—and this might be the most underrated factor—stay positive. Our industry can be surprisingly cynical. But look around: We're solving fascinating problems, working with brilliant people, and yes, being well compensated for it. A positive outlook isn't just about being nice—it's a career accelerant.
+
+
+## 1. Speed Is Your Multiplier
+
+
+This first principle might be the hardest one to replicate, but it's a necessary foundation.
+
+From day one at Meta, I could grasp problems and crank out code faster than most people around me. Maybe it was luck, maybe it was my background—I'm not sure.
+
+My first project at Meta involved migrating a legacy system that ingested ISIS and Al-Qaeda propaganda content and then hashed it to prevent copies from appearing on the platform. The timeline was set for "a month plus."
+
+I finished it in under a week.
+
+I now had three weeks to make it better. I redesigned the entire system. We took ingestion times from multiple days down to just seconds. And timing was critical here.
+
+When terror organizations post new media, their followers immediately reshare it across platforms. Most views happen within the first few hours. Our original pipeline, taking days to process, meant we were always too late. By reducing ingestion time to seconds, we could catch and block content before it gained traction.
+
+This was real, significant impact in my first month on the job as a junior engineer. We were now detecting an order of magnitude more harmful content.
+
+If you're not yet blazing through your core responsibilities, stop reading this article. Put all your energy into mastering your fundamental skills first. That speed multiplier—that extra 30% of time when you're good at your core job—unlocks everything else we're about to discuss.
+
+
+## 2. Operating Above Your Level
+
+
+Freeing up 30% of your time changes everything. You can use it to develop the perspective of someone a level above you. This mindset came naturally when I was a junior engineer, but as I grew more senior, I needed my manager to push me to think even bigger.
+
+As a junior engineer, I wasn't just focused on my tasks—I was studying how my senior teammates approached problems, evaluated trade-offs, and thought about systems. By the time I hit senior, I had shifted my lens to understanding how staff engineers connected broader technical strategies across teams. And as I approached staff, I was thinking about how technical decisions impacted entire organizations and shaped our long-term architecture.
+
+This pattern of looking ahead served me throughout my career. Each step up wasn't just about doing more—it was about seeing more. Understanding the concerns, constraints, and opportunities that only become visible at higher levels.
+
+It's easy to get stuck with a narrow aperture. Widening it is uncomfortable—you're stretching your mind to consider problems you're not yet expected to solve. I leaned heavily on my manager and trusted senior engineers to understand how they thought about problems at their level, then worked to develop that same perspective.
+
+The beauty of this approach is its simplicity. At worst, you develop a deeper understanding of your organization's challenges. At best, you start operating at that next level, making promotion a recognition of how you already think rather than a bet on your potential.
+
+
+## 3. No One Has All The Answers
+
+
+Many engineers join FAANG companies with crippling impostor syndrome. That alone is enough to sink—or at least significantly stall—most careers.
+
+For whatever reason, I didn't have it. Seeing the vulnerability of others around me reinforced a powerful truth—no one has all the answers. Not the senior engineers, not the directors, not even the VPs. Once I internalized this, I was suddenly free to share ideas broadly and without hesitation.
+
+Meta was a unique place for this mindset. Workplace, our internal version of Slack, allows employees to share their work and ideas across the company. This effectively surfaced valuable insights, regardless of an employee's level. You could develop a concept, draft a proposal, or pose a thought-provoking question and post it for everyone to see. The most impactful contributions naturally rose to the top.
+
+Sometimes, my posts got no reaction. Sometimes, that reaction was even negative. For example, I remember one post where a veteran employee publicly stated all the reasons why my proposal was idiotic. But here's what mattered: nobody remembered or cared the next day, including me.
+
+Other times, my posts went viral and led to meetings with directors or VPs to discuss my ideas 1:1. It was meritocracy at its finest—but you could only take advantage of it if you weren't paralyzed by the fear of looking stupid. Once you accept that, you stop waiting for permission to contribute.
+
+
+## 4. Simple Solutions to Complex Problems
+
+
+There's a tendency in tech—especially at companies like Meta—to reach for complex technical solutions. We're surrounded by brilliant minds building cutting-edge technology, so it's easy to get caught up in that current. But I learned early on that my strength wasn't in being the most technically sophisticated engineer in the room. Instead, it was in seeing the clearest path to solving the actual problem.
+
+A perfect example of this came during my work on suicide prevention. Our team faced an incredibly difficult challenge: detecting potential suicides in live videos in real time. The stakes couldn't have been higher—every false negative meant a potentially missed opportunity to save a life.
+
+We had a team of brilliant ML PhDs working alongside Meta's unified AI org to develop state-of-the-art models for video and audio. The technical complexity was staggering. But after watching enough false negatives, I noticed something that seemed almost too obvious. While our sophisticated models were still processing frame sequences and temporal features, the viewers in the comments section had already identified the crisis.
+
+Comments like "don't do it" or "it's not worth it" were appearing consistently. While we were pouring resources into optimizing frame embeddings and acoustic models, the clearest signals were hiding in plain sight.
+
+I suggested we add comments as a modality to our model. The results were immediate and dramatic: our recall jumped from 9% to over 50%. This breakthrough gave us a foundation to build on, and with further iterations—including incorporating comment embeddings as temporal features in our sequence models—and an expanding training dataset, we pushed our recall into the 90% range.
+
+This experience reinforced a crucial lesson: sometimes the best solution isn't the most technically sophisticated one. Taking a step back, questioning our assumptions, and being willing to see the problem from different angles does wonders. I've followed this principle throughout my career—always pushing myself to grow technically, but never letting the pursuit of technical elegance overshadow the fundamental goal: solving the problem.
+
+
+## 5. The Favor Economy
+
+
+Conventional wisdom says don't get distracted by things that don't drive direct impact. That's good advice for what it’s worth, and it's absolutely true in the startup world.
+
+But I took a different path, and it paid off.
+
+I helped everyone, especially in the beginning. Whether it was ops, DE, DS, or other engineers—it didn't matter if they were higher or lower level—I went out of my way to help.
+
+There's a fine line here, which I struggled with as I grew more senior. Time is finite and valuable. You can't waste it.
+
+But those early favors compound. By the time I hit Staff, others I'd helped had grown too. That manager from another team I helped? Now a director. That ops guy I assisted? Director of ops. While I never expected favors in return, they trusted me. That goodwill meant I was in all the right conversations. People came to me first with their ideas and opportunities.
+
+If someone outside the org wanted to talk about Content Integrity (my org), there was a good chance my name came up and they were routed to me. Those cross-discipline relationships I built meant people associated my name with my organization. And now those people were in positions of power. Say what you want about whether this is good for an organization, but it was definitely good for my career.
+
+
+## 6. The Power of Positive Motion
+
+
+I saved this one for last because it's both the easiest to replicate and the most underappreciated. The tech industry breeds cynicism. You'll find countless LinkedIn posts complaining about how big companies exploit their workers. Yet where else can you earn $200k+ straight out of college, enjoy free meals, excellent benefits, and a healthy work-life balance? We solve fascinating problems alongside brilliant minds while being well compensated. That hardly qualifies as exploitation in my book.
+
+Instead, I chose a different path: I made a conscious decision to never talk shit about anyone—not even in my thoughts. This wasn't about ignoring problems. I saw the flaws and felt the frustrations just like everyone else. But unless I could meaningfully address an issue, I wouldn’t focus on it.
+
+This mindset shift changed everything. I genuinely looked forward to coming to work each day. I found myself excited by our challenges rather than drained by them. I fully bought into our mission. Most importantly, I discovered that work became more fun—and there's no limit to what you can accomplish when you're enjoying what you do.
+
+Happiness and positivity are wild accelerants in life, not just work.
+
+
+## Conclusion
+
+
+The reality is there's no magic formula for rapid career growth. My path was as much about fortunate timing as deliberate action. But while we can't control timing, we can control our approach.
+
+These six principles—mastering speed as a multiplier, operating above your level, embracing that no one has all the answers, focusing on simple solutions to complex problems, building a favor economy, and maintaining positivity—weren't strategies I consciously developed. They emerged naturally as I reflected on what worked. They're not prescriptive steps to follow, but rather patterns I noticed in retrospect.
+
+Here's what I know for certain: if you're reading this looking for a blueprint to replicate my timeline, you're focusing on the wrong thing. The timeline isn't what matters. What matters is building sustainable habits that compound over time. Start with mastering your core responsibilities. Use that mastery to create bandwidth. Deploy that bandwidth strategically. Build relationships. Stay positive. The rest will follow.
+
+Good luck.
+
+Ryan again, hope you enjoyed Evan’s career story. Of course career growth as fast as his has an element of luck. However there’s a few things I noticed that helped him seize opportunity:
+
+  - Excellent at executionHe was a high performer at all timesUsed his spare time to help others and learn the next level’s behaviors
+
+Excellent at execution
+
+  - He was a high performer at all times
+
+He was a high performer at all times
+
+  - Used his spare time to help others and learn the next level’s behaviors
+
+Used his spare time to help others and learn the next level’s behaviors
+
+  - Willingness to push his boundaries and be boldKept him growing at each pointIncreased his visibility which unlocked opportunities
+
+Willingness to push his boundaries and be bold
+
+  - Kept him growing at each point
+
+Kept him growing at each point
+
+  - Increased his visibility which unlocked opportunities
+
+Increased his visibility which unlocked opportunities
+
+  - Strong communication & relationship buildingHe was good at communicating his ideas publicly and working with othersOpportunities came to him as a resultThis increased his “luck surface area”
+
+Strong communication & relationship building
+
+  - He was good at communicating his ideas publicly and working with others
+
+He was good at communicating his ideas publicly and working with others
+
+  - Opportunities came to him as a result
+
+Opportunities came to him as a result
+
+  - This increased his “luck surface area”
+
+This increased his “luck surface area”
+
+I’ll be having a conversation with him for the podcast. Anything you’d like me to ask him or dig deeper about? Drop a comment below and I’ll make sure to ask.
+
+Thanks for reading,
+Ryan Peterman

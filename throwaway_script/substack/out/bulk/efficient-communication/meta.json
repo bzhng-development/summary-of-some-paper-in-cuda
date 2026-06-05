@@ -1,0 +1,367 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/efficient-communication",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 139120489,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-11-24T14:00:52.133Z",
+  "updated_at": "2024-01-08T06:31:47.862Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "efficient-communication",
+  "social_title": null,
+  "subtitle": "Writing vs Speaking",
+  "teaser_post_eligible": true,
+  "title": "Efficient Communication",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 5,
+  "reactions": {
+    "❤": 85
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "top-tech-company-engineering-blog",
+  "next_post_slug": "promotion-via-job-hopping",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!vnWi!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe97c04e1-3439-4ab0-bf9d-e130b819c894_1200x630.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Writing vs Speaking",
+  "body_html": "<p>👋<em> Hi, this is&nbsp;<a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a>&nbsp;with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 33,000 readers this week </em>🙏<em> </em>🎉</p><p><em>This week, I’m writing about efficient communication and how it can cut down on meetings. If you find the post helpful, please share it with your friends and coworkers. Enjoy!</em></p><div><hr></div><p>It’s not controversial to say that meetings hurt productivity for software engineers. <a href=\"http://www.paulgraham.com/makersschedule.html\">That’s because meetings cost engineers more</a>. </p><p>Async communication via writing is one of the best ways to reduce meeting load, yet still efficiently exchange information. This can help us defragment our calendars.</p><p>There are a few reasons why writing is more efficient than speaking in engineering organizations.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!vnWi!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe97c04e1-3439-4ab0-bf9d-e130b819c894_1200x630.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!vnWi!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe97c04e1-3439-4ab0-bf9d-e130b819c894_1200x630.png 424w, https://substackcdn.com/image/fetch/$s_!vnWi!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe97c04e1-3439-4ab0-bf9d-e130b819c894_1200x630.png 848w, https://substackcdn.com/image/fetch/$s_!vnWi!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe97c04e1-3439-4ab0-bf9d-e130b819c894_1200x630.png 1272w, https://substackcdn.com/image/fetch/$s_!vnWi!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe97c04e1-3439-4ab0-bf9d-e130b819c894_1200x630.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!vnWi!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe97c04e1-3439-4ab0-bf9d-e130b819c894_1200x630.png\" width=\"569\" height=\"298.725\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/e97c04e1-3439-4ab0-bf9d-e130b819c894_1200x630.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:630,&quot;width&quot;:1200,&quot;resizeWidth&quot;:569,&quot;bytes&quot;:null,&quot;alt&quot;:&quot;Too many meetings at work is an easy escape and excuse to avoid the things that demands your time and attention - planning for the future, identifying better opportunities for your team, or investing in your own learning. Don't let the “too many meetings” and “this is a manager’s life” excuse go on for too long. It's time for you to be real. Take one hard look at your life and face the reality of your situation.&quot;,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"Too many meetings at work is an easy escape and excuse to avoid the things that demands your time and attention - planning for the future, identifying better opportunities for your team, or investing in your own learning. Don't let the “too many meetings” and “this is a manager’s life” excuse go on for too long. It's time for you to be real. Take one hard look at your life and face the reality of your situation.\" title=\"Too many meetings at work is an easy escape and excuse to avoid the things that demands your time and attention - planning for the future, identifying better opportunities for your team, or investing in your own learning. Don't let the “too many meetings” and “this is a manager’s life” excuse go on for too long. It's time for you to be real. Take one hard look at your life and face the reality of your situation.\" srcset=\"https://substackcdn.com/image/fetch/$s_!vnWi!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe97c04e1-3439-4ab0-bf9d-e130b819c894_1200x630.png 424w, https://substackcdn.com/image/fetch/$s_!vnWi!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe97c04e1-3439-4ab0-bf9d-e130b819c894_1200x630.png 848w, https://substackcdn.com/image/fetch/$s_!vnWi!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe97c04e1-3439-4ab0-bf9d-e130b819c894_1200x630.png 1272w, https://substackcdn.com/image/fetch/$s_!vnWi!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe97c04e1-3439-4ab0-bf9d-e130b819c894_1200x630.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">Writing can help you cut down on meeting load</figcaption></figure></div><h3>Higher Baud Rate</h3><p><strong>Reading is faster than listening</strong>. A quick Google search shows that on average, <a href=\"https://www.google.com/search?q=is+listening+faster+than+reading\">people read around 2x faster than they can listen</a>. This efficiency gap is even more pronounced when you consider skimming.</p><p>People don’t need to read every word to understand the full message; they can skip unnecessary words and read just the important ones.</p><h3>Easier To Reference</h3><p>Technical content often takes more than one pass to understand. You’re bound to miss critical details if you’re listening to a presentation. However, <strong>written material is easy to reread for anything you might have missed</strong>. </p><p>Not to mention that writing is searchable, which is a huge bonus for when you want to look back on the content down the road.</p><h3>Preparation Drives Higher Quality</h3><p>In my experience, <strong>putting work into writing yields a higher quality end result than prepping for a speech does.</strong></p><p>My guess on why this happens for most engineers is because there’s a lot more you need to nail to give a high-quality speech. It’s not just what you say but how you say it (e.g. vocal variety, pacing, avoiding filler).</p><p>With writing, you only need to consider the words. Because of that, time spent on editing goes a lot further than speech prep does.</p><div><hr></div><p>Given the above, it’s clear that writing is often more efficient than speaking is. Here are some recommendations:</p><ul><li><p><strong>Opt for Written Information Exchange</strong> - Postmortems, design discussions, and planning exercises can all be more efficient with writing.  Exchange information through write-ups and schedule shortened real-time discussions if needed.</p></li><li><p><strong>Consider Taking Meetings Offline</strong> - Some meetings don’t need any real-time discussion (e.g. status meetings). Propose canceling those in favor of async writing.</p></li><li><p><strong>Use Writing Templates</strong> - Don’t start with a blank slate when you write. Try these <a href=\"https://www.developing.dev/p/6-software-engineering-templates\">software engineering templates</a> to save time and structure your thoughts.</p></li></ul><p>Speaking has its place though. <strong>It’s better for real-time engagement, sensitive discussion, and building connectedness</strong>. Otherwise, I’d recommend writing if you want to be a more effective engineer.</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 34000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 33,000 readers this week 🙏 🎉",
+  "wordcount": 480,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "7944911a-7d9b-49e5-a951-df44d652b086",
+      "publication_id": 1340878,
+      "name": "Soft Skills",
+      "slug": "soft-skills",
+      "hidden": false
+    },
+    {
+      "id": "874981f8-464b-461c-9d3e-1d42147927a0",
+      "publication_id": 1340878,
+      "name": "Communication",
+      "slug": "communication",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        232,
+        214,
+        13
+      ],
+      "population": 289
+    },
+    "DarkVibrant": {
+      "rgb": [
+        6,
+        127,
+        157
+      ],
+      "population": 200
+    },
+    "LightVibrant": {
+      "rgb": [
+        247,
+        141,
+        154
+      ],
+      "population": 327
+    },
+    "Muted": {
+      "rgb": [
+        158,
+        84,
+        77
+      ],
+      "population": 48
+    },
+    "DarkMuted": {
+      "rgb": [
+        46,
+        76,
+        89
+      ],
+      "population": 3
+    },
+    "LightMuted": {
+      "rgb": [
+        175,
+        192,
+        202
+      ],
+      "population": 183
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 85,
+  "comment_count": 4,
+  "child_comment_count": 1,
+  "audio_items": [
+    {
+      "post_id": 139120489,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/139120489/tts/37d2b6a4-9822-49a2-bfe2-863cc9f60e06/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 44213495,
+      "body": "Writing as a form of async communication (and not as a format to deliver working results, as you would do in a thesis or other assignments in school and academia) is something engineers often learn only at a job, assuming that their working environment has a strong tendency to do so.\n\nOutside of that it is very hard to learn and stick to it, because your environment often does not honor the effort you put into the writing, instead they call you back (although you will actually read to them in the call what you have written. In that case you  wasted your time with writing (not exactly because writing often helps you get your thoughts straight, but it still can feel this way).",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Writing as a form of async communication (and not as a format to deliver working results, as you would do in a thesis or other assignments in school and academia) is something engineers often learn only at a job, assuming that their working environment has a strong tendency to do so."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Outside of that it is very hard to learn and stick to it, because your environment often does not honor the effort you put into the writing, instead they call you back (although you will actually read to them in the call what you have written. In that case you wasted your time with writing (not exactly because writing often helps you get your thoughts straight, but it still can feel this way)."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 139120489,
+      "user_id": 45896378,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-11-24T20:22:48.973Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Jörg Hoh",
+      "photo_url": "https://bucketeer-e05bbc84-baa3-437e-9518-adb32be77984.s3.amazonaws.com/public/images/69f83838-95cf-466f-b5cc-169304029074_144x144.png",
+      "handle": "joerghoh",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 6
+      },
+      "reaction_count": 6,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "joerghoh",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 11,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "3 replies by Ryan Peterman and others"
+    }
+  ]
+}

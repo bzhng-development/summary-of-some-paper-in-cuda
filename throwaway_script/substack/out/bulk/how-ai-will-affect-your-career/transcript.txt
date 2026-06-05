@@ -1,0 +1,88 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups, and career growth. If you find the post helpful, please share it with your friends and coworkers. Enjoy!
+
+The recent announcement of Devin, a fully autonomous AI software engineer, went viral this week. If you haven’t heard, they have an impressive demo of an AI that can resolve real-world issues found on Github without assistance. It’s far from perfect (resolves only 13.86% of issues without help) but it’s natural to worry about if software engineers will be replaced given the current rate of progress.
+
+Here’s how I expect AI will affect software engineers and what you should keep in mind when planning your career.
+
+
+## A Great Tweet
+
+
+Andrej Karpathy, ex-director of AI at Tesla and founding member of OpenAI, put out a great tweet explaining how he thinks software engineering will be automated. He believes that automating software engineering will look similar to automating driving.
+
+Automating driving has followed a pattern:
+
+  - Humans drive and we collect data
+
+Humans drive and we collect data
+
+  - AI helps with well-defined tasks (e.g. keeping in the lane and distance from other cars)
+
+AI helps with well-defined tasks (e.g. keeping in the lane and distance from other cars)
+
+  - AI takes on more complex tasks (e.g. lane changes, turns, stop lights)
+
+AI takes on more complex tasks (e.g. lane changes, turns, stop lights)
+
+  - AI is feature complete and we work on the long tail of quality improvements until full autonomy
+
+AI is feature complete and we work on the long tail of quality improvements until full autonomy
+
+You can imagine something similar for software engineering:
+
+  - Humans write code and we collect data
+
+Humans write code and we collect data
+
+  - AI helps with well-defined tasks (e.g. autocompleting a few lines)
+
+AI helps with well-defined tasks (e.g. autocompleting a few lines)
+
+  - AI takes on more complex tasks (e.g. writing larger chunks of code, agents that coordinate tools)
+
+AI takes on more complex tasks (e.g. writing larger chunks of code, agents that coordinate tools)
+
+  - Same as (4) above
+
+Same as (4) above
+
+Devin is an impressive step towards a feature-complete software engineering AI. However, it is more aspirational than functional today given its low success rate on scoped-out engineering tasks.
+
+Google started working on self-driving cars 15 years ago (2009) and we’ve only now started to see limited testing in the market. It’s not an apples-to-apples comparison but the high-level analogy stands. AI will code at some point, but humans will continue to oversee this process for a long time.
+
+
+## Planning Your Career
+
+
+The higher level you are the more ambiguity you can handle:
+
+  - Junior (IC3) - No ambiguity. We know exactly what we need to do and how to implement it. Project just needs to be carried out.
+
+Junior (IC3) - No ambiguity. We know exactly what we need to do and how to implement it. Project just needs to be carried out.
+
+  - Mid-level (IC4) - Feature-level ambiguity. We know the solution but don't know the exact details of how to implement it.
+
+Mid-level (IC4) - Feature-level ambiguity. We know the solution but don't know the exact details of how to implement it.
+
+  - Senior (IC5) - Roadmap-level ambiguity. We know what problem to solve and why, but we don't know what to do to solve it yet.
+
+Senior (IC5) - Roadmap-level ambiguity. We know what problem to solve and why, but we don't know what to do to solve it yet.
+
+  - Staff (IC6) - Strategy-level ambiguity. We don't even know what problems we should tackle. IC6s create scope.
+
+Staff (IC6) - Strategy-level ambiguity. We don't even know what problems we should tackle. IC6s create scope.
+
+Less ambiguous work, like well scoped out tasks with code pointers (Junior expectations), will be automated first. However, it will take a lot longer for us to trust AI to handle more ambiguous asks like “make our infrastructure more efficient” (Senior expectations).
+
+Therefore, if you’re worried about wasting time on replaceable skills, focus on learning higher-level behaviors. This means improving your directional thinking, ability to influence, and high-level tech planning to name a few examples. I have written many articles on these topics if you want to learn more.
+
+Also, you should start using AI tools if you aren’t already. Tools have always made our lives easier. AI is no different. If you aren’t using these tools you’ll get left behind.
+
+Don’t worry, software engineers aren’t going anywhere anytime soon.
+
+I’m excited about the future. I love software engineering, but small details like compiler errors and missing semicolons have always been a pain. The higher leverage my work, the more fun it has been. Looking forward to what these tools unlock for us.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already.
+
+Thanks for reading,
+Ryan Peterman

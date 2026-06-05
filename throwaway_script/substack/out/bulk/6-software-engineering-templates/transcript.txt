@@ -1,0 +1,72 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 27,000 readers this week 🙏 🎉
+
+This week, I gathered my favorite writing templates relevant to software engineers. If you find it helpful, please share it with your friends and coworkers. Enjoy!
+
+Writing is one of the most important skills for software engineers. A lot of it is repetitive in structure (e.g. design docs, post mortems, etc). This post captures my favorite templates that I use to structure my thoughts and save time.
+
+
+## How to use this post:
+
+
+  - Bookmark this page for future reference. I will keep it up to date so it always has the best software engineering templates.
+
+Bookmark this page for future reference. I will keep it up to date so it always has the best software engineering templates.
+
+  - Copy the relevant template and start editing it next time you need to write for one of these common use cases.
+
+Copy the relevant template and start editing it next time you need to write for one of these common use cases.
+
+
+## Eng Design Doc:
+
+
+Design docs are a great way to propose future engineering work and solicit feedback. Writing is great at persisting relevant details for discussion.
+
+📝 Here’s my personal design doc template.
+
+
+## Postmortem Review:
+
+
+When systems break, thinking through how to do better next time is a necessity. I wrote about the fundamentals of postmortem reviews here.
+
+📝  Here’s my personal postmortem review template to structure your thinking and discussions.
+
+
+## Diff (or PR) Summary:
+
+
+After writing hundreds of diffs, I realized that all their descriptions have a similar structure.
+
+📝  Save yourself time and structure your thinking with my personal diff summary template. I describe every code change I make starting with it.
+
+
+## Direction Doc:
+
+
+Engineers in leadership roles often have to set the direction for the team.
+
+📝  For any strategic initiative, I always start with my personal direction doc template. You can mold it to work for most directional discussions (e.g. major engineering initiative, team strategy, partnership alignment).
+
+
+## Eng Project Management:
+
+
+It’s often helpful to have a project timeline (or Gantt chart) for larger initiatives with many moving parts.
+
+📝  Here’s my simple timeline (Gantt chart) spreadsheet I always start with. You might want to add additional columns.
+
+
+## Launch Post:
+
+
+Writing when you have results and want to share them almost always has the same structure.
+
+📝 Here’s my launch post template that I always start with that saves time.
+
+If you have any favorite templates you think I should include please drop them in this feedback form. I’m always looking for ways to improve this list so it has the best software engineering templates.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already. Also, if you have feedback about how I can make the content better, please share it here 🙏
+
+Thanks for reading,
+Ryan Peterman

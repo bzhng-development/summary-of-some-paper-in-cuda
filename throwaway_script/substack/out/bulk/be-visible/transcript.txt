@@ -1,0 +1,50 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 16,000 readers this week 🙏 🎉
+
+This week I’m sharing a key takeaway from the “Journey to Staff Engineer” panel I was part of. It is a small change that can have a big impact on your career. Here’s the article; enjoy!
+
+Earlier this week, I was part of a panel with four other Staff+ Engineering Creators talking about growth to Staff Engineer (L6). Our paths to Staff were different so there was great variety in our answers. However, there was one question that we all answered the same. We agreed that relationships and visibility of our work were critical parts of our career growth. Here’s why visibility matters and how to market your work.
+
+
+## The World Isn’t Ideal
+
+
+Promotions are decided by people. To get promoted, your work needs to be both impactful and known by the right people. Imagine how smooth a promotion would be if everyone on the committee already thought your work was at the next level.
+
+In a perfect world, you’d do impactful work and that would be enough. However, in reality, your work can’t be recognized unless people know about it. Communicating the results of your work will help you get the recognition you deserve.
+
+
+## How To Market Your Work
+
+
+When you have results to share, create a short write-up that explains the problem you solved and the impact it had. Aim to keep it short and emphasize the main takeaways up front. Here’s a sample format I use for my write-ups:
+
+  - Tl;dr: one-liner explaining the launch and calling out the most impactful result
+
+Tl;dr: one-liner explaining the launch and calling out the most impactful result
+
+  - Context: a few sentences explaining the problem & solution
+
+Context: a few sentences explaining the problem & solution
+
+  - Results: bullet points of the detailed benefits of this launch (e.g. top metric movements, user benefits, cost savings, etc)
+
+Results: bullet points of the detailed benefits of this launch (e.g. top metric movements, user benefits, cost savings, etc)
+
+  - Next Steps: briefly explain the rollout timeline and follow-up work
+
+Next Steps: briefly explain the rollout timeline and follow-up work
+
+  - Tags: mention all relevant managers and tech leads (it is better to overcommunicate)
+
+Tags: mention all relevant managers and tech leads (it is better to overcommunicate)
+
+Once you have this write-up, send it somewhere public (e.g. public Slack channel, email with all relevant folks, public Workplace group) so it’s easy for everyone to see and look back on. Not only does this help you get more recognition, but it also helps your team establish a change log.
+
+You can also save the tl;dr, context and results away in a “brag journal”. Your manager will thank you for documenting your work when performance reviews come along.
+
+Some people worry this might seem like unnecessary self-promotion. But it’s not about overselling — it’s about showcasing your genuine achievements that also helps your team.
+
+It’s no coincidence that every person on the Staff Engineer Q&A panel emphasized the importance of being visible. You’re missing out if you don’t take that extra step to communicate the results of your work. It doesn’t take that much time and can make a big difference in recognition. So next time you launch something, don’t do it quietly; share it!
+
+Thanks for reading,
+Ryan Peterman

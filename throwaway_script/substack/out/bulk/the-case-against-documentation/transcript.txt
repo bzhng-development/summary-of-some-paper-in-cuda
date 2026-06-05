@@ -1,0 +1,66 @@
+Documenting code isn’t always a good thing.
+
+It’s easy to complain about not having enough documentation, but is it worth writing? It doesn’t come for free.
+
+No one actually wants documentation. What they want is the ability to get things done. Sometimes documenting code helps us move faster. But that often isn’t the case.
+
+Before you get your pitchforks out, let me be clear. Written communication is incredibly valuable for software engineers. I am a big fan of documenting information outside the codebase (e.g. updates, launches, decisions, designs).
+
+However, writing as a whole is often so valuable that engineers blindly document the code itself when it isn’t the best use of time.
+
+
+## Costs of Documenting Code
+
+
+Documentation about code must be up to date to be useful. But code changes so often that keeping it fresh is expensive. Also, since software engineering is collaborative, you need everyone to update the documentation. It’s already hard enough to get one person to remember, let alone an entire team.
+
+When you write documentation about code, you create a separate branch of information far from where it is needed. This adds a new cost for people to find that information. If documentation isn’t easy to find, it gets lost and becomes useless.
+
+This isn’t uncommon from my experience. Often, there is a general push to increase documentation coverage about the code. In many cases, the wikis people write aren’t read and eventually become outdated. If this happens, the documentation wasn’t even a neutral contribution. It was actually overall negative since we wasted time on something useless.
+
+
+## Consider the ROI
+
+
+Engineers need to think about the ROI of everything they do. Documentation is no exception. Here are some cases where the benefits of documenting code can outweigh the costs:
+
+  - Documentation that doesn’t change often - We get more value from this since it’ll get more readership over its lifetime and costs less to maintain. For example, high-level system diagrams about code are often worthwhile.
+
+Documentation that doesn’t change often - We get more value from this since it’ll get more readership over its lifetime and costs less to maintain. For example, high-level system diagrams about code are often worthwhile.
+
+  - Documentation that many people will need - The impact of documentation scales with the number of people who read it. Documenting a popular API or library is well worth the time if thousands of engineers need it.
+
+Documentation that many people will need - The impact of documentation scales with the number of people who read it. Documenting a popular API or library is well worth the time if thousands of engineers need it.
+
+  - Documentation you already have - I’m a big fan of writing for clearer thinking. If you already write for yourself, publishing it for others can be worth it since it’s near zero cost with some benefit.
+
+Documentation you already have - I’m a big fan of writing for clearer thinking. If you already write for yourself, publishing it for others can be worth it since it’s near zero cost with some benefit.
+
+Aside from these, my favorite documentation is inline with the code. It’s much easier to keep up to date and find when it’s next to the code it describes.
+
+To be clear, I am not saying we shouldn’t write. Writing is one of the most efficient ways to share information. I’m saying that writing about detailed code often isn’t worth the time and that we should be mindful of when we do.
+
+Who wants to manage static code documentation that just mirrors the codebase anyway? I’d rather get things done.
+
+I’m hopeful that one day, you could chat with the codebase and get up-to-date, simple explanations. Given the improvements we’re seeing in LLMs, I don’t think this is far off.
+
+If you liked this post, consider sharing it with a friend. As always, you can find more of my stuff here:
+
+  - LinkedIn
+
+LinkedIn
+
+  - Twitter
+
+Twitter
+
+  - Threads
+
+Threads
+
+  - Youtube
+
+Youtube
+
+Thanks for reading,
+Ryan Peterman

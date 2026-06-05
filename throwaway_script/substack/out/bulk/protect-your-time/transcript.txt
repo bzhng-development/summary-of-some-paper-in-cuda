@@ -1,0 +1,64 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 21,000 readers this week 🙏 🎉
+
+This week I’m tackling a question about finding time for projects that drive promotion. Hope it is helpful; enjoy!
+
+> Q: How do you find time for projects that will set you up for promotion outside of your regular engineering duties?
+
+Q: How do you find time for projects that will set you up for promotion outside of your regular engineering duties?
+
+Promotion demands “next-level” work. Yet, your team’s projects and keeping-the-lights-on work (e.g. oncall, bug fixes, etc.) often won’t get you promoted. You’ll need to find time to take initiative above the expectations of your level. There are two ways to do this:
+
+  - Stretch yourself - This isn’t for everyone. I’ve already talked about this in last week’s article and it is straightforward so we don’t need to revisit it.
+
+Stretch yourself - This isn’t for everyone. I’ve already talked about this in last week’s article and it is straightforward so we don’t need to revisit it.
+
+  - Protect your time - Saying no to less impactful work will clear time for projects that will get you promoted. Let’s dive into how to do this.
+
+Protect your time - Saying no to less impactful work will clear time for projects that will get you promoted. Let’s dive into how to do this.
+
+
+## Understanding Impact
+
+
+First, you’ll need to develop a sense of what is impactful and what isn’t so you can decide where to spend your time. For potential work, you’ll need to weigh the benefits against the cost. Here are some questions that guide how I think about it:
+
+  - Benefit - What is the business impact of the work? What metrics would it move and how important are they?
+
+Benefit - What is the business impact of the work? What metrics would it move and how important are they?
+
+  - Cost - For most software engineering, the main cost is developer time. So the question here is often, how long will this take to finish?
+
+Cost - For most software engineering, the main cost is developer time. So the question here is often, how long will this take to finish?
+
+Your manager and tech lead should have a solid sense of this. You can discuss the prioritization of your work with them as you learn this skill. Once you have this down, you can start to be strategic with where you say no.
+
+Don’t worry about deprioritizing work that isn’t worthwhile. Your manager and company want you to have more impact so protecting your time is good for everyone. You can’t say no to everything but explaining why work isn’t impactful should help you get some time back.
+
+
+## A Concrete Example
+
+
+When I was a Senior Engineer (IC5), my manager needed me to lead a workstream that fit into a larger partnership. I was the best fit, so I couldn’t say no. I thought the work was impactful but not a home run.
+
+I chatted with my mentor about leading the workstream with the least possible time investment on my end. He agreed even though he was the lead of the larger partnership. So, I consulted on all the projects and made sure the initiative was successful but avoided time-intensive work like coding.
+
+This allowed me to lead the workstream effectively using only ~20% of my time. With the rest of my time, I found a much more impactful workstream which led to the compute efficiency work that got me promoted to Staff (IC6).
+
+This story has a few key learnings:
+
+  - You can’t always drop your regular engineering duties, but you can manage your level of investment. Communicating well during planning is key.
+
+You can’t always drop your regular engineering duties, but you can manage your level of investment. Communicating well during planning is key.
+
+  - Impact matters above all else. Even though this workstream was part of a larger initiative my mentor was leading, he still sided with my assessment to spend less time on it.
+
+Impact matters above all else. Even though this workstream was part of a larger initiative my mentor was leading, he still sided with my assessment to spend less time on it.
+
+As you advance in your career, you’ll need to protect your time more. The most senior engineers I know are often hard to reach unless you’re working on something that is a priority for them. They aren’t trying to be mean; it is out of necessity. One Distinguished Engineer (IC9) I heard even negotiated his way out of being on his team’s oncall.
+
+There’s a balance here in being too protective of your time. That IC9 was also known as a jerk to some since he was too stingy with his time. Remember that helping other engineers is also impactful, so don’t forget that as you grow. That’s one of the reasons I make time to write this newsletter each week.
+
+If you have feedback about how I can make the content better, please share it here 🙏
+
+Thanks for reading,
+Ryan Peterman

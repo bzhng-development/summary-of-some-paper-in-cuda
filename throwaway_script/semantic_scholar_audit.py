@@ -51,6 +51,7 @@ def _throttle() -> None:
         time.sleep(_MIN_GAP - elapsed)
     _last_request_at = time.monotonic()
 
+
 # Org -> (affiliation match patterns, list of known author names).
 # Affiliation pattern matches the strings S2 stores on author records
 # (e.g. "OpenAI", "Meta AI", "FAIR"). Used to disambiguate name collisions:
@@ -58,26 +59,63 @@ def _throttle() -> None:
 ORG_CONFIG: dict[str, tuple[list[re.Pattern], list[str]]] = {
     "OpenAI": (
         [re.compile(r"\bopenai\b", re.IGNORECASE)],
-        ["Mark Chen", "John Schulman", "Sam McCandlish", "Wojciech Zaremba",
-         "Aleksander Madry", "Lukasz Kaiser", "Jakub Pachocki", "Ilya Sutskever",
-         "Jacob Hilton", "Karl Cobbe", "Nat McAleese", "Hyung Won Chung"],
+        [
+            "Mark Chen",
+            "John Schulman",
+            "Sam McCandlish",
+            "Wojciech Zaremba",
+            "Aleksander Madry",
+            "Lukasz Kaiser",
+            "Jakub Pachocki",
+            "Ilya Sutskever",
+            "Jacob Hilton",
+            "Karl Cobbe",
+            "Nat McAleese",
+            "Hyung Won Chung",
+        ],
     ),
     "Anthropic": (
         [re.compile(r"\banthropic\b", re.IGNORECASE)],
-        ["Tom Henighan", "Sam Bowman", "Dario Amodei", "Tom Brown",
-         "Karina Nguyen", "Christopher Olah", "Catherine Olsson",
-         "Jared Kaplan", "Daniela Amodei", "Trenton Bricken", "Andy Jones"],
+        [
+            "Tom Henighan",
+            "Sam Bowman",
+            "Dario Amodei",
+            "Tom Brown",
+            "Karina Nguyen",
+            "Christopher Olah",
+            "Catherine Olsson",
+            "Jared Kaplan",
+            "Daniela Amodei",
+            "Trenton Bricken",
+            "Andy Jones",
+        ],
     ),
     "DeepSeek": (
         [re.compile(r"\bdeepseek\b", re.IGNORECASE)],
-        ["Daya Guo", "Qihao Zhu", "Wenfeng Liang", "Junxiao Song",
-         "Bochao Wu", "Chong Ruan", "Damai Dai", "Y. Wu", "Haowei Zhang"],
+        [
+            "Daya Guo",
+            "Qihao Zhu",
+            "Wenfeng Liang",
+            "Junxiao Song",
+            "Bochao Wu",
+            "Chong Ruan",
+            "Damai Dai",
+            "Y. Wu",
+            "Haowei Zhang",
+        ],
     ),
     "Mistral": (
         [re.compile(r"\bmistral\b", re.IGNORECASE)],
-        ["Guillaume Lample", "Alexandre Sablayrolles", "Devendra Singh Chaplot",
-         "Diego de Las Casas", "Lucile Saulnier", "Arthur Mensch",
-         "Pierre Stock", "Marie-Anne Lachaux"],
+        [
+            "Guillaume Lample",
+            "Alexandre Sablayrolles",
+            "Devendra Singh Chaplot",
+            "Diego de Las Casas",
+            "Lucile Saulnier",
+            "Arthur Mensch",
+            "Pierre Stock",
+            "Marie-Anne Lachaux",
+        ],
     ),
     "Moonshot AI": (
         [re.compile(r"\b(moonshot|kimi)\b", re.IGNORECASE)],
@@ -85,8 +123,7 @@ ORG_CONFIG: dict[str, tuple[list[re.Pattern], list[str]]] = {
     ),
     "Zhipu / GLM": (
         [re.compile(r"\b(zhipu|z\.ai|glm)\b", re.IGNORECASE)],
-        ["Aohan Zeng", "Xiao Liu", "Wenyi Hong", "Jiale Cheng",
-         "Hanlin Zhao", "Zihan Wang", "Yuxiao Dong", "Jie Tang"],
+        ["Aohan Zeng", "Xiao Liu", "Wenyi Hong", "Jiale Cheng", "Hanlin Zhao", "Zihan Wang", "Yuxiao Dong", "Jie Tang"],
     ),
     "MiniMax": (
         [re.compile(r"\bminimax\b", re.IGNORECASE)],
@@ -110,9 +147,16 @@ ORG_CONFIG: dict[str, tuple[list[re.Pattern], list[str]]] = {
     ),
     "Hugging Face": (
         [re.compile(r"\bhugging\s*face\b", re.IGNORECASE)],
-        ["Loubna Ben Allal", "Anton Lozhkov", "Lewis Tunstall",
-         "Edward Beeching", "Leandro von Werra", "Quentin Lhoest",
-         "Thomas Wolf", "Patrick von Platen"],
+        [
+            "Loubna Ben Allal",
+            "Anton Lozhkov",
+            "Lewis Tunstall",
+            "Edward Beeching",
+            "Leandro von Werra",
+            "Quentin Lhoest",
+            "Thomas Wolf",
+            "Patrick von Platen",
+        ],
     ),
     "Snap Research": (
         [re.compile(r"\bsnap\s+(inc|research)\b", re.IGNORECASE)],
@@ -137,7 +181,7 @@ def s2_get(endpoint: str, params: dict | None = None) -> dict | list | None:
             # S2 puts a per-IP cooldown after even a small burst. Back off
             # AGGRESSIVELY — start at 30s and grow.
             wait = 30 * (attempt + 1)
-            logger.warning(f"  429 rate-limit, sleeping {wait}s (attempt {attempt+1}/6)")
+            logger.warning(f"  429 rate-limit, sleeping {wait}s (attempt {attempt + 1}/6)")
             time.sleep(wait)
             continue
         if r.status_code in (502, 503, 504):
@@ -187,11 +231,13 @@ def fetch_2026_arxiv_papers(author_id: str) -> list[dict]:
             ext = p.get("externalIds") or {}
             arxiv = ext.get("ArXiv") or ext.get("ARXIV")
             if arxiv and re.match(r"^\d{4}\.\d{4,5}$", arxiv) and arxiv.startswith("26"):
-                out.append({
-                    "arxiv_id": arxiv,
-                    "title": p.get("title") or "",
-                    "year": p.get("year"),
-                })
+                out.append(
+                    {
+                        "arxiv_id": arxiv,
+                        "title": p.get("title") or "",
+                        "year": p.get("year"),
+                    }
+                )
         if not data.get("next"):
             break
         offset = data["next"]

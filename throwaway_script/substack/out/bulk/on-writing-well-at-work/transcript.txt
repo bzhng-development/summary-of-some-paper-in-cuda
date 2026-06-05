@@ -1,0 +1,48 @@
+Update: Interviewing Senior ICs from OpenAI, Meta, Amazon has been so much fun lately. I’m glad I did an early test of a few episodes and plan to keep going. Appreciate all your support since the beginning 🙏
+
+My hope is to take it more seriously going forward with the mission of sharing their inspiring advice and stories with everyone for free. If you missed it, here were the top 2 episodes I did so far (always open to feedback):
+
+  - [209k views] OpenAI & Meta Distinguished Engineer (IC9) On Working With Zuck, Carmack & Career Growth | Philip Su
+
+[209k views] OpenAI & Meta Distinguished Engineer (IC9) On Working With Zuck, Carmack & Career Growth | Philip Su
+
+  - [173k views] Amazon Principal Engineer On Layoffs, Interviewing & Career Growth | Steve Huynh
+
+[173k views] Amazon Principal Engineer On Layoffs, Interviewing & Career Growth | Steve Huynh
+
+I’ve learned a lot from these senior ICs and plan to publish the most important learnings common across the Senior Staff+ engineers I interview on this newsletter. Here is one such insight I’ve been thinking about recently:
+
+Was chatting with a Senior Staff Eng (IC7) at Meta about how to become better at writing. We agreed that you need to be your own critic first to write well. Again, I saw a similar opinion when chatting with an ex-Meta Distinguished Engineer (Philip Su, IC9). He said, “To write well, you need to read well.” Knowing what is “good” writing is the key.
+
+The question then becomes, how do you know what good writing is? Writing is subjective, so it depends on your target audience on what “good” is. Here’s how I’d go about it if you want to write well at work.
+
+
+## Read Well
+
+
+You need a way to find effective, high-quality writing in your org. You can do this by studying the writing of more senior engineers. Look at influential docs, posts, and messages written by more senior folks. You can get signal on what is influential by looking at engagement (e.g. Slack reactions, replies, comments, readership).
+
+Also, you should ask people with good taste already for good examples. Your management chain and senior IC leadership probably have the best sense of what good writing looks like in your org.
+
+One day I’ll put together a list of quality pieces of content you can study and share why I think they are good. If you’re looking for a quick list, you can sort my writing by engagement to see what has resonated with a software engineering audience.
+
+
+## Reverse Engineer & Test Your Theories
+
+
+Once you have some quality examples, study them and see what parts resonate for people. Discuss the writing with others who write well. Come up with theories on what made the writing good.
+
+Then adjust your writing with those theories of what worked in those quality examples. Get feedback on your writing (ideally from people who write well). See if the improvements made any difference.
+
+Over time, your writing will become “good” for that audience. It sounds simple and obvious because it is. I think the non-trivial takeaway is to think critically about quality and how to find what is “good.” That’s the missing piece for most people who lack taste.
+
+We all have the ability to learn good taste, you just need to make sure you’re learning from the right sources.
+
+Going forward, I plan to keep this newsletter high signal. I’d hate for it to turn into a noisy channel where I just self-promote whatever I want people to see without putting effort into the writing.
+
+If you see a post about new podcast episodes, I’ll always include a written summary I write by hand that includes the top highlights and valuable points worth considering.
+
+By the way, I had a friend help me with redoing the branding of the podcast. So far the podcast been pretty hacky but hopefully this gives it a little more polish. What do you think?
+
+Thanks for reading,
+Ryan Peterman

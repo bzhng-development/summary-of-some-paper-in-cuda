@@ -1,0 +1,425 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/the-developing-dev-compiled-2024",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 153237248,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-12-20T14:03:43.722Z",
+  "updated_at": "2024-12-20T14:07:03.306Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "the-developing-dev-compiled-2024",
+  "social_title": null,
+  "subtitle": "Looking back, next year, and an easy-to-use index",
+  "teaser_post_eligible": true,
+  "title": "The Developing Dev: Compiled 2024",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 8,
+  "reactions": {
+    "❤": 95
+  },
+  "top_exclusions": [],
+  "pins": [
+    1340878
+  ],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "new-grad-to-staff-at-meta-in-3-years",
+  "next_post_slug": "ex-meta-staff-eng-and-yc-startup",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!LKD_!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffa72d0d3-4bba-4943-8c41-33c32d406e23_1920x1080.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 153237248,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Looking back, next year, and an easy-to-use index",
+  "body_html": "<p>2024 was the biggest year yet for the Developing Dev. Here are some stats to show you how far we’ve come this year:</p><ul><li><p><strong>More than doubled the # of subscribers:</strong> 41,000 → 94,000 (almost at 100k!)</p></li><li><p><strong>Tripled page views:</strong> ~1M/yr → ~3M/yr </p></li><li><p><strong>Launched a podcast</strong> that went better than I expected (<a href=\"https://www.youtube.com/@RyanLPeterman\">YouTube</a>, <a href=\"https://open.spotify.com/show/0MX9PyeCzDhdlyRv6slwIX\">Spotify</a>, <a href=\"https://podcasts.apple.com/au/podcast/the-developing-dev/id1777363835\">Apple Podcasts</a>)</p></li><li><p><strong>Wrote a</strong> <strong>post every week without fail</strong>: 51 this year, 97 in total (almost at 100 posts!)</p></li></ul><p>I’m most proud of that last one. I’ve stayed up late most Thursday nights getting my weekly post done since I work full-time and have many other commitments. I’ve never missed even when on vacation (I’m writing this article at ~3 am from Cancun).</p><p>Even though I haven’t made a dime off of writing this newsletter, I write it because I get to <a href=\"https://www.developing.dev/p/new-grad-to-staff-at-meta-in-3-years\">learn from others</a>, <a href=\"https://www.developing.dev/p/a-new-era-of-writing-code\">explore interesting topics</a>, and <a href=\"https://www.developing.dev/p/scaling-yourself\">solidify what I’ve learned</a>. And the main reason why I never miss is because <a href=\"https://www.developing.dev/p/the-story-behind-this-newsletter\">I promised I’d write weekly</a> when I started. I might change that at some point though and could use your input:</p><div class=\"poll-embed\" data-attrs=\"{&quot;id&quot;:248666}\" data-component-name=\"PollToDOM\"></div><p>If you want to see my top posts by view count, <a href=\"https://www.developing.dev/?sort=top\">you can find them here</a>. Looking forward, here’s some stuff I’m planning for next year:</p><ul><li><p><strong>More podcasts</strong> - I’m just getting started here. You have no idea how good top engineer career stories can be. When I first joined Meta, I discovered a series of posts from Meta’s top engineers detailing their career paths. I loved those stories and want to share something similar with you all.</p></li><li><p><strong>Dabbling in video</strong> - I’d like to make some videos since it’d be fun to learn and try to make something quality. Today, most of my content is educational, but I am considering making some entertaining videos too.</p></li><li><p><strong>Launching <a href=\"https://www.developing.dev/p/revealing-my-passion-project\">my passion project</a></strong> - I plan to launch the product I’m building in 2025. I’ve been drowning in work and content so I haven’t had much time to share about ongoing product development. We’re making a lot of progress here even though I haven’t shared much yet.</p></li><li><p><strong>Branding refresh</strong> - So far, I’ve just picked a font and color I liked without much thought. It’s hacky though so I’m thinking about doing a brand refresh to have some consistency.</p></li></ul><p>I appreciate all your support this year; writing this newsletter wouldn’t be the same without you! 🙏</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!LKD_!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffa72d0d3-4bba-4943-8c41-33c32d406e23_1920x1080.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!LKD_!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffa72d0d3-4bba-4943-8c41-33c32d406e23_1920x1080.png 424w, https://substackcdn.com/image/fetch/$s_!LKD_!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffa72d0d3-4bba-4943-8c41-33c32d406e23_1920x1080.png 848w, https://substackcdn.com/image/fetch/$s_!LKD_!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffa72d0d3-4bba-4943-8c41-33c32d406e23_1920x1080.png 1272w, https://substackcdn.com/image/fetch/$s_!LKD_!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffa72d0d3-4bba-4943-8c41-33c32d406e23_1920x1080.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!LKD_!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffa72d0d3-4bba-4943-8c41-33c32d406e23_1920x1080.png\" width=\"1456\" height=\"819\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/fa72d0d3-4bba-4943-8c41-33c32d406e23_1920x1080.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:819,&quot;width&quot;:1456,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:330894,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!LKD_!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffa72d0d3-4bba-4943-8c41-33c32d406e23_1920x1080.png 424w, https://substackcdn.com/image/fetch/$s_!LKD_!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffa72d0d3-4bba-4943-8c41-33c32d406e23_1920x1080.png 848w, https://substackcdn.com/image/fetch/$s_!LKD_!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffa72d0d3-4bba-4943-8c41-33c32d406e23_1920x1080.png 1272w, https://substackcdn.com/image/fetch/$s_!LKD_!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ffa72d0d3-4bba-4943-8c41-33c32d406e23_1920x1080.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><p>After writing almost a hundred posts, here’s the best way to find relevant articles organized by what the content will help you with (🎖️ = my recommendation) :</p><h4>0. I want to become better at writing</h4><ol><li><p><a href=\"https://www.developing.dev/p/why-engineers-need-to-write\">Why Engineers Need To Write</a> 🎖️</p></li><li><p><a href=\"https://www.developing.dev/p/6-software-engineering-templates\">6 Software Engineering Templates I Wish I Had Sooner</a> 🎖️</p></li><li><p><a href=\"https://www.developing.dev/p/write-down-the-plan\">Write Down The Plan</a></p></li><li><p><a href=\"https://www.developing.dev/p/how-to-write\">How To Write</a></p></li><li><p><a href=\"https://www.developing.dev/p/writing-tactics-part-1\">Writing Tactics - Part 1</a></p></li><li><p><a href=\"https://www.developing.dev/p/writing-tactics-part-2\">Writing Tactics - Part 2</a></p></li><li><p><a href=\"https://www.developing.dev/p/efficient-communication\">Efficient Communication</a></p></li></ol><h4>1. I want to improve my soft skills</h4><ol><li><p><a href=\"https://www.developing.dev/p/how-to-onboard\">How To Onboard</a> 🎖️</p></li><li><p><a href=\"https://www.developing.dev/p/how-to-drive-meetings\">How To Drive Meetings</a> 🎖️</p></li><li><p><a href=\"https://www.developing.dev/p/what-you-work-on-how-hard-you-work\">What You Work On &gt;&gt; How Hard You Work</a> 🎖️</p></li><li><p><a href=\"https://www.developing.dev/p/promoting-your-work\">Promoting Your Work</a></p></li><li><p><a href=\"https://www.developing.dev/p/earning-trust\">Earning Trust</a></p></li><li><p>E<a href=\"https://www.developing.dev/p/engineering-confidence\">ngineering Confidence</a></p></li><li><p><a href=\"https://www.developing.dev/p/5-skills-all-10x-engineers-have\">5 Skills the Best Engineers I Know Have in Common</a> </p></li><li><p><a href=\"https://www.developing.dev/p/3-important-software-eng-skills-nobody\">Top 3 SWE Skills I Picked Up On The Job</a> </p></li><li><p><a href=\"https://www.developing.dev/p/be-visible\">Be Visible</a></p></li><li><p><a href=\"https://www.developing.dev/p/protect-your-time\">Protect Your Time</a></p></li><li><p><a href=\"https://www.developing.dev/p/judgment\">Judgment</a></p></li><li><p><a href=\"https://www.developing.dev/p/how-ai-will-affect-your-career\">How AI Will Affect Your Career</a></p></li></ol><h4>2. I want to learn how promotions work</h4><ol><li><p><a href=\"https://www.developing.dev/p/how-promotions-and-ratings-work\">How Promotions and Ratings Work</a> 🎖️</p></li><li><p><a href=\"https://www.developing.dev/p/ic-promo-champions\">IC Promo “Champions”</a></p></li><li><p><a href=\"https://www.developing.dev/p/ratings-promotions\">Ratings != Promotions</a></p></li><li><p><a href=\"https://www.developing.dev/p/how-to-write-an-effective-self-review\">How To Write an Effective Self-Review</a> </p></li></ol><h4>3. I want to grow into a mid-level engineer</h4><ol><li><p><a href=\"https://www.developing.dev/p/how-to-get-promoted-without-getting\">How To Get Promoted (Without Getting Lucky)</a> 🎖️</p></li><li><p><a href=\"https://www.developing.dev/p/speedrunning-guide-l3-l4\">Speedrunning Guide: Junior (L3)-&gt; Mid-Level (L4)</a> 🎖️</p></li><li><p><a href=\"https://www.developing.dev/p/faang-career-ladder-junior-l3-vs\">FAANG Career Ladder: Junior (L3) vs Mid-level (L4)</a></p></li><li><p><a href=\"https://www.developing.dev/p/generalist-or-specialist\">Generalist or Specialist?</a></p></li><li><p><a href=\"https://www.developing.dev/p/how-to-start-reviewing-code\">How to Start Reviewing Code</a></p></li></ol><h4>4. I want to grow into a senior engineer</h4><ol><li><p><a href=\"https://www.developing.dev/p/what-i-wish-i-knew-as-a-mid-level\">What I Wish I Knew As a Mid-Level Engineer</a> 🎖️</p></li><li><p><a href=\"https://www.developing.dev/p/how-some-engineers-always-lead\">How Some Engineers Always Lead</a> 🎖️</p></li><li><p><a href=\"https://www.developing.dev/p/faang-career-ladder-mid-level-l4\">FAANG Career Ladder: Mid-level (L4) vs Senior (L5)</a></p></li><li><p><a href=\"https://www.developing.dev/p/speedrunning-guide-mid-level-l4-senior\">Speedrunning Guide: Mid-level (L4) -&gt; Senior (L5)</a></p></li><li><p><a href=\"https://www.developing.dev/p/finding-next-level-scope\">Finding Next-Level Scope</a></p></li></ol><h4>5. I want to grow into a staff engineer</h4><ol><li><p><a href=\"https://www.developing.dev/p/the-tech-leads-playbook\">The Tech Lead’s Playbook</a> 🎖️</p></li><li><p><a href=\"https://www.developing.dev/p/scaling-yourself\">Scaling Yourself</a> 🎖️</p></li><li><p><a href=\"https://www.developing.dev/p/setting-up-cross-team-workstreams\">Setting Up Cross-Team Workstreams</a> </p></li><li><p><a href=\"https://www.developing.dev/p/finding-staff-level-scope\">Finding Staff-Level Scope</a></p></li><li><p><a href=\"https://www.developing.dev/p/tech-lead-manager-tlm-roles\">Tech Lead Manager (TLM) Roles</a></p></li><li><p><a href=\"https://www.developing.dev/p/how-to-influence-without-authority\">How To Influence Without Authority</a></p></li><li><p><a href=\"https://www.developing.dev/p/backchannel-alignment\">Backchannel Alignment</a></p></li><li><p><a href=\"https://www.developing.dev/p/staffing-your-projects\">Staffing Your Projects</a></p></li><li><p><a href=\"https://www.developing.dev/p/staff-engineer-panel-summary\">Staff Engineer Panel Summary</a></p></li><li><p><a href=\"https://www.developing.dev/p/faang-career-ladder-senior-l5-vs\">FAANG Career Ladder: Senior (L5) vs Staff (L6)</a></p></li><li><p><a href=\"https://www.developing.dev/p/speedrunning-guide-senior-l5-staff\">Speedrunning Guide: Senior (L5) -&gt; Staff (L6)</a></p></li></ol><h4>6. I want to grow to staff+ engineering levels</h4><ol><li><p><a href=\"https://www.developing.dev/p/optimizing-for-opportunity\">Optimizing for Opportunity</a> 🎖️</p></li><li><p><a href=\"https://www.developing.dev/p/faang-career-ladder-staff-l6-vs-senior\">FAANG Career Ladder: Staff (L6) vs Senior Staff (L7)</a></p></li><li><p><a href=\"https://www.developing.dev/p/staff-career-growth-product-or-infra\">Staff+ Career Growth: Product or Infra?</a></p></li></ol><h4>7. I want help with finding a job/interviewing</h4><ol><li><p><a href=\"https://www.developing.dev/p/how-i-11xd-my-interview-offer-rate\">Cracking the Coding Interview</a> 🎖️</p></li><li><p><a href=\"https://www.developing.dev/p/staying-sharp\">Staying Sharp</a></p></li><li><p><a href=\"https://www.developing.dev/p/looking-in-the-layoff-era\">Job Hunting in the Layoff Era</a></p></li><li><p><a href=\"https://www.developing.dev/p/scope-not-titles\">Scope, Not Titles</a></p></li><li><p><a href=\"https://www.developing.dev/p/why-leetcode-is-so-popular\">Why Leetcode Is So Popular</a></p></li><li><p><a href=\"https://www.developing.dev/p/big-tech-vs-startups-for-new-grads\">Big Tech vs Startups (for New Grads)</a></p></li></ol><h4>8. I want to learn from other engineer’s experience</h4><ol><li><p><a href=\"https://www.developing.dev/p/new-grad-to-staff-at-meta-in-3-years\">New Grad to Staff at Meta in 3 years: Evan King</a> 🎖️</p></li><li><p><a href=\"https://www.developing.dev/p/from-microsoft-intern-to-meta-staff\">From Microsoft Intern to Meta Staff Engineer: Raviraj Achar</a> 🎖️</p></li><li><p><a href=\"https://www.developing.dev/p/28-year-old-staff-engineer-google\">28 Year Old Staff Engineer @ Google</a></p></li><li><p><a href=\"https://www.developing.dev/p/junior-ic3-to-staff-ic6-via-job-hopping\">Junior (IC3) to Staff (IC6) via Job Hopping</a></p></li><li><p><a href=\"https://www.developing.dev/p/from-liberal-arts-major-to-amazon\">From Liberal Arts Major to Amazon Principal Engineer: Steve Huynh</a></p></li><li><p><a href=\"https://www.developing.dev/p/the-best-manager-ive-had\">The Best Manager I’ve Had</a></p></li><li><p><a href=\"https://www.developing.dev/p/promotion-via-job-hopping\">Promotion via Job Hopping</a></p></li><li><p><a href=\"https://www.developing.dev/p/building-experience-faster\">Building Experience Faster</a></p></li><li><p><a href=\"https://www.developing.dev/p/why-i-stayed-at-meta-when-all-my\">Why I Stayed at Meta When All My Friends Left</a></p></li><li><p><a href=\"https://www.developing.dev/p/engineering-career-stories-jordan\">New Grad to Senior Engineer in 2 years: Jordan Cutler</a></p></li></ol><h4>9. I want to hone my engineering skills</h4><ol><li><p><a href=\"https://www.developing.dev/p/shipping-code-faster\">Shipping Code Faster</a> 🎖️</p></li><li><p><a href=\"https://www.developing.dev/p/a-new-era-of-writing-code\">A New Era of Writing Code</a> 🎖️</p></li><li><p><a href=\"https://www.developing.dev/p/standing-on-the-shoulders-of-giants\">Standing on the Shoulders of Giants</a> </p></li><li><p><a href=\"https://www.developing.dev/p/why-write-small-diffs\">Why Write Small Diffs</a> </p></li><li><p><a href=\"https://www.developing.dev/p/top-tech-company-engineering-blog\">Top Tech Company Engineering Blog Posts</a> </p></li><li><p><a href=\"https://www.developing.dev/p/resilience-through-retrospection\">Resilient Systems Through Retrospection</a></p></li><li><p><a href=\"https://www.developing.dev/p/threads-invisible-armor\">Threads' Invisible Armor</a></p></li><li><p><a href=\"https://www.developing.dev/p/tools-of-the-trade\">Tools of the Trade</a></p></li><li><p><a href=\"https://www.developing.dev/p/move-fast-break-less\">Move Fast Without Breaking Anything</a></p></li><li><p><a href=\"https://www.developing.dev/p/unlearning-leetcode\">Unlearning Leetcode</a></p></li></ol><p>All my writing fits into the above index except this post on <a href=\"https://www.developing.dev/p/an-optimized-wfh-setup\">my WFH desk setup</a>.</p><p>If you have any questions you’d like me to address in 2025, <a href=\"https://forms.gle/7guSHaxce6jLjzuD6\">feel free to drop them here</a>. I will use these to make sure I answer the questions you care about most.</p><p>As always, you can find more of my stuff here:</p><ul><li><p><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">LinkedIn</a></p></li><li><p><a href=\"https://twitter.com/ryanlpeterman\">Twitter</a></p></li><li><p><a href=\"https://www.threads.net/@ryanlpeterman\">Threads</a></p></li><li><p><a href=\"https://www.youtube.com/@RyanLPeterman\">Youtube</a></p></li></ul><p>Thanks for reading,<br>Ryan Peterman</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 94,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "2024 was the biggest year yet for the Developing Dev. Here are some stats to show you how far we’ve come this year:",
+  "wordcount": 987,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        28,
+        108,
+        220
+      ],
+      "population": 1
+    },
+    "DarkVibrant": {
+      "rgb": [
+        6,
+        94,
+        111
+      ],
+      "population": 27
+    },
+    "LightVibrant": {
+      "rgb": [
+        137.37096774193546,
+        180.14516129032253,
+        240.02903225806455
+      ],
+      "population": 0
+    },
+    "Muted": {
+      "rgb": [
+        132,
+        132,
+        132
+      ],
+      "population": 24
+    },
+    "DarkMuted": {
+      "rgb": [
+        68,
+        68,
+        68
+      ],
+      "population": 35
+    },
+    "LightMuted": {
+      "rgb": [
+        188,
+        188,
+        188
+      ],
+      "population": 30
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 95,
+  "comment_count": 5,
+  "child_comment_count": 4,
+  "audio_items": [
+    {
+      "post_id": 153237248,
+      "voice_id": "en-US-OnyxTurboMultilingualNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/153237248/tts/c455b923-baff-47a6-bb94-226d64eee4db/en-US-OnyxTurboMultilingualNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 82789335,
+      "body": "Congrats on the stats, really impressive! ",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Congrats on the stats, really impressive!"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 153237248,
+      "user_id": 20003289,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-12-23T15:51:57.573Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Matt | Venturist 🌿",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/06393ab8-7bc9-4d49-8596-6afd6f81517b_1024x1024.png",
+      "handle": "venturistsub",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "venturistsub",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "The Venturist Newsletter",
+          "id": 2682532,
+          "base_url": "https://mattventurist.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 82488996,
+      "body": "Congratulations for this growth and wonderful 2024. 🎉🙌",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Congratulations for this growth and wonderful 2024. 🎉🙌"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 153237248,
+      "user_id": 222972410,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-12-21T05:42:05.673Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Komal",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5724f42f-c6be-4753-a9f6-4cc332b2c0b7_144x144.png",
+      "handle": "komal178581",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "komal178581",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+At some point, you’ll need to decide whether to become a people manager or stay as an individual contributor (IC). Neither path is objectively better than the other.
+
+When I became a Staff Engineer (IC6) at Meta it was an immediate question. I gathered a lot of notes from several senior managers and ICs before making the transition.
+
+In this article, I’ll share everything I compiled to give you the most important information you need to make an informed decision.
+
+
+## Career Growth
+
+
+Manager career growth scales with the size of your team. There are exceptions but in most cases, promotion comes from the sustained impact of your larger team. The problem is that your team only grows if your business area needs it to. Without any reason for your team to grow, your career will stagnate regardless of how good you do your job. Managers have much less control over their career growth than ICs do.
+
+This can lead to outlier career growth if you get lucky though. I’ve seen many folks who were early at Facebook get promoted to Director within just a year or two because the company was growing like crazy (“a rising tide lifts all boats”). That same growth would take much longer as an IC.
+
+Also, managers have less career mobility than ICs do. This is because there are fewer management roles. Meanwhile, a good senior IC can go almost anywhere because they create scope and don’t rely on having a team for impact.
+
+
+## Working Style
+
+
+Managers work almost entirely through delegation and influence. This means you’re dealing with people and meetings most of the day which has its cons:
+
+  - Almost no time for deep work since your schedule is fragmented
+
+Almost no time for deep work since your schedule is fragmented
+
+  - Less control of your schedule. Meetings dictate when you work
+
+Less control of your schedule. Meetings dictate when you work
+
+  - Politics and drama inevitably come up
+
+Politics and drama inevitably come up
+
+Although this sounds like hell for many engineers, there are benefits to this working style:
+
+  - Work usually stops after business hours
+
+Work usually stops after business hours
+
+  - Your people skills grow since they are your primary tool for getting things done. These skills help you in your personal life too
+
+Your people skills grow since they are your primary tool for getting things done. These skills help you in your personal life too
+
+The high-level tradeoff is that you work fewer hours but you have less control of your time. All managers I surveyed said something similar. This makes sense given managers don’t trade their time for impact. You scale your judgment through delegation and influence.
+
+
+## Why become an EM?
+
+
+At this point, some engineers might wonder why anyone would want to become a manager. Management may be a good fit for some because of:
+
+  - Your strengths and interests - I’ve met managers who knew back when they were ICs that one day they would switch because it fit their skillset. They were ok at engineering but where they shined was in growing others and using their people skills.
+
+Your strengths and interests - I’ve met managers who knew back when they were ICs that one day they would switch because it fit their skillset. They were ok at engineering but where they shined was in growing others and using their people skills.
+
+  - Long-term career aspirations - If you want to be an executive or create your own company one day, becoming a manager will give you more relevant experience.
+
+Long-term career aspirations - If you want to be an executive or create your own company one day, becoming a manager will give you more relevant experience.
+
+  - Desired skill growth - Some engineers have been an IC for long enough that they are bored and want to learn something new. Becoming a manager can help you learn new skills.
+
+Desired skill growth - Some engineers have been an IC for long enough that they are bored and want to learn something new. Becoming a manager can help you learn new skills.
+
+You shouldn’t become an EM just because you think it’s the fastest way to grow your career. As always, it depends. Some people used to argue that management was better for career growth since there were more managers than ICs at the highest levels (IC7+). That’s not true anymore after the 2023 manager layoffs throughout the industry. Even if it was true, your career growth in either role depends on your specific situation.
+
+When I was considering switching to management, my manager warned me that I would have less control of my career growth. And he was right. I learned a lot from switching to management and enjoyed it but I didn’t get any closer to the next level. I had a much more clear path to the next level as an IC in my org.
+
+If you want to become an EM, here’s what I’d do:
+
+  - Get promoted to Staff (IC6) - Most companies don’t allow transition before then (there are some exceptions).
+
+Get promoted to Staff (IC6) - Most companies don’t allow transition before then (there are some exceptions).
+
+  - Try it out and show you’re ready - Try managing an intern. It’s one of the best ways to try management out without taking on a full team. You can also try taking on more of a tech lead role. It is similar to being an EM just without having to do performance reviews.
+
+Try it out and show you’re ready - Try managing an intern. It’s one of the best ways to try management out without taking on a full team. You can also try taking on more of a tech lead role. It is similar to being an EM just without having to do performance reviews.
+
+  - Express interest to your manager - EM roles are limited. When an opportunity comes you’ll want to be on your manager’s mind as someone who has the skillset and is interested in the role.
+
+Express interest to your manager - EM roles are limited. When an opportunity comes you’ll want to be on your manager’s mind as someone who has the skillset and is interested in the role.
+
+Opportunities to transition to management are situational. Growing areas that are hiring a lot will have the most opportunities for management based on need.
+
+If you have a friend thinking about management, consider sharing this with them. As always, you can find more of my stuff here:
+
+  - LinkedIn
+
+LinkedIn
+
+  - Twitter
+
+Twitter
+
+  - Threads
+
+Threads
+
+Thanks for reading,
+Ryan Peterman

@@ -1,0 +1,94 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 55,000 readers this week 🙏 🎉
+
+This week I’m writing about what a “tech lead” does. Hope it is helpful; enjoy!
+
+If you want to grow into more senior roles, being a “tech lead” is a classic path. It scales well into higher levels and keeps the door open for management. In this post, I’d like to talk about the common way this archetype of engineer operates.
+
+
+## The Playbook
+
+
+Here are the high-level steps that tech leads follow:
+
+  - Set direction
+
+Set direction
+
+  - Get alignment and staff projects
+
+Get alignment and staff projects
+
+  - Execute the roadmap
+
+Execute the roadmap
+
+1) Setting Direction
+
+Tech leads need to figure out what direction the team should go in and why. Sometimes their management chain hands them problems, and other times they find opportunities themselves (“creating scope”). I wrote a bit about how to find problems to solve here.
+
+Once they have an impactful problem in hand, they come up with a high-level plan. Tech leads that do this well often have many more project ideas than they have hands for. This is a good thing and leads us to the next step.
+
+2) Get Alignment and Staff Projects
+
+Tech leads often need to get more people involved to land their projects. This means that they align with others on how important the work is and influence them to take on the work.
+
+Two ways they find staffing are:
+
+  - Work with engineering managers (EMs) - if work impacts things that EM cares about they can help allocate some engineers
+
+Work with engineering managers (EMs) - if work impacts things that EM cares about they can help allocate some engineers
+
+  - Talk to engineers directly - if work is interesting or a good career opportunity for an IC they might take on the project
+
+Talk to engineers directly - if work is interesting or a good career opportunity for an IC they might take on the project
+
+A good tech lead is a peer to their surrounding EMs and helps navigate staffing/prioritization discussions.
+
+3) Execute the Roadmap
+
+The last part is the “easy” part. The reason I say that with quotes is of course the projects are hard and there’s a lot needed to get the job done. But there is much less ambiguity at this stage of the initiative; it’s just a matter of execution.
+
+A good tech lead does whatever they need to do for the overall initiative to be successful. That means they might do a variety of things such as:
+
+  - Coding - Completing the highest leverage or riskiest changes
+
+Coding - Completing the highest leverage or riskiest changes
+
+  - Resolving technical ambiguity - Scoping out tasks and designs so that others can easily pick up the work
+
+Resolving technical ambiguity - Scoping out tasks and designs so that others can easily pick up the work
+
+  - Uplifting others - Unblocking work, spreading knowledge, building tooling, or mentoring others
+
+Uplifting others - Unblocking work, spreading knowledge, building tooling, or mentoring others
+
+  - Project Management - Lead workstream syncs, track progress of the work, and shift resources to at-risk areas
+
+Project Management - Lead workstream syncs, track progress of the work, and shift resources to at-risk areas
+
+  - Workstream Comms - Keep stakeholders in the loop on workstream progress and increase the visibility of the workstream
+
+Workstream Comms - Keep stakeholders in the loop on workstream progress and increase the visibility of the workstream
+
+
+## Some Things to Remember
+
+
+As you transition into a tech lead role, there are two things I’d keep in mind that will help you succeed:
+
+  - Tech leads should still write code - It’s okay to write less code, but never lose touch with the codebase and existing system. This context is what sets a good tech lead apart from an engineering manager.
+
+Tech leads should still write code - It’s okay to write less code, but never lose touch with the codebase and existing system. This context is what sets a good tech lead apart from an engineering manager.
+
+  - Good communication is a superpower - Tech leads rely on their writing and speaking to have influence. The better you are at communication, the easier it is to get the ambiguous directional work done.
+
+Good communication is a superpower - Tech leads rely on their writing and speaking to have influence. The better you are at communication, the easier it is to get the ambiguous directional work done.
+
+There is a common pitfall to avoid as a tech lead. The pitfall comes from living by this quote I found from a viral tweet:
+
+Bad tech leads make a ton of noise and try to claim credit regardless of the impact that they have. Although I agree it’s good to be visible, self-promotion is never a replacement for high-quality work. Being a tech lead should come naturally based on the needs of the workstream, not from your desire to assert yourself over others. Never lose sight of what is important; always focus on impact.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already.
+
+Thanks for reading,
+Ryan Peterman

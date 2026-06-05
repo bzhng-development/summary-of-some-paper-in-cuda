@@ -1,0 +1,442 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/staff-engineer-panel-summary",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 142200035,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-03-01T14:02:38.844Z",
+  "updated_at": "2024-03-01T14:13:10.846Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "staff-engineer-panel-summary",
+  "social_title": null,
+  "subtitle": "Brief Notes & Links to Video Clips",
+  "teaser_post_eligible": true,
+  "title": "Staff Engineer Panel Summary",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 1,
+  "reactions": {
+    "❤": 61
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "scaling-yourself",
+  "next_post_slug": "mentorships-role-in-my-staff-promotion",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!4lWb!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2681b666-a364-492f-b0db-f40b258cd39e_1024x468.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 142200035,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Brief Notes & Links to Video Clips",
+  "body_html": "<p>👋<em> Hi, this is&nbsp;<a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a>&nbsp;with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 52,000 readers this week </em>🙏<em> </em>🎉</p><div><hr></div><p>This week, I joined several other engineering creators who got promoted to Staff (L6) for a live Q&amp;A about growth to that level. The panelists have a ton of relevant, unique experience:</p><ul><li><p><a href=\"https://www.linkedin.com/in/eczachly/\">Zach Wilson</a> - past Staff Data Engineer at Airbnb, Ex-Netflix, Ex-Meta</p><ul><li><p><strong>Unique Experience: Job hopping into promotions</strong></p></li></ul></li><li><p><a href=\"https://www.linkedin.com/in/rpandey1234/\">Rahul Pandey</a> - past Staff Software Engineer at Meta, Ex-Pinterest</p><ul><li><p><strong>Unique Experience: Promotions within company and Tech Lead Manager (TLM) transition</strong></p></li></ul></li><li><p><a href=\"https://www.linkedin.com/in/lmckeeman/\">Lee McKeeman</a> - Staff Software Engineer at Google, Ex-Meta, Ex-Amazon</p><ul><li><p><strong>Unique Experience: Management experience and transition back to IC</strong></p></li></ul></li><li><p><a href=\"https://www.linkedin.com/in/carly-taylor-data/\">Carly Taylor </a>- Director and Past ML Engineer Lead at Activision</p><ul><li><p><strong>Unique Experience: Management experience and promotions within company</strong></p></li></ul></li><li><p><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman (myself)</a> - Staff Software Engineer at Meta, Ex-Amazon</p><ul><li><p><strong>Unique Experience: Promotions within company</strong></p></li></ul></li></ul><p>The event was an hour long but I cut it down to something you can skim in just a few minutes. Below are paraphrased notes along with links to the video clips if you’d like to watch the original responses. </p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!4lWb!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2681b666-a364-492f-b0db-f40b258cd39e_1024x468.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!4lWb!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2681b666-a364-492f-b0db-f40b258cd39e_1024x468.png 424w, https://substackcdn.com/image/fetch/$s_!4lWb!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2681b666-a364-492f-b0db-f40b258cd39e_1024x468.png 848w, https://substackcdn.com/image/fetch/$s_!4lWb!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2681b666-a364-492f-b0db-f40b258cd39e_1024x468.png 1272w, https://substackcdn.com/image/fetch/$s_!4lWb!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2681b666-a364-492f-b0db-f40b258cd39e_1024x468.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!4lWb!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2681b666-a364-492f-b0db-f40b258cd39e_1024x468.png\" width=\"1024\" height=\"468\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/2681b666-a364-492f-b0db-f40b258cd39e_1024x468.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:468,&quot;width&quot;:1024,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:385017,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!4lWb!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2681b666-a364-492f-b0db-f40b258cd39e_1024x468.png 424w, https://substackcdn.com/image/fetch/$s_!4lWb!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2681b666-a364-492f-b0db-f40b258cd39e_1024x468.png 848w, https://substackcdn.com/image/fetch/$s_!4lWb!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2681b666-a364-492f-b0db-f40b258cd39e_1024x468.png 1272w, https://substackcdn.com/image/fetch/$s_!4lWb!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2681b666-a364-492f-b0db-f40b258cd39e_1024x468.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><h3>Background: What Is a Staff Engineer?</h3><p><strong>Rahul </strong><a href=\"https://youtu.be/_4_w2urNZ8Y\">(full video clip ~2 min)</a>:</p><ul><li><p>Staff Engineer is the next level after Senior engineer (L5) on the IC track</p></li><li><p>It is a way to continue growing your career without becoming a manager</p></li><li><p>Leadership is a requirement at the Staff level</p></li><li><p>Not everyone gets to Staff; it’s a difficult role to get promoted into</p></li><li><p>Staff engineers own larger scope (e.g. across teams, product-wide)</p></li></ul><div class=\"captioned-image-container\"><figure><a class=\"image-link image2\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!rrGh!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F825b1917-9828-46dd-8158-8fb4e01906e3_1398x508.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!rrGh!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F825b1917-9828-46dd-8158-8fb4e01906e3_1398x508.png 424w, https://substackcdn.com/image/fetch/$s_!rrGh!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F825b1917-9828-46dd-8158-8fb4e01906e3_1398x508.png 848w, https://substackcdn.com/image/fetch/$s_!rrGh!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F825b1917-9828-46dd-8158-8fb4e01906e3_1398x508.png 1272w, https://substackcdn.com/image/fetch/$s_!rrGh!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F825b1917-9828-46dd-8158-8fb4e01906e3_1398x508.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!rrGh!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F825b1917-9828-46dd-8158-8fb4e01906e3_1398x508.png\" width=\"641\" height=\"232.9241773962804\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/825b1917-9828-46dd-8158-8fb4e01906e3_1398x508.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:508,&quot;width&quot;:1398,&quot;resizeWidth&quot;:641,&quot;bytes&quot;:null,&quot;alt&quot;:&quot;Typical dual-track engineering career ladder&quot;,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"Typical dual-track engineering career ladder\" title=\"Typical dual-track engineering career ladder\" srcset=\"https://substackcdn.com/image/fetch/$s_!rrGh!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F825b1917-9828-46dd-8158-8fb4e01906e3_1398x508.png 424w, https://substackcdn.com/image/fetch/$s_!rrGh!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F825b1917-9828-46dd-8158-8fb4e01906e3_1398x508.png 848w, https://substackcdn.com/image/fetch/$s_!rrGh!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F825b1917-9828-46dd-8158-8fb4e01906e3_1398x508.png 1272w, https://substackcdn.com/image/fetch/$s_!rrGh!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F825b1917-9828-46dd-8158-8fb4e01906e3_1398x508.png 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div></div></div></a><figcaption class=\"image-caption\">Graphic Rahul used from staffeng.com</figcaption></figure></div><p>If you want to learn more about what the expectations are for the Staff level, you can take a look at <a href=\"https://www.developing.dev/p/faang-career-ladder-senior-l5-vs\">this article I wrote about Senior (L5) vs Staff (L6)</a>.</p><h3>How To Find Staff-Level Problems?</h3><ul><li><p><strong>Zach:</strong> Had a few options for projects at Netflix. A project about building graph database infrastructure stood out since there were so many use cases for it at the company. <strong>The leverage and impact were clear.</strong></p></li><li><p><strong>Ryan:</strong> <strong>Build the intuition about what is impactful before investing your time.</strong> I learned this by seeing what different teams were goaling on to know what they considered impactful. Also, in some areas, it’s clear there’s low-hanging fruit even without existing team goals.</p></li></ul><p><a href=\"https://youtu.be/wIVdKaputNE\">Here’s the full video clip (~4 min)</a>.</p><h3>Should You Ask About Promotion Explicitly?</h3><ul><li><p><strong>Carly:</strong> As a director, I have a ton of reports. Sometimes I am proactive with initiating promotions, but you shouldn’t count on that. <strong>It’s always better to initiate conversations with your manager about promotion</strong> (assuming you’re open to feedback).</p></li><li><p><strong>Lee:</strong> Being open to feedback and actioning on it is necessary for promotion.</p></li><li><p><strong>Zach:</strong> On the other side, <strong>if you hear feedback that you don’t agree with then interview and see what other companies think</strong>. I’ve only been promoted once in my career. The rest of my promotions came from job hopping.</p></li><li><p><strong>Rahul:</strong> I agree with Carly that you should ask. It’s important how you ask though. <strong>Communicate that you want to be promoted but make sure you land meaningful impact first</strong>.</p></li><li><p><strong>Ryan:</strong> <strong>I’ve always been explicit with my managers about wanting to be promoted and it made a big difference for me.</strong> It shouldn’t be an uncomfortable conversation; your manager will likely be supportive.</p></li></ul><p><a href=\"https://youtu.be/Ax1NkLj9HLM\">Here’s the full video clip (~7 min)</a>.</p><h3>How Much Control Does Your Manager Have in Your Promotion?</h3><ul><li><p><strong>Ryan:</strong> If you are a high performer and you do a lot of great work for your manager, they will be more willing to help you grow to retain you. </p></li><li><p><strong>Lee:</strong> Even if your manager wants to promote you, they don’t have full control. <strong>Your manager needs to follow company processes.</strong></p></li><li><p><strong>Zach:</strong> Airbnb’s promotions before Staff were controlled by the manager. After that, it was promotion by committee.</p></li><li><p><strong>Lee:</strong> At Amazon, promotions were signed off by folks higher up in the management chain than just your manager.</p></li><li><p><strong>Ryan:</strong> There isn’t as much ambiguity in promotions to Senior so what your manager says is likely what will happen. <strong>Starting at Staff your manager is just a messenger for the promotion committee and has much less control.</strong></p></li></ul><p><a href=\"https://youtu.be/c5-nZcDWvfs\">Here’s the full video clip (~3 min)</a>.</p><h3>What Kind of Team Should You Choose for Growth to Staff?</h3><ul><li><p><strong>Rahul:</strong> Working on <strong>teams that are a top company priority</strong> will generally help you get promoted.</p></li><li><p><strong>Lee:</strong> Although often true, that doesn’t mean that you can’t get promoted on teams that work on lower priorities. There can be opportunities to create Staff scope.</p></li><li><p><strong>Carly:</strong> The most important thing for me was <strong>finding a team with work I enjoyed</strong>. Finding teams like this led to me doing my best work and helped me grow faster.</p></li><li><p><strong>Ryan:</strong> Up to Senior, team choice doesn’t matter that much since most teams have sufficient scope. <strong>For Staff+ growth, I’ve noticed that there tend to be more opportunities on infrastructure teams than on product teams.</strong> Staff+ engineers in product orgs tend to have leverage through leading large projects (there are fewer spots). Infrastructure teams tend to have natural leverage through the technology itself (there are more spots).</p></li><li><p><strong>Zach:</strong> +1 to infrastructure having more leveraged opportunities in my experience.</p></li></ul><p><a href=\"https://youtu.be/ju6QfVfPxqU\">Here’s the full video clip (~7 min)</a>.</p><h3>Additional Questions:</h3><ul><li><p>How many hours did you work for your Staff promotion? (<a href=\"https://youtu.be/UIHaa4Cj94Y\">~2 min video clip here</a>)</p><ul><li><p><strong>Ryan, Carly, Zach, and Rahul:</strong> Often worked much more than 40+ hours</p></li><li><p><strong>Lee:</strong> I didn’t work extra. I focused on being a force multiplier so I could have more impact with less time spent.</p></li></ul></li><li><p>How do you avoid being down-leveled when you interview at FAANG? (<a href=\"https://youtu.be/fIkxvDaEP08\">~2 min video clip here</a>)</p><ul><li><p><strong>Lee:</strong> You aren’t getting down-leveled, you’re getting leveled correctly for the scope of the work you do. Besides the pay is often much better at FAANG.</p></li><li><p><strong>Zach:</strong> I got an 80% pay bump when I was down-leveled in FAANG so it was a no-brainer for me.</p></li><li><p><strong>Ryan:</strong> Levels are arbitrary. <strong>The scope of your work is what matters most.</strong> Compare that across companies to see where you stand.</p></li></ul></li><li><p>Does seniority lead to more opportunities? (<a href=\"https://youtu.be/2uETXxOunXQ\">~2 min video clip here</a>)</p><ul><li><p>Ryan: Often yes, but it isn’t the only way. <strong>If you are visible and have a strong internal brand, people will give you opportunities.</strong></p></li><li><p>Lee: Your title opens the door but organizational trust is what matters. If you have a Director level sponsor, doors will open for you.</p></li></ul></li><li><p>How can remote employees compete with in-person employees? <a href=\"https://youtu.be/gyEFOb34rQg\">(30 sec video clip here)</a></p><ul><li><p>Zach: I’ve worked full-remote mostly. The way to do this is to <strong>create documentation and communicate well in writing</strong>. </p></li></ul></li></ul><div><hr></div><p>This is my first time experimenting with video content about career growth. The <a href=\"https://www.youtube.com/watch?v=_4_w2urNZ8Y&amp;list=PLmvMm6hsJgCdVX11AF3vuP_RN3k9dGquL\">full playlist of clips is up on YouTube here</a> if you want to listen to it in the background. Let me know what you think about it compared to writing and I’ll keep it in mind for future content I create.</p><p>If you found this useful, <strong>please share it with a friend and consider subscribing if you haven’t already.</strong></p><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 52,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 52,000 readers this week 🙏 🎉",
+  "wordcount": 1188,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "f4df2d6e-046e-448c-b0bf-6dd4ae5a5a6a",
+      "publication_id": 1340878,
+      "name": "To Staff",
+      "slug": "to-staff",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        193,
+        97,
+        76
+      ],
+      "population": 3
+    },
+    "DarkVibrant": {
+      "rgb": [
+        28,
+        20,
+        84
+      ],
+      "population": 1
+    },
+    "LightVibrant": {
+      "rgb": [
+        245,
+        227,
+        213
+      ],
+      "population": 303
+    },
+    "Muted": {
+      "rgb": [
+        154,
+        106,
+        94
+      ],
+      "population": 184
+    },
+    "DarkMuted": {
+      "rgb": [
+        87,
+        54,
+        41
+      ],
+      "population": 302
+    },
+    "LightMuted": {
+      "rgb": [
+        223,
+        201,
+        192
+      ],
+      "population": 195
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 61,
+  "comment_count": 4,
+  "child_comment_count": 2,
+  "audio_items": [
+    {
+      "post_id": 142200035,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/142200035/tts/7607a2e1-a0d0-4e68-bd78-c46ac8340bd9/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 50839278,
+      "body": "I got a lot of insights from the time I watched the recording. Thanks for distilling yours here, Ryan!\n\nI hope to see in the near future a post about your journey with YouTube and video content. It's always interesting to see the backstage of other creators!\n",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I got a lot of insights from the time I watched the recording. Thanks for distilling yours here, Ryan!"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I hope to see in the near future a post about your journey with YouTube and video content. It's always interesting to see the backstage of other creators!"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 142200035,
+      "user_id": 170998285,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-03-03T17:16:59.944Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Fran Soto",
+      "photo_url": "https://substackcdn.com/image/fetch/$s_!XWMk!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F10f90fdb-11ac-48b4-8f51-6a59e07763d2_1149x1149.png",
+      "handle": "fransotodev",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 0
+      },
+      "reaction_count": 0,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "fransotodev",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Strategize Your Career",
+          "id": 1974191,
+          "base_url": "https://strategizeyourcareer.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 1,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    },
+    {
+      "id": 50715630,
+      "body": "Thank you for the summary! I’m in the process of preparing a promotion package to Staff Engineer. Majority of the recommendations agree with my experiences so far. Maybe specific to my company as well but joining high visibility projects backed with strong written communication and documentation gave me the most traction.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Thank you for the summary! I’m in the process of preparing a promotion package to Staff Engineer. Majority of the recommendations agree with my experiences so far. Maybe specific to my company as well but joining high visibility projects backed with strong written communication and documentation gave me the most traction."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 142200035,
+      "user_id": 122984758,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-03-01T18:11:14.134Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Tomasz",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/1fb5908d-8f59-4c35-918c-c7b9efb54f70_144x144.png",
+      "handle": "blackbearrrd",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 0
+      },
+      "reaction_count": 0,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "blackbearrrd",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 1,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

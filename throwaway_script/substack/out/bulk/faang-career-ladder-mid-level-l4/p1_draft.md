@@ -1,0 +1,13 @@
+Here are the takeaways from this Ryan Peterman article on the FAANG career ladder, comparing mid-level (L4) and senior (L5) engineers:
+
+**Team-Level Influence as the Core Difference**
+
+The L4 → L5 gap is larger than the L3 → L4 one because L5 promotion requires significant behavior changes. L5s are expected to lead and influence their teams. The key difference is behavioral: "I wouldn't say the L5 examples are harder. They just require a mindset shift to own things at the team level." You can see how soft skills start to become more important at L5 since you're expected to lead and influence others. Ryan illustrates this across three dimensions: improving the codebase (L4 initiates refactoring; L5 identifies areas of improvement, influences the team to take goals on improving it together, then leads the charge), production excellence (L4 participates in oncall; L5 creates an "oncall improvement" workstream and builds a process for everyone to make the team's oncall better), and project direction (L4 owns project management of a medium-to-large feature; L5 drives team planning and builds a roadmap of several medium-to-large features).
+
+**Project Scope Criteria**
+
+L5s should handle larger-scope projects. Big tech companies measure scope along several criteria, and these criteria "aren't a checklist. Your work can be L5 scope by meeting only some of these criteria." Ryan notes that your manager will use these criteria to argue that your work is L5 scope, which is one of the reasons why "it's important to align with your manager on your work's scope. If you only work on L4 scope, you won't get any closer to promotion, no matter how good your work is."
+
+**Mentorship and Team Culture**
+
+L5 is the first level where engineers are expected to grow others. L4s just need to be good team players, while L5s are responsible for mentoring others and building up the team's culture. Example L5 team culture contributions include knowledge sharing (writing wikis, organizing knowledge-sharing presentations, contributing to Q&A groups), recruiting activities (interviewing, outreach, attending college career fairs), and team activities (organizing happy hours, social activities, bug bashes). These contributions are "necessary, but not the top priority. Influence and impact are much stronger drivers of promotion to L5." For L4s looking to grow to L5, Ryan recommends focusing on influence and impact first—if you do that, "you'll get promoted quickly (~2-3 halves)."

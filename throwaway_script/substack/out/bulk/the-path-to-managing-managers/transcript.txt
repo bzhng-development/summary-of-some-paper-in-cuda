@@ -1,0 +1,91 @@
+👋 Hi, this is Ryan with another edition of my newsletter about software engineering and career growth. ​​Thanks to your support, we hit 101k readers this week!
+
+Today’s post is from James Stanier who is an engineering director at Shopify. He’s written two books on engineering management (book1, book2), and I’ve found a lot of his writing online helpful for understanding manager career growth.
+
+Today, he’s sharing about the path to managing managers, which is interesting since career growth and strategy for managers is very different from early IC career growth:
+
+For more from James, I recommend you follow him on LinkedIn or subscribe to his newsletter. He writes high-quality posts on engineering management.
+
+Here’s James:
+
+How do you end up being one of those people that manages managers?
+
+No doubt you’ve seen Director of…, Head of…, and VP roles advertised externally, especially at large software companies. However, often there’s a Catch-22 situation that you’ll face: they’re typically looking for people who have had experience doing it before. Or even if they say that they aren’t, what chance will you have in the recruitment process if you’re up against others who’ve been there and done that? Now, of course, you might get lucky. But maybe there are ways of preparing to make yourself even more lucky.
+
+Let’s think about preparing yourself for the leap to managing managers. I believe that you stand the most chance of being able to make the next progression step if you find yourself at the union of a majority of the following characteristics and situations:
+
+  - You’ve been an Engineering Manager for a decent amount of time (say, 2-5 years) and have a provable track record of shipping and people management, with references that can back you up. After all, if you’re running multiple teams, you’ll need to know how to run one team inside out.
+
+You’ve been an Engineering Manager for a decent amount of time (say, 2-5 years) and have a provable track record of shipping and people management, with references that can back you up. After all, if you’re running multiple teams, you’ll need to know how to run one team inside out.
+
+  - You’re already working for a company with a strong management culture with clear career progression tracks for managers and individual contributors. This means that if the role opens up where you already work, it’s clear how to put yourself forward for it. It’ll also mean you’re learning and practicing the right skills.
+
+You’re already working for a company with a strong management culture with clear career progression tracks for managers and individual contributors. This means that if the role opens up where you already work, it’s clear how to put yourself forward for it. It’ll also mean you’re learning and practicing the right skills.
+
+  - You’re at a company that is changing fast and tends to be unable to keep up with the chaos. This often occurs during periods of rapid growth, or even via shake-up – through downsizing, mergers and acquisitions – any event that begins to question the current shape of the org chart being correct for the foreseeable future.
+
+You’re at a company that is changing fast and tends to be unable to keep up with the chaos. This often occurs during periods of rapid growth, or even via shake-up – through downsizing, mergers and acquisitions – any event that begins to question the current shape of the org chart being correct for the foreseeable future.
+
+  - You have a good presence online via the usual social channels: LinkedIn, Twitter, Github, and so on. This way if people are trying to find people like you elsewhere, they can.
+
+You have a good presence online via the usual social channels: LinkedIn, Twitter, Github, and so on. This way if people are trying to find people like you elsewhere, they can.
+
+Now, of course, it is entirely plausible that you may apply cold for a Director of Engineering role as an external applicant while currently being an Engineering Manager. That’s what I meant by getting lucky above. Quite often more senior engineering management positions are either headhunted or promoted from within.
+
+But why is this?
+
+  - The more senior the managerial position, the more risky a bad hire is. That’s why excellent internal candidates always have the upper hand: they are a known entity that likely already has domain knowledge. They’re also far more likely to have the company take a chance on the new gig working out. Even better: smart companies will do a 30-60-90 plan that allows the promoted member of staff to revert to their old role amicably if it’s not working out.
+
+The more senior the managerial position, the more risky a bad hire is. That’s why excellent internal candidates always have the upper hand: they are a known entity that likely already has domain knowledge. They’re also far more likely to have the company take a chance on the new gig working out. Even better: smart companies will do a 30-60-90 plan that allows the promoted member of staff to revert to their old role amicably if it’s not working out.
+
+  - Good companies will look out for their staff first and seize opportunities to offer career progression to retain existing talent. I don’t have any statistics on how many manager-of-manager roles get filled and are never advertised externally, but I’d reckon it’s maybe in the 70%+ region. If you hire good people consistently, you’ll always have someone great progressing up the ranks. Why look elsewhere, unless you need to bring in someone specific, such as a candidate with key domain knowledge that is lacking at the company?
+
+Good companies will look out for their staff first and seize opportunities to offer career progression to retain existing talent. I don’t have any statistics on how many manager-of-manager roles get filled and are never advertised externally, but I’d reckon it’s maybe in the 70%+ region. If you hire good people consistently, you’ll always have someone great progressing up the ranks. Why look elsewhere, unless you need to bring in someone specific, such as a candidate with key domain knowledge that is lacking at the company?
+
+  - The need to find a manager of managers (in my experience) is rarely something that undergoes extensive planning. During periods of rapid growth, the number of staff in the department may start stacking up to the point that existing teams need to be split into smaller ones, thus creating opportunities for a node in the org chart above those teams. Sometimes an existing manager of managers will quit and filling that void internally, on a tight timeline, is much easier than reaching outside the company. Or perhaps two organizations merging create a bunch of empty nodes in the org chart needing urgently to be filled. Often you look within.
+
+The need to find a manager of managers (in my experience) is rarely something that undergoes extensive planning. During periods of rapid growth, the number of staff in the department may start stacking up to the point that existing teams need to be split into smaller ones, thus creating opportunities for a node in the org chart above those teams. Sometimes an existing manager of managers will quit and filling that void internally, on a tight timeline, is much easier than reaching outside the company. Or perhaps two organizations merging create a bunch of empty nodes in the org chart needing urgently to be filled. Often you look within.
+
+These are all opportunities you can more likely seize if you make sure you’re already working for an ambitious, high growth company and are doing a stellar job of running a team. This is no small feat in itself, mind you.
+
+Start-ups, or smaller high growth companies in general, are great for giving yourself this opportunity, especially ones that have just received a new venture capital investment. An injection of money means an injection of people, which creates more opportunities for leading them as the org chart adapts. I advocated strongly for the managerial opportunities that high-growth start-ups can offer you in the penultimate chapter of my book. After all, how do you reckon many CTOs became CTOs for the first time?
+
+So where am I going with this? To use the cheesiest quote, you’ve gotta skate where the puck is going. (Thanks Wayne.) Yes, you can keep an eye on external adverts, apply to anything and everything, and hope you land the job. However, depending on where you currently work, it may be more fruitful to change your role sooner at your current level – which is often easier – to stand more of a chance of upward growth over time.
+
+There are parallels here with the early stages of an individual contributor’s career. It’s often hard to land that first job because the applicant has yet to prove themselves. However, once they’ve stuck around for a few years and have gained experience by shipping lots of code, they find themselves having to bat the recruiters away.
+
+The same thing is true about progressing further up the management track. Getting your first management role is tough, but you only have to do it once to prove you can do it again. The same is true about the next step of managing managers. People often grow from within by being excellent performers and working their way upwards.
+
+If you’re looking to grow from managing individual contributors to managing managers, think about the following points.
+
+  - How likely will this be possible at your current company within a reasonable timeframe? If it’s not, you might need to look elsewhere sooner rather than later.
+
+How likely will this be possible at your current company within a reasonable timeframe? If it’s not, you might need to look elsewhere sooner rather than later.
+
+  - Is your current Engineering Manager role defined similarly to how other notable companies in the industry define it? If not, why not? The more your current EM role fits that of the best employers in the industry, the better chance you have of moving sideways and upwards.
+
+Is your current Engineering Manager role defined similarly to how other notable companies in the industry define it? If not, why not? The more your current EM role fits that of the best employers in the industry, the better chance you have of moving sideways and upwards.
+
+  - How many years of experience in this role do you have? I would expect a manager of managers to be a high growth EM with at least a few years of tenure.
+
+How many years of experience in this role do you have? I would expect a manager of managers to be a high growth EM with at least a few years of tenure.
+
+  - What notable infrastructure, features or products have you shipped while being an EM?
+
+What notable infrastructure, features or products have you shipped while being an EM?
+
+  - Are you seen as an influential person in your current department? Do people outside your team seek your advice? If not, why not?
+
+Are you seen as an influential person in your current department? Do people outside your team seek your advice? If not, why not?
+
+  - Have you coached anyone outside of your team? If not, I’d advise you to start giving it a go.
+
+Have you coached anyone outside of your team? If not, I’d advise you to start giving it a go.
+
+  - Have you found anyone else doing this role at your existing company, your network or online? Get in touch with them to see if they’ll have a chat with you about what it’s like to do that job, and ask them how they got into it. What changed for them when compared to just running one team? What happened to their time to contribute technically?
+
+Have you found anyone else doing this role at your existing company, your network or online? Get in touch with them to see if they’ll have a chat with you about what it’s like to do that job, and ask them how they got into it. What changed for them when compared to just running one team? What happened to their time to contribute technically?
+
+What’s your current story? Does it feel like you’re ready for the next step? Have you already been working at the level of your next promotion?
+
+Until the next one, good luck!

@@ -87,9 +87,7 @@ async def fetch_search_page(page, keyword: str, page_idx: int, size: int = 200) 
     await page.goto(url, wait_until="domcontentloaded", timeout=60_000)
     await page.wait_for_selector("li.arxiv-result", timeout=30_000)
     # Expand all "more" abstracts so the full text is in the DOM.
-    await page.evaluate(
-        """() => document.querySelectorAll('a.abstract-full').forEach(a => a.click())"""
-    )
+    await page.evaluate("""() => document.querySelectorAll('a.abstract-full').forEach(a => a.click())""")
     results = await page.eval_on_selector_all(
         "li.arxiv-result",
         """nodes => nodes.map(n => {
@@ -116,14 +114,27 @@ async def fetch_search_page(page, keyword: str, page_idx: int, size: int = 200) 
 FIRST_PERSON_AFFIL_PATTERNS = {
     "LinkedIn": [
         re.compile(r"\b(at|from|by)\s+linkedin\b", re.IGNORECASE),
-        re.compile(r"\blinkedin('s)?\s+(team|researchers|recommendation|search|feed|production|system|platform|engineering|deploy)", re.IGNORECASE),
-        re.compile(r"\bwe\s+(deploy|present|introduce|propose|describe|launch|build).{0,80}\blinkedin\b", re.IGNORECASE),
+        re.compile(
+            r"\blinkedin('s)?\s+(team|researchers|recommendation|search|feed|production|system|platform|engineering|deploy)",
+            re.IGNORECASE,
+        ),
+        re.compile(
+            r"\bwe\s+(deploy|present|introduce|propose|describe|launch|build).{0,80}\blinkedin\b", re.IGNORECASE
+        ),
         re.compile(r"\bdeployed\s+(at|on|in)\s+linkedin\b", re.IGNORECASE),
     ],
     "Meta / FAIR": [
-        re.compile(r"\b(at|from|by)\s+(meta\s+ai|fair|facebook\s+ai\s+research|meta\s+platforms|meta\s+gen.?ai)\b", re.IGNORECASE),
-        re.compile(r"\b(meta\s+ai|fair|facebook\s+ai\s+research)('s)?\s+(team|researchers|model|llama)\b", re.IGNORECASE),
-        re.compile(r"\bwe\s+(deploy|present|introduce|propose|describe|launch|build|train).{0,80}\b(meta\s+ai|fair|facebook)\b", re.IGNORECASE),
+        re.compile(
+            r"\b(at|from|by)\s+(meta\s+ai|fair|facebook\s+ai\s+research|meta\s+platforms|meta\s+gen.?ai)\b",
+            re.IGNORECASE,
+        ),
+        re.compile(
+            r"\b(meta\s+ai|fair|facebook\s+ai\s+research)('s)?\s+(team|researchers|model|llama)\b", re.IGNORECASE
+        ),
+        re.compile(
+            r"\bwe\s+(deploy|present|introduce|propose|describe|launch|build|train).{0,80}\b(meta\s+ai|fair|facebook)\b",
+            re.IGNORECASE,
+        ),
     ],
     "Instacart": [
         re.compile(r"\b(at|from|by)\s+instacart\b", re.IGNORECASE),
@@ -149,7 +160,7 @@ async def fetch_abs_authors(page, arxiv_id: str) -> list[dict]:
     try:
         await page.goto(url, wait_until="domcontentloaded", timeout=45_000)
         await page.wait_for_selector("div.authors", timeout=15_000)
-    except Exception as e:
+    except Exception:
         return []
     # Authors block is `<div class="authors">Authors:<a>Name</a>, ...</div>`
     # — affiliations aren't always shown inline on the abs page. The fuller
@@ -198,7 +209,7 @@ async def go(args: argparse.Namespace) -> int:
                 continue
             try:
                 already_seen.add(json.loads(line)["arxiv_id"])
-            except (json.JSONDecodeError, KeyError):
+            except json.JSONDecodeError, KeyError:
                 continue
         logger.info("resume: {} arxiv_ids already in output", len(already_seen))
 
@@ -235,12 +246,10 @@ async def go(args: argparse.Namespace) -> int:
                     for r in results:
                         if r["arxiv_id"] not in candidates:
                             candidates[r["arxiv_id"]] = r
-                    logger.info("[{}] page {}: +{} results (cumulative {})",
-                                kw, p_idx, len(results), len(candidates))
+                    logger.info("[{}] page {}: +{} results (cumulative {})", kw, p_idx, len(results), len(candidates))
 
             todo = {aid: row for aid, row in candidates.items() if aid not in already_seen}
-            logger.info("[{}] {} candidates, {} new to triage",
-                        org.label, len(candidates), len(todo))
+            logger.info("[{}] {} candidates, {} new to triage", org.label, len(candidates), len(todo))
 
             for aid, row in todo.items():
                 abstract = row.get("abstract") or ""
@@ -269,13 +278,12 @@ async def go(args: argparse.Namespace) -> int:
                 already_seen.add(aid)
                 n_verified += 1
 
-            logger.info("[{}] done — verified {} / rejected {} of {} new",
-                        org.label, n_verified, n_rejected, len(todo))
+            logger.info("[{}] done — verified {} / rejected {} of {} new", org.label, n_verified, n_rejected, len(todo))
 
         await browser.close()
 
     out_fh.close()
-    print(f"\n=== done ===")
+    print("\n=== done ===")
     print(f"  output:    {args.output}")
     print(f"  verified:  {n_verified}")
     print(f"  rejected:  {n_rejected}")
@@ -285,7 +293,12 @@ async def go(args: argparse.Namespace) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--output", type=Path, default=Path("local_data/playwright_org_papers.jsonl"))
-    ap.add_argument("--pages-per-query", type=int, default=4, help="Pages of 200 results to walk per keyword. Default 4 = up to 800 results per keyword.")
+    ap.add_argument(
+        "--pages-per-query",
+        type=int,
+        default=4,
+        help="Pages of 200 results to walk per keyword. Default 4 = up to 800 results per keyword.",
+    )
     ap.add_argument(
         "--orgs",
         type=lambda s: [x.strip() for x in s.split(",") if x.strip()],

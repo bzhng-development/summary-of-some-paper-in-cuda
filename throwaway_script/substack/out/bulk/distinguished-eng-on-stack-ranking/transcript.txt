@@ -1,0 +1,1043 @@
+Bryan Cantrill was a distinguished engineer at Sun Microsystems and has now founded his own company called Oxide Computer Company. We discussed his career experiences through boom/busts, what competing with Bezos was like, and career regrets.
+
+Check out the episode wherever you get your podcasts: YouTube, Spotify, Apple Podcasts.
+
+
+## Timestamps
+
+
+00:00:42 - Working at Sun Microsystems
+
+00:10:17 - His growth to distinguished eng
+
+00:19:14 - Why goaling on promotion is bad
+
+00:29:34 - Stack ranking and layoffs
+
+00:36:00 - Why he hated the Oracle acquisition
+
+00:44:19 - Why Bezos is the apex predator of capitalism
+
+00:48:04 - Differences between CTO and VP
+
+00:49:58 - Starting his own company
+
+01:02:37 - Grilling him on his past
+
+01:11:57 - AI boom and bust advice
+
+01:14:41 - When he was happiest in his career
+
+01:17:22 - Top career regret
+
+01:19:21 - Advice for younger self
+
+
+## Transcript
+
+
+
+## 00:00:42 — Working at Sun Microsystems
+
+
+Ryan:
+
+[00:00:42] Your career started at Sun Microsystems and that’s kind of a legendary company. It was before my time. What was the industry like when you first entered it? Was there FAANG equivalence at the time? What was Sun Microsystems like? What were the other companies like?
+
+Bryan:
+
+[00:01:04] Yeah, you know, it’s kind of funny cause there’s always been like a FAANG kind of equivalent. You know, in the 60s it was called the bunch. Burroughs, UNIVAC, NCR control data and Honeywell were the bunch. It was IBM and the Bunch. So for kind of every era there’s always some hot group, some growing sector. And in my day though, so things were, I mean, I think in a bit of a divot. So I graduated in 96, so I was really interviewing in 95.
+
+[00:01:37] And there was for sure on campus interviews happening. But Microsoft was very dominant in that era. And I definitely knew I was not going to go to Microsoft as a kind of a point of principle.
+
+Ryan:
+
+[00:01:52] Why was that?
+
+Bryan:
+
+[00:01:54] Oh, I view Bill Gates robbed me of my childhood. Microsoft had such garbage. I mean, they really did. In what sense? Their operating system was. You know, I came up in the personal computer era, so I came up in the 80s. And it wasn’t until, you know, I went to University in 1992 and it wasn’t, you know, I had just been accustomed to kind of like garbage on the computer. And it’s like it’s garbage in a way that is kind of unfathomable.
+
+[00:02:25] Now DOS itself, the disk operating system from Microsoft had no memory protection whatsoever. So if an application misbehaved, the machine would just reboot. And this just became like part of life. It’s like the machines reboot. You gotta boy, you gotta save your work because you’d be in WordPerfect or WordStar, whatever. This is where I sound like a true like living fossil. I feel like I’m relaying like coming across the Oregon Trail or something.
+
+[00:02:51] But you’d be in your word processor, you know, working on your English paper and all of a sudden the machine would reboot. And actually that was just, that was life. And you hope you saved it, hope you had a hard copy. And it was only when I got to college that I realized like, wait a minute, hold on, there’s actually something called there’s memory protection in the microprocessor. And for much of my adolescence there had been memory protection present and DOS didn’t use it at all.
+
+[00:03:18] And the, and Windows used it. I mean with Windows it gets complicated. But the answer, the short answer is Windows didn’t use either. And so it wasn’t until I got to like Unix on a workstation. And I just remember being like, you know, 18 years old and having like having a command line shell up in one window, having an FTP to woo archive, downloading some like EGA game that I would want to go play back in my dorm in another window, having something else going on in a third window, having a compile in a fourth window and having this happen magically concurrently was just mind bending.
+
+[00:03:55] It’s like, how is this even possible? I mean again it sounds, and I appreciate how old this sounds, but this is what it was. And then looking back I’m like, why do I have garbage from Microsoft? And Microsoft was just not an operating system company. They were the dominant operating system provider. But in their DNA, the most fundamental, like the nucleotide base pairs of Microsoft are compilers.
+
+[00:04:21] They were a compiler company, not an operating systems company. And Apple was, you know, Apple, what was Apple at that time? I mean Apple had this is long fired Steve Jobs. This is the, the Apple was kind of the Mac was really honestly not that much better. It was like cleaner but also didn’t make use of memory protection. So this is just like unconscionable to me. And there was just, and this is like aside from all the bad behavior from Microsoft, and there was plenty of bad behavior from Microsoft.
+
+[00:04:48] Microsoft was very anti competitive. And you know, the findings of fact in the Netscape, you know, years later would be just very underhanded, very wanting to. It was not a company that had the best technology. It was a company that jockeyed for position and then would kind of abuse its position.
+
+Ryan:
+
+[00:05:08] What’s the TLDR of that abuse?
+
+Bryan:
+
+[00:05:12] So what Microsoft would do and this is a pattern you would see repeated since. But what Microsoft would do is they would announce, you know, you’re a promising company that has something that’s, that’s a application that people might use. They would announce that it’s going to become a forthcoming feature of the operating system. But as it turns out then it wouldn’t show up. It was vaporware that the term vaporware, I think if it didn’t originate with Microsoft.
+
+[00:05:38] Microsoft definitely perfected the art of vaporware, of announcing something that didn’t exist. And they were kind of dominant with this mediocrity. Now to their credit they also when they went in. So for example Microsoft Word, which I mean still exists but WordPerfect was the really the dominant word processor. WordPerfect and WordStar but Microsoft Word was very bad and to their credit it would get better over time and ultimately supplanted WordPerfect in part because they started bundling it with the operating system.
+
+[00:06:10] So they, they were very deeply anti competitive. And that’s not like an opinion, that’s like a, that’s just a judicial finding of fact. That’s a judge Alsop finding a fact. And that changed a lot when Gates, I mean Gates when he hit middle age, that company changed a bunch. And after the antitrust case in the late 90s. But I was not going to work for Microsoft.
+
+Ryan:
+
+[00:06:32] I saw in your goodbye post for from Sun Microsystem when you were leaving the company you wrote public post and you said that when you joined the company and you interviewed you only knew two things that you one, you wanted to work on an operating system kernel development and two is that you didn’t particularly want to work for sun but it looks like you had an amazing time. So what flipped the switch from going from I don’t want to work here to I love working here.
+
+Bryan:
+
+[00:07:05] So the, when I, I had kind of talked with other groups at sun and I just like the people I dealt with at sun were fine, but just not where it didn’t feel energizing. And certainly PBN did not feel energizing. And I was kind of accustomed to being the youngest person in a group. But you don’t wanna be completely by your lonesome. You wanna feel like there are other people that have that kind of, that same shared passion.
+
+[00:07:32] And when I met Kevin Clark and Jeff Bonwick, it was like a bolt of lightning. Those two were energized, passionate really. They saw all of the same things that I saw in terms of the pot operating systems to be innovative and were and wanted to go, like, rip out broken code and replace it with, with beautiful code and all that. That same verve that, that I felt. And yeah, it was, it was absolutely.
+
+[00:08:03] Meeting those two. You’re just like, okay, I, I, I. There are. I am going to work for Sun. I remember actually very vividly coming back from that trip being like, oh, my God, I’m going to go work for Sun. If they make, they’re going to make me an offer and I’m absolutely going to go work there.
+
+Ryan:
+
+[00:08:15] I saw that eventually you grew to a distinguished engineer there. And what was the career ladder like?
+
+Bryan:
+
+[00:08:22] It would be interesting to know where the kind of member of technical staff, staff engineer, senior staff engineer, distinguished engineer comes from. I think it might come from Sun. I think it’s possible that sun is the originating company. It’s also possible from Xerox parc. You’d have to kind of take it apart where. And I actually remember when, you know, I had interacted with some folks at sun and they’d give me a business card, and I remember like, coming out to sun, being like.
+
+[00:08:46] And not really knowing what my rank was. And I’m like, Because I was gonna make business cards, I’m like, why? I’m an engineer and I’m on staff. So I like, I think I’m a staff engineer. So. And, you know, I kind of go to make business cards. And then I kind of like didn’t, didn’t complete submission on the form or whatever. And then of course, it wasn’t that long afterwards. Everybody was like, oh, wait a minute.
+
+[00:09:03] That was like. That would have been like saying I had got tenure. Like, I definitely am not a staff engineer. I’m a member of technical staff. I was an MTS3. So the, there was the, uh, you would kind of climb up through those ranks and then to, to staff engineer, senior staff engineer, distinguished engineer.
+
+Ryan:
+
+[00:09:17] And three was the start of the.
+
+Bryan:
+
+[00:09:20] No, I mean, it’s supposed. I think it did start at MTS1. Um, no, most college hires would start at MTS2, but they, but I, I was an unusual college hire in a lot of ways.
+
+Ryan:
+
+[00:09:30] Interesting. So they brought you on two levels deep as a new grad.
+
+Bryan:
+
+[00:09:34] Yeah, yeah, yeah, that’s right. Um, I mean, I’d had a lot. I. So sun was actually not the first company I worked for. I worked for a company called QNX in Canada and I done kernel development there. So I had done OS development at QNX for two summers and done some, actually some work that I was, that I still think is actually. I love That I love working for qnx. I love being in Canada and really. And I had decided that I didn’t want to go back to QNX professionally.
+
+[00:10:01] That I did. The other thing I would say is I decided that I wanted to come out to Silicon Valley. I did not want to be. I’d gone to school in the Northeast, had worked in Canada, but I really wanted to come out to Silicon Valley.
+
+Ryan:
+
+[00:10:11] I see. So then when you, when you look at your journey growing from I guess this MTS3 to.
+
+Bryan:
+
+[00:10:17] Yeah.
+
+
+## 00:10:17 — His growth to distinguished eng
+
+
+Ryan:
+
+[00:10:17] Up to where you grew, like if you were to break down that. I guess the story behind that growth and kind of what are the highlights that, that stuck out to you, that made you grow?
+
+Bryan:
+
+[00:10:26] Yeah. So, I mean, I was not, I was very much not focused on my, my grade, my rank or promotion that was not on. I was not interested in that. My view was always like, I would much rather be under promoted than over promoted. I’d much rather be doing work where people are like, wait a minute, why are you back here? Like, what happened to you? That’s just. I am not interested in being kind of doing work performatively.
+
+[00:10:59] I was always going to do what I felt was the most important thing to go do. And sun was a company that was very accommodating of headstrong engineers. And so I, that’s what I, what I wanted to do was solve the problems that our customers had, make the operating system what I believed it could be, kind of realize that vision for what the OS could be. Sun was the only company, honestly in 1996 that was really invested in the operating system.
+
+[00:11:28] Every other company was mortgaging its future to Microsoft and Windows. And all these computer companies were giving up on their own operating system, giving up on Unix. It was really Unix’s darkest hour. And being in that group in Solaris Colonel development during those years was enormously energizing and allowed us to do all sorts of things. And then along the way you get promoted, right? Along the way, like, promotions were just the kind of thing that happened as you, as you went along the way.
+
+[00:11:56] I mean, sons became. I learned, I would say I took away a lot of life lessons in terms of what works and doesn’t work. I found that the cause, of course, we had formalized performance review. And I found this is like not a deep thought, but that formalized performance review never resulted in me having higher performance. And this is like, this is one of these things that you kind of like feels very naive to say because it’s like no dummy, like performance Review is not about you performing better.
+
+[00:12:28] It’s about us measuring your performance. It’s like, well, that’s not what it should be about. What it should be about is, like, what feedback is great. Like, we should be making everyone be the best that they can possibly be. And the, The. The. The formalized, the annual cadence of it, I felt was very broken. You know, we would have you submit a self review, of course, and then your review is like, oh, wow, my review looks stunningly like my self review, albeit with grammatical errors introduced.
+
+[00:12:57] And you know that in every review, even the reviews in which I was promoted, they were just not uplifting. Like, that was not. When I look back at the moments of, like, what were the highlights for me during that progression, it was never being promoted. It was always doing a significant body of work or nailing a hard bug or working with someone on something that we thought was impossible. Like, that was the stuff that.
+
+[00:13:21] That. That was really catalytic for me. And then this, like, son just kind of had to promote me along the way. Now, the one exception, though, I would say to that is that the. The promotion to Distinguished Engineer was very regrettable and stupid. I mean, not my promotion, but just in general. Like, the process. The process for being promoted at SUN was, I would say, very traditional in that, you know, you’re taking your folks that are performing very well and you’re promoting them up to the next grade.
+
+[00:13:48] The SUN did have a very silly process thing that, you know, they had three grades. They would give you superlative, excellent, and good. And then I think there was like a, you know, like 70% good, maybe 20% excellent, and 10% supportive, something like that. And they had this thing where if you were superlative, they had to promote you. Like, that was like the index for promoting you. Like, if you got that superlative grade, they promote you.
+
+[00:14:14] But also they had to promote you if they gave you that superlative grade. So you would. I had these. I had these reviews that were like, apologetic, being like, look, I have to give you an excellent grade, even though, like, the work that you’ve done over this past period has been extraordinary and innovative and actually better than the work that you did two years ago or a year ago. But I can’t actually give you the supportive grade because if I give you the supportive grade, I would have to promote you.
+
+[00:14:40] And we just promoted you a year ago, and it’s really like, we don’t want to promote people any faster than every 18 months. And you’re like, okay, does this make sense to you? I mean, this doesn’t like, I was just like, okay, if you’re satisfied with this. Fortunately, I just don’t care one way or the other, so. Sounds good. Okay. Can I get back to work now? Are we done here? It’s like, are we? And then again, trying not to be trolled by the grammatical reviews in my.
+
+[00:15:03] In the review that’s being handed to me. So now the difference for that was the. And you know, the promotion of staff engineers was a big deal. And like, great, fine. Actually, it was funny because all the staff engineers. So sun had this thing called keep, the key employee incentive program. And KEEP was effectively like an annual dividend. It was like a bonus. So, you know, and there was like a keep pool that was set across the company and, you know, kind of a traditional thing.
+
+[00:15:31] Right. And the. The metric was based on, like, company performance. That’s what they. And so I did hear when I was, you know, in mts 3 mts for the staff engineers, like, you know, they would get their keep bonus. And if the keep bonus is really good, they take everyone out to dinner. And it was kind of like, you know, it was like being at the mining town, right when there’s a big or strike or what have you.
+
+[00:15:49] Gold strike. So I was like, okay, wow, this is like, this will be great. So of course, I mean, just like, of course, like, when do I get promoted to staff engineer? It must have been in like 2000, 2001. I get promoted to staff engineer as like the dot com nuclear bomb goes off. And the keep bonus was. I never got like, keep bonus was zero. From then on out, sun lost 98% of its value in the public markets.
+
+[00:16:11] And like, I never. So it’s a good thing that I wasn’t doing it for the keep bonus because the keep bonus was zero. But then getting. So that’s what staff engineer, senior staff engineer, and then distinguished engineer was really unfortunate in that there were kind of two paths in to distinguished engineer. And this may be true of a lot of companies. I don’t know. I mean, I don’t have ranks at oxide for this reason.
+
+[00:16:33] Like, I think ranks are corrosive. I don’t think they get people to do their best work. I’m not interested in them. But the at sun, there were two ways to be a distinguished engineer. One was, of course, to be like, promoted from a senior staff engineer to a distinguished engineer. And that was a very, very. I mean, I would say rigorous, but it’s giving it far too much credit. It was a very political process.
+
+[00:16:54] The des would vote on whether you should be admitted to this country club of distinguished engineers, which is a terrible idea. Putting like, this is like the wrong place for democracy in a society. Right. For so many different reasons, but. So that’s how you would get promoted. Distinguished engineer. Very hard to get promoted. The other way to become a distinguished engineer is sun is buying your little company, is acqua.
+
+[00:17:18] Hiring your company. And the company’s got just enough leverage during that process to be like, oh, by the way, our CTO needs to be a deep. So you would have these like, DEs just kind of like, pop in the side. You’re like, who’s this? Like, oh, yeah, we acquired their company. So. And. And there was definitely a difference in, like, you knew the. The homegrown DEs versus the ones that had been. Had been aqua hired in.
+
+[00:17:42] But when I. And I actually, like. And this is like, I just do not want to even think about this process again, I’m not really a political person. Like, the last thing I want to do is. Fortunately, we had. I’d done work that was kind of so indisputable at that point that it was going to be. It was pretty clear that if sun is going to have such a rank, I was probably worthy of it. But again, I didn’t want to deal with it.
+
+[00:18:03] Sun’s CTO at the time, Greg Papadopoulos, very grateful to Greg. Greg had chartered this group that we developed actually in San Francisco, first on Mission called Fishworks, where we had developed a new storage product. Storage product was going to gangbusters. Was a great product, although a great product with asterisks on it wasn’t as great as we thought. It was mishap that we learned a lot about it.
+
+[00:18:27] But the product was doing really well. Greg, again, I was not in the meeting, so this was told to me secondhand. But your DE case needs to be presented by someone. Another de. Well, Greg presented my case, and so you had the CTO of the company. And son was not a very hierarchical company, and Greg was not a very hierarchical person. But Greg put apparently my materials up, and it’s like, I don’t expect anyone to vote against this.
+
+[00:18:51] Take your vote.
+
+Ryan:
+
+[00:18:52] He said that?
+
+Bryan:
+
+[00:18:53] Yeah. And apparently it was unanimous. So it’s like, thank you, Greg. Deeply appreciative. So, Greg, I didn’t have to deal with that bullshit because Greg was dealing with it for me. And it was kind of like, you know, honestly, it was kind of a validation of my hypothesis. Like, Greg honestly viewed it more of a reflection on the company than a Reflection on me, it’s like, great. I had done work that was, at some level, kind of indisputable, and that’s kind of the way I had wanted the chart my career.
+
+
+## 00:19:14 — Why goaling on promotion is bad
+
+
+Ryan:
+
+[00:19:14] There’s two schools of thoughts on. On, you know, how people structure their careers within these ladders. If a really ambitious new graduate engineer comes to you and they say, hey, I want to be a distinguished engineer one day, I have two ideas. One idea is I’m going to just focus on the work and just, you know, promotions will be a byproduct. Or I’m going to do the other thing where, you know, I talk to my manager.
+
+[00:19:41] I’m like, hey, how do I get to that next level? And hey, what are those things that the next level needs to do? And then I will do work that molds to that mold.
+
+Bryan:
+
+[00:19:51] Yeah. I would try to steer someone to a third path.
+
+Ryan:
+
+[00:19:54] What’s the third path?
+
+Bryan:
+
+[00:19:56] Why. Why do you want to be. What does it. Why do you want to be distinguished engineer? Because if that’s the goal, if the goal is to be a distinguished engineer, you get there, you’ll be distinguished engineer. Now what. I mean, you can be so fixated on that. It’s like, at some level that doesn’t actually, that’s not the thing that matters. That doesn’t give you meaning. And to me, if I had a young engineer who’s like, I want to be a distinguished engineer.
+
+[00:20:25] I’m like, that’s a recipe for a midlife crisis. So let’s try to dial you differently. And I think what I would steer someone to is what’s get you on a path that has meaning, where you’re going to be developing and what drives meaning for you. What’s important to you? And it’s like, well, what’s important to me is to be a distinguished engineer and be like, okay. I mean, you’d want to tease it apart, get them on the couch a little bit.
+
+[00:20:52] Like, why. I mean, are you not. Were you not loved enough as a child? Like, what’s going on? Like, you know, and you kind of work through some of these issues because you don’t want to be dependent on that kind of external validation. I would want to be like, let me introduce you to people who’ve achieved what you are putatively setting out as your goal and are miserable. Like, let me introduce you to some miserable des.
+
+[00:21:15] You want to be wealthy. Let me introduce you to some miserable wealthy people. So you know that it’s like, that can’t be. It there’s got to be something else that is the fuel in that furnace. And like let’s go find that thing. And then, then like the promotions will happen and the work will happen.
+
+Ryan:
+
+[00:21:35] Okay, but let’s say. Okay, Mentee comes to you and says, you have a good point. I want financial independence. A lot of people I think want that as they, they want to.
+
+Bryan:
+
+[00:21:46] Yeah. What’s financial independence though? Because like we are in such a well compensated domain. It’s like you and I right now could go out and get a cup of coffee that is the best cup of coffee. We’re in San Francisco, we’re in the Mission. We can get some coffee that is like some Ethiopian coffee, some amazing coffee that is like the, and that is attainable to you and me and to basically everyone else.
+
+[00:22:10] It’s like a six hour cup of coffee. Right?
+
+Ryan:
+
+[00:22:13] Yeah. Yeah. Well, okay, well let’s say you define it as you don’t need to work for money ever again.
+
+Bryan:
+
+[00:22:20] But then what this is like, okay, you don’t need to work for money ever again. Like okay, I get that. But, but so you can go off and do the thing that actually motivates you. Well then go off and do the thing that actually motivates you.
+
+Ryan:
+
+[00:22:30] But what if it doesn’t make money?
+
+Bryan:
+
+[00:22:31] Well, I think and I, this is where I, you want to take it apart and so like you want to find a way. I mean certainly you’re going to have things like the, the, the, the difference that you want to make, the meaning that you’re going to find is going to be something that’s like, yeah, this is, this is just not a career path at all. Like I can’t actually sustain myself at all. So then you need to find a way.
+
+[00:22:51] Balance that I would say with your career and you want to keep that balance. I think, I also think it’s a mistake to be like I’m going to achieve financial independence and then I’m going to do the thing that is meaningful to me. It’s like. And again you just. And I definitely had the blessing of most people were like me made a lot of money on paper in the dot com boom and just lost every penny of it.
+
+[00:23:14] I mean I had a loss carry forward for so many years that I actually like one year I lost track of my lost carry forward. I’m like so. But I had a lost carry forward and I was, you know, I had like fond memories of the dot com bubble when I would take my, whatever it was, $3,000 a year against my. From a Lost carry forward the. That was most people around here. Most people kind of like lost it all, but also were fine.
+
+[00:23:39] This is the other thing, like the dot com bust was super helpful because if you had geared yourself to be really economically motivated in 99, 2000, 98, 99, 2000, which would’ve been easy. 2001, 2002, 2003, like, that was not why you were here. Because this place was nuclear winter. And, and you had to, had to find something else. And I knew like, so the funny thing, I knew like lots of people that like had to remind themselves why they got in this and it wasn’t money.
+
+[00:24:10] I also knew people, I did know people that made a bunch of money in the dot com boom. The people that made a bunch of money in the dot com boom weren’t that interested in tech to begin with. So when it went up in, you know, late 99, 2000, they were like, I’m selling it all. Like, I actually don’t want to do this. And those people, and there are a couple of them that I knew and some of them really, really struggled in the next decade because they didn’t have to work for the rest of their lives.
+
+[00:24:35] But now what, like, you don’t have to work, so like now what do you do? And they were on their own search for meaning and like, not easy and going through periods of like, oh, like, I’ll buy six houses. Then you realize that like, six houses are kind of like a pain in the ass. It’s like you and I could go drink six cups of coffee concurrently, but you’re just like, what am I doing here? Am I just like proving that I can buy six?
+
+[00:24:56] So why do I want six houses? Okay, then you scale that way back. I mean, it gives you like, it really opens your eyes about what matters and what, what doesn’t matter. What doesn’t matter as much. Certainly you need to be able to provide for yourself and provide for, for a family. You want to be able to raise a family and so on. So you want to be able to have that, but you want to do that in a way that’s honestly sustainable.
+
+[00:25:19] I think that, that too many folks are focused on like, I’m going to do this so I can leave. It’s like, then maybe you shouldn’t be in this industry at all. Like, go do something. Go do the thing you would do when you left and find a way to do that in a way, like, and go pursue that dream and because you’ll be happier, you’ll have meaning doing that quit your job at Meta and become a podcaster, you know.
+
+Ryan:
+
+[00:25:40] Well, I did.
+
+Bryan:
+
+[00:25:43] Well,
+
+Ryan:
+
+[00:25:45] it’s interesting you say that because there’s this subreddit, this community that’s all about financial independence, earning enough. I’ll see a very regular post that says, guys, I did it and I don’t know what to do now. Exactly.
+
+Bryan:
+
+[00:26:03] Yeah, yeah, I did it. I did. And also, like, I geared. I mean, I think this is like, this is a problem, by the way, in engineering. Not even in. Even when the goal is. Has meaning, this is a problem. This is what I. This is what I call postpartum in engineering. When you are really focused on shipping something and you’re just like, shipping this thing is just the lens through which you’re doing everything.
+
+[00:26:24] And when we shipped our first rack of oxide, I was very concerned about, like, we are going to have postpartum and there are going to be people who are like, I was working so hard and pulling so hard for so long, and now we shifted and like, now what? And I’m. I. So even when the thing you’ve done is obviously meaningful and you’ve achieved something extraordinary, you’re going to have that when the thing you’ve also achieved is like, well, I can like buy any cup of coffee.
+
+[00:26:47] It’s like the thing I want. Like, now I’m not even, like, I got, like, what am I supposed to do? It’s just easy to see how you people wonder what the meaning of it really is. And then there are some people that just like, snip all the wires and they’re like, well, the meaning of it is to get even more. And then just like, you know, then you get like Larry Ellison or whatever. But like, that’s also not something that people should aspire to.
+
+Ryan:
+
+[00:27:09] Right. I. Well, what would you say? Because I, I do know someone who is genuinely happy just doing nothing. By doing nothing, I just mean, like relaxing in bed, you know, watching their shows, you know, going to. Hanging out with friends and stuff. Yeah, I mean, I think they had the billion dollars. They just do that every day. Yeah, but what you said doesn’t work in that case, because that doesn’t earn anything.
+
+Bryan:
+
+[00:27:36] You know, I actually did know a guy. I knew a guy. I actually did know a guy who did this.
+
+Ryan:
+
+[00:27:39] Who.
+
+Bryan:
+
+[00:27:40] I was thinking about people who made money in the dot com. I knew one of, I, I believe one of Yahoo’s like, first employees, but not because he was like crazy sharp or anything, because he, like, they. They wanted to hire a web surfer and he was like, A pothead who’s like this, like this sounds like the level of work that I’m a. So he gets a job as like a web surfer one at Yahoo, but as like employee number like single digit.
+
+[00:28:06] He gets the equity grant as part of like joining the company. Never gets another equity grant, but makes a king’s ransom because he’s very early at Yahoo, Never promoted above like web server rank one or whatever and was complaining to everybody about how much his job sucked. And it was like you surf the web for a living. Like you’ve somehow managed to like win this insane lottery where you’re getting paid to do like very close to nothing.
+
+[00:28:32] And he like when it started he owned like all of Yahoo in terms of like surfing. Because the way Yahoo worked you. You may be wondering what the hell am I talking about. Yahoo was a curated directory of links. This is again where I sound pre Google. Very much pre Google. This is like pre Google. This is not just pre Google. This is like pre Lycos, pre Hotbot, pre altavista.
+
+Ryan:
+
+[00:28:50] This is.
+
+Bryan:
+
+[00:28:51] This is like basically pre the ability to search the Internet. You would have these curated directory of links and someone needs to go like find this content. And it was like this guy, Yahoo employee number six or whatever he was. And so he originally like owned the entire directory. But he’s like not very good and not very energetic. It was like, you know, stoned all the time. So they kind of like carved.
+
+[00:29:13] And so finally he. I believe at the end before he finally quit, he owned only like snowboarding in Northern California. That’s what it was his like responsibility to. It’s like this is a job. And so that is the kind of person who was. And you would like to think that, that he found something that was actually meaningful to him, but clearly it was not the work, or work for that matter.
+
+
+## 00:29:34 — Stack ranking and layoffs
+
+
+Ryan:
+
+[00:29:34] Right. You said earlier there were these ratings. It was superlative, excellent, excellent, something like that.
+
+Bryan:
+
+[00:29:41] Yeah, yeah, yeah.
+
+Ryan:
+
+[00:29:41] I noticed you didn’t mention there’s. There’s a bad rating, right?
+
+Bryan:
+
+[00:29:44] There was a. Yeah, no there was not. Basically not sun. Did not the. The idea of like a PIP or the. The whole like rank and yank, which is what intel famously did the ranking yanking Yank.
+
+Ryan:
+
+[00:30:00] Is that was. Was that just Stack ranking?
+
+Bryan:
+
+[00:30:03] It was their name for Stack ranking. Yeah, it was ranking Yank. Yeah. Stock ranking is organizational cancer. It is. It is very, very, very bad news when you. Especially if you are going to terminate a bottom end percent that is. That’s death. I really think that is just a wall to wall terrible idea. Because you’ve incentivized people to have dead weight on their teams that they can. That.
+
+Ryan:
+
+[00:30:26] Oh, is that. Oh, so they have fodder.
+
+Bryan:
+
+[00:30:29] Got someone to throw into the wood chipper.
+
+Ryan:
+
+[00:30:31] Wait, so you think that a manager is strategically keeping around.
+
+Bryan:
+
+[00:30:35] Oh, I know so. I mean, that definitely happened to son. For sure. Oh, yeah, for sure. I mean, there were people that were like, why are they still here? Like, they don’t. They don’t not seem to be doing anything. And someone kind of took me aside and like, yeah, that person is in your best interest because, like, do you know what that person’s rating is? It is always, like, good. Like, they. They get a good.
+
+[00:30:54] So you can be an excellent or a superlative. And I’m again, I’m like, does this make sense to you? Like, why are we. Okay, so. No. All sorts of perverse incentives. All sorts of perverse incentives with stack ranking. Was that Stack ranking, fundamentally, stack ranking teaches you that your team are adversaries. And that’s a bad idea. That is. And it’s just not the way I want to operate. Like, my big belief is that teams do extraordinary things and that everybody should want to be serving the team.
+
+[00:31:27] It is the team that wins or loses, the team that succeeds. And I think that stack ranking really operates very much contrary to that.
+
+Ryan:
+
+[00:31:36] You mentioned that Sun. I mean, the stock price went down by 98%.
+
+Bryan:
+
+[00:31:42] Yeah. Trading below our cash at one point.
+
+Ryan:
+
+[00:31:45] I mean, was there not some management at some point saying, hey, we gotta. It’s time to.
+
+Bryan:
+
+[00:31:49] Oh, we did.
+
+Ryan:
+
+[00:31:50] I mean, mass layoffs.
+
+Bryan:
+
+[00:31:52] Oh, no, no. Sun did. I mean, sun resisted layoffs for a little while. Scott was kind of. Famously did not. McNeely famously did not want to lay people off. But that. Which was a mistake. He waited too long for that.
+
+Ryan:
+
+[00:32:02] That.
+
+Bryan:
+
+[00:32:03] But no, once the layoff started, I mean, I think at one point I counted the. The number of layoffs that had. The rounds of layoffs was like 35 layoffs. 35 rounds of layoffs over, like eight years.
+
+Ryan:
+
+[00:32:14] That’s. I mean, it’s more than. For a year.
+
+Bryan:
+
+[00:32:16] Yeah. Yeah, absolutely. Yeah. No, it was. It was brutal.
+
+Ryan:
+
+[00:32:19] That’s. That’s insane.
+
+Bryan:
+
+[00:32:20] You get these, like, small layoffs, big layoffs. I mean, this is actually before the War Act, I think, but you would get. We actually. I mean, this is dark, but we. You could. You could. There was an API effectively to the. Although this is like before the era of rest APIs. But there was a way to get the employee directory programmatically, and so we would run what we called the obits and the obits would run every day and would tell you who is no longer at the company.
+
+[00:32:49] And so you would see these small layoffs that were not actually like you. You would see, you know, a group that was like, oh. Or you would see. And then you would see like, oh, my God, like that’s 1500 people or that’s 3000 in today’s OB bits.
+
+Ryan:
+
+[00:33:01] Was the company aware that you had that access to that data?
+
+Bryan:
+
+[00:33:06] Son, Sun’s strength and weakness was that no one was truly in charge. So I mean, I think it would not have been. I would not have been surprising. But I mean, sun, to its credit, was a pretty transparent company. So I don’t think that we would have. I think that we weren’t violating any kind of policy. We were accessing a. We were accessing the. Org tool, which was the tool they had to show you kind of organizational layouts.
+
+[00:33:31] And we weren’t doing anything untoward. But it was a way for us to know like, what’s happening in the company as the. So no, it was layoff after layoff after layoff after layoff after layoff.
+
+Ryan:
+
+[00:33:40] I mean, 35 layoffs. It almost.
+
+Bryan:
+
+[00:33:44] Yeah, it’s crazy.
+
+Ryan:
+
+[00:33:45] I.
+
+Bryan:
+
+[00:33:45] But that was everybody too. Again, that was not like, like. Oh. I mean, the. It is hard to express the period from the. com bust when, you know, kind of pets. comcraters in the spring of 2000, they kind of ran on momentum until the end of 2000. And at the end of 2000, the dot com bubble truly, truly burst for everybody, for sun included. And 911 did not help. Right. And the economy was. Tech was basically dead for five years.
+
+[00:34:22] And Y Combinator is formed kind of at that. Y Combinator is, I think 2006, I see and starts to form, I think in part because I think get Graham’s perspective on this. But the. I mean, there was a. There was a capital deficit at that point. There were like people that could solve interesting things and there was like no way to start a company to go do it. So the. It was really, really bleak here for many, many years.
+
+Ryan:
+
+[00:34:50] I see slightly off topic, but I was stalking your Twitter and I saw that Paul Graham had blocked you. Do you know is Paul Graham blocked me?
+
+Bryan:
+
+[00:34:59] He did block me. I think he. Yeah, that was a point of pride that I did felt. I felt like I really arrived when Paul Graham blocked me. Yeah, Paul Graham blocked me. Yeah. I definitely feel like I’m on the right side of history on that one.
+
+Ryan:
+
+[00:35:08] Well, what do you think that was for.
+
+Bryan:
+
+[00:35:10] No, I know what that was for. That was for. I think that Paul Graham was defending some of the worst behavior of Richard Stallman. And the worst behavior of Richard Stallman does not age very well. It’s truly, truly some, some pretty gross kind of behavior. And he was defending that and I was attacking him for it and he was blocking me for that. So like, all right, I’ll take that. Yeah, I mean, Paul Graham is complicated for me.
+
+[00:35:36] There are a couple of people like this in Silicon Valley that are complicated in that there are says some things that I really strongly agree with and some things that I really strongly disagree with, often in the same sentence. So often you’re just like, my brain’s getting zapped. Like, okay, this is like wrong, but also not wrong. And so, yeah, you see, he’s a complicated one. There are a couple people like that.
+
+
+## 00:36:00 — Why he hated the Oracle acquisition
+
+
+Ryan:
+
+[00:36:00] I understand that Sun Microsystems was eventually acquired by Oracle. Invaded.
+
+Bryan:
+
+[00:36:05] Yeah.
+
+Ryan:
+
+[00:36:05] And I just want to know why was it so controversial at the time? There’s even a Wikipedia page that says the acquisition of Sun Microsystems and it’s almost like an obituary. And there’s a lot of top level engineers.
+
+Bryan:
+
+[00:36:20] Well, it was dramatic. There’s actually a really interesting SEC filing because it’s a public company that IBM and HP were both jockeying to try to buy sun and each was trying to sabotage the other and each was trying to get their. Because they almost wanted to buy sun punitively. They were both competitors with sun and while they were kind of screwing with one another, Oracle swept in and bought the company.
+
+[00:36:48] So Oracle, that happened really quickly. The actual acquisition itself was necessarily controversial. It took a while to close to the contrary. I mean, there’s nothing really controversial about Oracle because Oracle is what it is. Oracle is just. There’s not a lot of depth to Oracle. Oracle is just an octopus that knows how to feed itself. And the sun was very much not that way. Sun was. There was a level, I wouldn’t call it purism, but there was.
+
+[00:37:22] Sun was always endeavoring to do the right thing by its customers. Sun was endeavoring to solve hard, interesting technical problems that had commercial relevance. And it gave its engineers us tremendous freedom to go do so. And it tended to attract people that wanted to do that, that wanted to be bold. And it was a great place for that reason because it rewarded that kind of technical boldness. So that’s why NFS and Spark and Java and Solaris and then all the technologies that I worked on, all these things came out of Sun.
+
+[00:38:00] There were so many of these seminal technologies that came out of sun because of that kind of that passion and independence. Oracle doesn’t have any of that. That Oracle’s just like. Oracle truly is focused on, really on one thing, namely its own profitability, which is like, I thought when the acquisition happened, I’m like, well, this will be interesting because we’ll get someone with, like, great business savvy.
+
+[00:38:21] Maybe. One of the things that was frustrating me about sun is that sun on. In terms of business execution, sun fell down a bunch of times. And I thought we would have someone in Oracle that would be just better at the execution of a commercial enterprise. As it turns out, I was really overestimating Oracle. Oracle, really, about being able to get effectively a monopoly, a natural monopoly over its own customers, Asphyxiating competition and then raising the rent on its customers.
+
+[00:38:50] Like, that is really what Oracle wanted to go do. And it’s not a company I wanted to work for.
+
+Ryan:
+
+[00:38:56] I see. Because there’s a talk that you gave that where you really.
+
+Bryan:
+
+[00:39:01] I mean, you know, I didn’t even. Yeah, I know. You’re talking. The talk is the Lisa Talk from 2011.
+
+Ryan:
+
+[00:39:07] Yeah. Before you even got to talking about it, you said, I’m gonna try and make it through this slide without crying.
+
+Bryan:
+
+[00:39:14] Oh, that was on the slide.
+
+Ryan:
+
+[00:39:17] Yeah. Yeah. And then I think you were talking about Oracle and you said that they screw customers and lie. I guess you explained the screw customers part. But that’s the lie part of Oracle. Yeah.
+
+Bryan:
+
+[00:39:31] Oracle is. Has made many promises to its own customers that it does not keep. Oracle has not earned the trust of its customers. If you ask customers, do you trust Oracle, the answer to that will be no. And I would kind of let that speak for itself. Making that slide without crying bit was not about Oracle. That was about very much about Sun. And that was the. And Scott McNeely’s epitaph for sun. Kicked butt, had fun, didn’t cheat, loved our customers, changed computing.
+
+Ryan:
+
+[00:40:00] Yeah, you said that.
+
+Bryan:
+
+[00:40:00] Yeah, yeah. That was the bit that, like, it still chokes me up a little bit just because it. It’s true. It was true. And we. When we started Oxide, it’s like, adopted that as our own mission because that. That’s exactly what we wanted to go do at Oxide, and I thought was a very concise distillation of that. And that was just not Oracle. Oracle’s not interested in that. When.
+
+Ryan:
+
+[00:40:24] When a lot of the top engineers. It seems like there’s a. An exodus, a big exodus. Were people confiding with each other? Like, were you talking to other high level engineers, say, hey, we gotta get out of here.
+
+Bryan:
+
+[00:40:34] Oh yeah. Oh yeah. I mean, it’s not even like, I mean, you’re just like, you’re in a burning building. Are people confiding with one another they should leave the burning building? It’s like, no, actually people are just like running for their lives. I mean, you’re just not like, oh, what do you think of the burning building? Like, do you think the building is burning? What do you. And no, I mean, it was pretty clear and there were actually.
+
+[00:40:52] The real true jockeying came from those engineers. Before it actually closed, there were going to be some engineers that would be laid off before it closed. But as the acquisition closed, in other words, there were some people that were sun employees that were not going to be Oracle employees.
+
+Ryan:
+
+[00:41:10] ACWA laid off. Like, they wouldn’t, there wouldn’t be a existing company.
+
+Bryan:
+
+[00:41:14] They just, that’s right. So they would lose their job.
+
+Ryan:
+
+[00:41:18] Okay, okay.
+
+Bryan:
+
+[00:41:18] But they would get like a pretty rich severance package. So you had like an absolute line at the trough for how can I get laid off? Lay me off first. This was not me. This was not us. We were, I, I was, I mean, I mean, at least to the credit of the, like the people lining up at the trough, at least they knew what was going to happen. And there’s still people to this day that are a little resentful of.
+
+[00:41:41] People are like that guy, that guy got laid off. And I, I mean, I quit because I could not work there in good conscience. After 45 days, that guy got laid off and got a year of salary or whatever it was. But we know I, I was not that I was. We were at this fishworks Group in San Francisco and I was really optimistic that. I’m really optimistic, somewhat optimistic that we could combine the best of both companies or what I perceive to be the best of both companies.
+
+[00:42:06] And as it turns out, that’s not the case.
+
+Ryan:
+
+[00:42:07] So what’d you see? Because you left really quick. So what did you see?
+
+Bryan:
+
+[00:42:11] That, oh, it was really clear to me that this was a very, very different company. I mean, Oracle gave me like, I decided like, I can’t work here anymore. And the time between I decided that and I actually left, which was only like 30 days more, a little longer than that, maybe 45 days. Oracle gave me like four other reasons to be like, oh my God, I just can’t, I can’t stomach working here. I mean, and I mean it was a bunch of things.
+
+[00:42:37] One, it was sun for all of its faults and there were many, many faults of Sun. Sun had the trust of its customers. Our customers actually were rooting for us at Sun. Our customers wanted us to prevail. Why? Because we actually, they. They trusted us. And they. Even when it wasn’t in our own best interests, like, we would. We would be straight with our customers. And I think that that was. We did not lie to our customers.
+
+[00:43:03] Right. And that was something that our customers found very, very appealing. That was not Oracle. Oracle does not have the trust of its customers. And I realized something very important about myself. I can’t work for a company that has that kind of profound distrust. I mean, in terms of, like, we’re talking about meaning. That so eroded my own sense of meaning. I felt ashamed. I felt ashamed to work there, and I had never felt that.
+
+[00:43:27] I’ve never. You know, for Sun, I was embarrassed from time to time, but never ashamed. And with Oracle, I was ashamed.
+
+Ryan:
+
+[00:43:35] You mentioned people were eager to get themselves laid off. How do you even do that?
+
+Bryan:
+
+[00:43:41] You just like, oh, you tell your manager, look, there’s a list. Put me on it.
+
+Ryan:
+
+[00:43:45] Okay.
+
+Bryan:
+
+[00:43:45] Yeah. Oh, there is a list. Okay. Who else is on it? Like, I want to be on it. I mean, just like, all the ways that you. I mean, it’s not like. Like, you don’t fill out a web form. I mean, you’re obviously, like, you know, you’re. You’re a courtier kind of whispering about trying to figure out, like, what’s the scuttlebutt who’s gonna get laid off.
+
+Ryan:
+
+[00:44:00] I thought you’d have to, like, really, you know, underperform and like.
+
+Bryan:
+
+[00:44:03] No, no, no, no, no. I. I think that they were. No, it was all about, like, hey, I, I’m, I. I have no value to Oracle. Could you. I mean, it was much more like, oracle’s not interested in what I’m doing. Right? And then you get like, Oracle is interested. You’re like,
+
+
+## 00:44:19 — Why Bezos is the apex predator of capitalism
+
+
+Ryan:
+
+[00:44:19] So, okay, so I get why you left Oracle. And obviously sun was acquired. And so the next place you worked at was Joyent. And I understand that this company competed with aws.
+
+Bryan:
+
+[00:44:32] That’s right. Yeah.
+
+Ryan:
+
+[00:44:33] And I listened to some of the conversation you already had, and, yeah, interesting quote. You said bezos is the apex predator of capitalism.
+
+Bryan:
+
+[00:44:42] Yeah.
+
+Ryan:
+
+[00:44:43] What makes you say that?
+
+Bryan:
+
+[00:44:45] Just Amazon was. Amazon at its height was such. So relentless on execution. And what made Bezos really, really good is that. And I would say, like. And when I say it’s height, I mean Amazon hits the mother load. And they hit the mother load, not because they’re lucky. There’s luck involved. You know, they allow S3 to be developed, right? They develop EC2, then they, they realize what they’re onto and they’re on cloud computing before anyone has figured it out.
+
+[00:45:17] And the, the, the, the, those reinvents like from 2010 to say 2015 were relentless. Every re invent was a price cut. It was price cut and it was a bunch of new services. And if you’re a customer, you’re like, this is awesome. I love this. This is great. Like, why would I not. I mean, so it was so. And that’s what I mean by the apex predator. Because he was on something that was wildly profitable.
+
+[00:45:45] He pulled off a, just an absolute move of moves in that Amazon did not break out their revenue. So it’s just like Amazon. It’s like you got the dot com side, you have aws. They’re not breaking out any of that. They’re just like, literally like this is how much Amazon’s making. Analysts would ask in the call. They’re just like, yeah, we’re not talking about that. Which apparently you can get away with as a public company.
+
+[00:46:07] And so they actually created this idea, especially with the relentless price cuts. People are like, oh, the cloud’s a terrible business. Like no one, no one should get into the cloud because it’s a terrible business. And so people didn’t. And meanwhile, like what we knew because we did compete with Amazon, we did have a public cloud and we knew it’s like, no, the actual, the margins on this thing are great.
+
+[00:46:26] Like this is actually a great business. And Amazon, and Amazon is executing very, very, very, very well. And they did extraordinarily well in those years. And I mean they are still. Obviously it’s a, it’s a, it’s a very profitable company, but they have am. Has. Is not what it was in, in those years. I not sure when the last price cut was announced at Re Invent, but it’s been a while. It is not that.
+
+[00:46:53] That’s not what you get at re invent. You don’t get the kind of, the new services that you can’t live without. So it’s, it’s a different company.
+
+Ryan:
+
+[00:47:00] AWS was, was early and they already had I guess a dominant market share.
+
+Bryan:
+
+[00:47:06] Yeah.
+
+Ryan:
+
+[00:47:07] Why would Jeff Bezos continue to just, just like ruthlessly keep going and keep going instead of milking it?
+
+Bryan:
+
+[00:47:14] Because he is not merely a predator, he is an apex predator in capitalism. This is what makes him so good. He’s like, I’m not gonna. No. Like I’m gonna I’m gonna press my advantage. Like, I’m gonna make it so no one can compete with me. And I’m gonna make it so no one wants to get into this business. And I’m gonna do it honestly, like the right way. I’m gonna do it by like giving a great product at a reasonable price.
+
+[00:47:37] It’s like, damn, yeah, that’s good. That’s a win, win. That’s a win win. And it was essential for innovation during that era of companies that were cloud born. And I mean, it was really. And it was very, very hard to compete with Amazon, I’ll tell you that. You had to really like, find a lane and we found lanes where we could go compete with Amazon, but it was brutal. Their execution was extraordinary at this company.
+
+
+## 00:48:04 — Differences between CTO and VP
+
+
+Ryan:
+
+[00:48:04] I saw that you start out as a VP and then you transition to CTO at some point.
+
+Bryan:
+
+[00:48:09] Yeah.
+
+Ryan:
+
+[00:48:10] What’s the difference in the roles?
+
+Bryan:
+
+[00:48:12] That’s a great question. I actually gave a talk on this with Joyent CTO at the time on the contrast between VP of Engineering and cto. And I’m not sure how much I buy the difference now. I mean, I think in both capacities, you’re serving as an engineering leader and I think that, you know, I guess you can argue that a CTO is more outward looking for.
+
+Ryan:
+
+[00:48:34] Sure.
+
+Bryan:
+
+[00:48:34] Chief Travel Officer is kind of the pejorative for it. You’re on the road talking to customers a lot. You are VP of Engineering may be more focused on some of the necessary mechanics that you have in an engineering organization. For me personally, I mean, they brought me in as a VP of Engineering because they frankly already had a cto. So I mean, like, I, again, it’s just like the grade I was at, at, at Sun.
+
+[00:48:59] I didn’t particularly care. What I did care about is when the, you know, the CTO had left and then another CTO that we had CTO who had been a founder of the company and when he left, so there was kind of like the, the, the empty CTO position. I didn’t care. What I did care was that we didn’t hire externally for that because I did so that I did care about a lot about, like, look, if there’s going to be a cto, I’m happy to be the VP of Engineering in perpetuity.
+
+[00:49:24] But like, like, I, I would rather like if there’s going to be a cto, I would like to not hire externally for that, please. Or let me be involved in that anyway.
+
+Ryan:
+
+[00:49:33] Why not hire externally?
+
+Bryan:
+
+[00:49:35] I just didn’t want to deal with like having to bring in. I didn’t need that. That’s not what we needed at that time. What, what we needed at, at that time especially? Well, we had, we got rid of the CEO and we, we really were, we, we needed really a terrific CEO, which we, which we later got.
+
+
+## 00:49:58 — Starting his own company
+
+
+Ryan:
+
+[00:49:53] So then you started oxide.
+
+Bryan:
+
+[00:49:56] Started oxide in 2019. Yeah.
+
+Ryan:
+
+[00:49:58] And what’s the story behind you starting your own company?
+
+Bryan:
+
+[00:50:01] Well, I knew again, I kind of had in my mind that like, I want to start a company. And the thing that I knew is I want to start a company with Steve. Steve and I had worked together at that point. I mean, Steve was the. When I went to Joyent, I had not talked to Steve prior to going to Joyent and I was going to Joyent in part because I was running away from Oracle and it was going to allow me to hire folks and so on.
+
+[00:50:27] But I didn’t talk to Steve until after I came to Joy in and I’m like, this guy is amazing. And Steve and I just worked very closely together. Steve came up on the go to market side, on the sales side. And I knew, I’m like, I definitely want to start a company with this guy. And fortunately he felt the same. So we both felt like, all right, whatever we do next, we do it together. Other and so now it’s like, all right, well now what?
+
+[00:50:52] Now we got to figure out what we want to go do. And we had these long walks in the city because we were working in San Francisco and we had so many bad ideas. I mean, it was just, it was just basically one bad idea after another. So then we’re trying to come up with ideas that like, we’re a better match for the kinds of things that people would fund. And we recommend people not do this. It’s understandable.
+
+[00:51:15] I did it. I understand. But we’re trying to like come up with, with things that people would fund and coming up with things that were just like not in our heart. You know what I mean? Like, this is like, okay, I could do this, but like really, I mean, it’d be fun to do it with Steve, but just doesn’t feel like that’s not gonna. I wanna do something that is like that is this next long chapter of my career.
+
+[00:51:35] And so as we’re kind of struggling with that and I was trying to figure out like, okay, we actually need to start talking to venture capitalists at some point. We need to like start like get this ball rolling and understand like I and I had always known venture capitalists and had gotten lunch with them over the years, but had not really, like, you know, kind of gone deep and known in the venture capitalists associated with Joyent for sure.
+
+[00:51:57] And so I got, I was reminding myself of the email address of one VC in particular, actually a very famous vc, but someone I had known since early, early, early in his career. And he and I had just gotten lunch periodically through our careers from when he was first in venturing and I was in engineering. And we, it’s like. And he had kind of become pretty famous. And I was just wanting to remind myself of the email address and the last email he had sent to me, which was maybe, you know, 18 months prior, was like, hey, Brian, really enjoy getting lunch with you today.
+
+[00:52:26] I just want to remind you, I will fund literally anything you put in front of me. I think I’m like, wow. And I was like, Steve, you know, remind myself this email of this guy’s email address. He said he will fund literally anything we put in front of him. So we should just go big. We should do the thing that is in our heart. And Steve’s like, what do you mean? I’m like, we should build the computer that we want to build.
+
+[00:52:57] We should build a Rack scale machine. And he’s like, yeah, that’d be amazing. Do you think we can get that funded? And I’m like, I, yeah, yeah, I think so. And you know, that was very much in our heart. That was what we had lived, that he had lived, that Steve had been at Dell prior to Joyent. He’d been at Dell for a decade. I’d been obviously at sun for 14 years. We, and then together at Joyent for another decade.
+
+[00:53:25] And this is we. This was truly in our marrow. And we found like, okay, like we can go. And we, as we started talking VCs about this, about building, and we again envisioned Rack scale design. We wanted to do our own board design, do our own switch, do our DC bus far basis line, do all of our own software, build the machine that we ourselves wish we could have had at Samsung after Samsung acquired Joyent.
+
+[00:53:53] And what was very catalyzing actually was going to. You were at what would have been Facebook at the time, before they renamed it, and going to their open computer, going to the Open Compute Summit and looking at like Tioga Pass, and you’re like, what is this, like Tioga Pass? Like, I mean, it was like I would liken it to discovering Unix as an undergrad when I had been living with dos and Be like, what is this?
+
+[00:54:17] And you go, look at Tioga Pass. You’re like, this is what a computer can be like. This is gorgeous. This is amazing. We gotta go build this for the enterprise market. And what we discovered is this was very contrarian, but things that are contrarian are attractive to venture. So we would get this thing where people would actually be pretty interested in it. And, I mean, I don’t have to tell you how the story ends, but we went back, we’d actually talked to a bunch of venture capitalists before.
+
+[00:54:46] I went back to that same VC that sent me the email. And I get maybe 45 seconds into describing the problem we want to go solve at Oxide. Brian, stop, stop, stop. If you are talking about starting a computer company, I want nothing to do with it. And I’m like, you know, it’s funny. You sent me an email years ago that said you would fund literally anything I put in front of you. And he said, doesn’t sound like me.
+
+[00:55:13] I’m like, well, okay, what do you want me to do with that one? I’m like, you sent me the email. It’s like, is your admin writing all your emails? Did you have your kid write the email? I. I don’t know what to do with that one. Like, you did send me the email. Are you calling me a liar? I mean. And I’m like, all right, fine. And it’s like, fine. And I. We go over the phone, I go to hang up on him, and of course, like, VCs, this is just like, it’s in the animal brain, right?
+
+[00:55:32] If you. You go to hang up on a vc, they’ll be like, wait, wait, wait, wait, wait, wait, wait, wait. I was like, oh, okay. He’s like, wait, wait, wait, wait. I’m like, fine, got it. He’s like, wait, wait, wait, wait, wait, wait. I’m not going to invest. And I’m like, I know you’re not going to invest. And I knew the reason I knew he wasn’t going to invest is he’s had some big zeros in this department.
+
+[00:55:49] And when a VC has had zeros in something that looks close to what you’re doing, that are like, I want nothing to do that again. Like, nope, nope, nope, nope, nope, nope. Was in a bad relationship with one of those. Don’t want to do that again. And in part, in their defense, it’s often because, like, actually, I understand this problem a lot better, and now I understand all the headwinds, and now I can.
+
+[00:56:07] I mean, in some ways, like, you need VCs to be. And they need themselves to be like, like naive at some level. Optimistic is a. Be a better way of phrasing it where they can like envision the world as it could be, as opposed to getting all mired in the way the world is. You gotta be kind of blind to the odds to a certain degree. And I knew that he was not blind to the odds because he’d had two big zeros.
+
+[00:56:28] And so I knew that he was gonna be like. And one zero that like looked a lot like oxide. And so he’s like, look, I’m not gonna find it. I’m like, again, I knew that, that. But I do want to help you. Like, okay, it’s great. And I always tell people, like, when you are. VCs will ask this a lot, especially a VC that’s like, where you’re not a fit for them, you’re not a portfolio fit for them, you’re not a thesis fit, whatever it is, you’re not a stage fit.
+
+[00:56:53] If they like you, they’ll be like, look, I’m not going to invest, but how can I help? And you always want to have an answer to that question of how you can help. And I had an. I knew how he could help. I had a very concrete idea. It’s like one of those zeros. I want to talk to him, I want to talk to the founders. I want to understand everything that went wrong. And I did. He’s like, okay, that I can do.
+
+[00:57:13] He made the intro and it was really, really interesting and like the mistake that that company had made. And again had a thesis that looked like oxide. But they didn’t raise a lot of cat. They raised kind of arguably too little capital. They got something working that’s smaller than what we built at oxide Minimum viable product at oxide is a rack. It’s big. Took us three years, three plus years to develop.
+
+[00:57:35] They developed something a little bit faster, but it was much smaller. It was basically, you could view it as like Nitro, circa like 2013. Nitro from the enterprise acquisition at AWS does a lot of really important offload for aws. So you could view it as like very early nitro. But it didn’t really have a market. But they had a customer and they got a customer and they’re like, great. And the customer was happy and they wanted to use it in particular on their active directory servers.
+
+[00:58:01] Great. We have product market fit. Raised a bunch of money, hired a huge go to market team. Problem is that customer huge bank only wanted to run it on like their six active directory servers. So they were gonna buy like quantity six. And this is one of the world’s largest banks. You’re like, oh, so you’re like, how many world’s largest banks are there? Like, well, they’re like a couple of others, but like we can sell like you know, two dozen of these things, like we’ve got it.
+
+[00:58:28] And. And by the time they realized that they had a lot of mouths to feed on the go to market side. And that wasn’t a zero. They were acquired, but they were acquired in a way that left the founder extremely bitter and really felt like the VCs had pumped too much capital in him at the wrong time, had gotten him to do the wrong thing, and was then trapped at the acquiring company and was really not happy about it.
+
+[00:58:56] He was also the one. So I was describing what we wanted to do at Oxide. He’s like, that is a suicide mission. And I just remember writing down a little notebook, almost like writing down suicide mission, kind of underlining it, like, okay, we’re on a suicide mission. That’s fun.
+
+Ryan:
+
+[00:59:08] When I think of Rack scale compute, especially these days, I think of racks of GPUs more than CPUs. Is that something that you’re building?
+
+Bryan:
+
+[00:59:19] Yeah, right. A very reasonable question. And when we set out, we’re like, we, I mean again, set out in 2019. The GPGPU was around obviously and important, but that’s not what we were focused on. We were really focused on general purpose compute, General purpose compute, general purpose storage, general purpose networking. And our belief had always been like, that’s what we actually want. There is so much to go build there and go differentiate there.
+
+[00:59:44] And of course along the way people are like, what about an accelerator? Like what about an accelerator gpu? And the problem is that the way we want to build systems, we want to really build systems from first principles where we have components that have transparency at that hardware software interface and we want to write that lowest layer of software. We are the company, ultimately we are building a hardware software co design product.
+
+[01:00:06] In order to be able to do that, you need to be able to write very low level software. The problem is that’s really not compatible with Nvidia. Nvidia is a pretty proprietary company, executes well, but a very proprietary company company. And what that meant is there are effectively two doors for Oxide. One is labeled compete with Nvidia and the other is labeled partner with Nvidia. And I didn’t want to do either of those things.
+
+[01:00:27] Have not wanted to do either of those things because I certainly don’t want to compete with Nvidia and I think that that’s getting more plausible now. But we can’t partner because we just have a very different view of how systems should be built. And Nvidia wants to like their view is like we should own the whole stack. Like forget you, whoever you are. So like, okay, that’s fine, we’re going to focus on general purpose cpu.
+
+[01:00:50] We got plenty to do over here. I think the thing that’s been interesting and a bit surprising is that because the GPU landscape is so cluttered, I mean you’ve got this very aggressive, the very well executed company in terms of Nvidia, you’ve got a lot of competitors around it, it’s gory right over there, there to get. And meanwhile on the general purpose CPU side, it’s like hp, Dell, Super Micro, the same companies that are, are doing the same kind of junk honestly that they have been doing.
+
+[01:01:22] And so we are by our lonesomes in terms of a hardware software product over there. So over and over and over again we have had people come to oxide that we think like no, no, we’re not a fit for you because you like, you do a lot of different GPU. You’ve got a ton of GPUs. Like you company famously have a lot of GPUs. No, no, no, we do have a lot of GPUs. We also have a lot of CPU as it turns out, because certainly the emergent AI workloads, not just AI workloads, but certainly AI workloads, but high performance computing workloads.
+
+[01:01:54] There’s a lot of general purpose CPU that’s attached to the special purpose compute. You know when you’re sitting there on ChatGPT and it’s surfing the web, you got the little spinny saying, it’s surfing the web. That is not a GPU that’s surfing the web, that is a CPU that’s surfing the web. And the CPU is really, really important. So for us we are more focused than ever on the general purpose cpu.
+
+[01:02:15] And there is a ton to go do there, fortunately to get this product to be where we believe it can be. And I think we will do an accelerator at some point. But I’ve been kind of saying it’s like 18 months away for a while or 18 months that we would really start thinking about it. And again, I know we’ll do it in the limit, but boy, not in the foreseeable future.
+
+
+## 01:02:37 — Grilling him on his past
+
+
+Ryan:
+
+[01:02:37] Coming to the end. I want to ask you some career reflections.
+
+Bryan:
+
+[01:02:42] Yeah, you bet.
+
+Ryan:
+
+[01:02:42] Some kind of just all over the place type of questions. You wrote a tweet a while ago. I thought it was a really interesting idea. Which was. You said it would be interesting to have a conference called In Retrospect, where presenters revisit talks that they’ve given prior and describe how their thinking has evolved since. And I pulled a bunch of stuff that you’ve, I guess, written or said in the past.
+
+[01:03:08] I’m curious if your perspective has evolved since then. So we’ll go through each of those.
+
+Bryan:
+
+[01:03:13] Sure.
+
+Ryan:
+
+[01:03:14] So, first one, which is actually really famous, when I saw. I kind of did a double take. So in. In 1996, as a new grad, there’s this. I don’t even know what Usenet was. I had to do research, actually. But there’s a guy who. He writes this long technical response.
+
+Bryan:
+
+[01:03:33] David S. Miller.
+
+Ryan:
+
+[01:03:34] Yes. And part of it, too. It’s not nice either. I saw there’s a line in there, it says Linux is lightweight, Solaris is a pig. Which Solaris is what I guess sun was.
+
+Bryan:
+
+[01:03:46] Yes.
+
+Ryan:
+
+[01:03:46] And then he writes this long thing and you reply with. With just a few words, you say, yeah. Have you ever kissed a girl?
+
+Bryan:
+
+[01:03:51] Yeah.
+
+Ryan:
+
+[01:03:53] Oh, first of all, I want to know the context behind it. And then also knowing what you know now.
+
+Bryan:
+
+[01:03:56] Oh, definitely in the regret department, if that’s what that’s asking. Like, yeah, I’ve got very few regrets in my career, but, like, you can put that one, like, pretty firmly in the regret column. Yeah, no, that. That was, that was. And also had no idea that this was going to live in perpetuity, that. I mean, if you could have told me In, I think 1997 is maybe when I posted. Maybe it was.
+
+[01:04:17] It was 96. It was 96. 97. Certainly. Like, I’m like 22. Like, I’m. I’m very young. If you had told me, like, oh, by the way, 30 years in the future you’re gonna be asked about this, I’d be like, what the hell? No, no, trust me. It’s like, the world gets weird. You’re gonna be asked about this. So it was actually a. Okay, this is. I’m not defending it. I just want to be sure that. I want to be clear that, like, it was a mistake.
+
+[01:04:46] It was actually a reference to a Saturday Night Live sketch. So there’s an SNL sketch that is from an era of Saturday Night Live that it’s like you can’t even Find the video. But they have. So the. William Shatner is guest starring on Saturday Night Live. And the skit is that William Shatner is at a Trekkie convention. And the Trekkies are asking him all of these questions. And they’re asking questions.
+
+[01:05:14] And of course, like. Like, you know, in episode. You know, this season of this episode, you know what. What was the combination on the safe? He’s like, what? I don’t know that. I don’t.
+
+[01:05:22] I don’t know that. Why would I know that? Like, I don’t. That’s not even. And he’s like, these two people are kind of arguing themselves and they’re asking him questions that are like this. That are all about, like the. The kind of. The canon of Star Trek. And then he’s like, hey, can I just say something? Get a life, people. You. You. Have you ever kissed a girl? That was the. That was. Where you going?
+
+[01:05:40] To a 30. Going to John Lovitz when. Like, Vulcaneers. John Lovitz. Yeah. Yeah. It’s like Lost history. Why am I doing this? And kind of like looks down at himself and so, like, it was actually like an obscure Saturday Night Live reference, which again, like, I’m not. It doesn’t make it any better. The. Yeah, it was that. That was. That’s definitely in the. In the. The regret department.
+
+Ryan:
+
+[01:06:03] What did he say back to that?
+
+Bryan:
+
+[01:06:06] Oh, he had a whole lot to say about. Back to that. And I actually did have a longer post, kind of taking apart what he had said about the. About, like. All right, like, a lot of what you’ve said here is actually wrong. And so, like, really going through kind of point by point, I think, you know, I’ve actually never. I’ve never met him, never talked about this very talented guy. I think he actually.
+
+[01:06:29] I actually did read. I think it was in the Rebel book about Linux. Remember him reading that? He’s like, yeah, I kind of, like, was shooting my mouth off and a son engineer kind of put me back in my place. And I’m like, man, if that is his read on it, he’s being very generous to me. So I’d like to believe that maybe he and I both regretted a little bit. We were both like a little, you know, a little young and excitable.
+
+[01:06:52] But, yeah, that was definitely. That was a life lesson. I would say that history forgot about that, though.
+
+Ryan:
+
+[01:06:58] So on another tweet.
+
+Bryan:
+
+[01:06:59] Yeah, sorry. Yeah, here we go. This is great.
+
+Ryan:
+
+[01:07:02] This is.
+
+Bryan:
+
+[01:07:02] We’re. This is like the cleanse. Yeah.
+
+Ryan:
+
+[01:07:05] Okay. This is in 2022. You wrote a tweet. You said, if you’re tempted to blame a team for a startup’s failure, please don’t. Success is often due to a great team, but failure is almost always due to bad leadership.
+
+Bryan:
+
+[01:07:18] I, I wrote that. That’s a good one. That’s a good. I don’t remember writing that. That’s it. I, I agree with that guy. He’s on to something. I guess the question, what was I responding to? I wonder. I must have been something. Must have been something that day on the Internet or some weather on the Internet. I’m subtweeting Paul Graham there somewhere. I think that must have been it.
+
+Ryan:
+
+[01:07:33] But 2022, I’m curious, do you think that’s true for. For sun because sun ultimately failed.
+
+Bryan:
+
+[01:07:40] So, okay, I don’t agree that sun failed. I don’t agree that sun failed because sun, again, sun is founded in 1983 and is invaded in. In 2008, 2009. That’s a good run. That’s a really good run. Sun was a public company. Sun was in the Fortune 200. Lots of people, like kids went to college because their, their parents were able to work for sun. And you got, you know, so I, I don’t view. I do not view sun as a failure.
+
+[01:08:07] Son is like, sun did not, I mean, arguably did not or not maybe inarguably did not succeed to the scope of its own ambition. But sun, to me, is not a failure. Sun is a success.
+
+Ryan:
+
+[01:08:19] Was its collapse at the end, I guess, changeable in hindsight, with different leadership?
+
+Bryan:
+
+[01:08:26] I think so. I think that there are. I mean, this is a classic power game of, like, why did sun ultimately not survive as an independent entity? And why is that? I think there were a bunch of reasons. I think that there’s a degree to which sun got very strung out on the very high margins during the dotcom boom and never quite, quite, like, got off of that. Never like, we embraced x86 too late. We kind of thought of ourselves.
+
+[01:08:57] I mean, the company itself became fractured. The layoffs didn’t help. I mean, I think we. At Fishworks, we were developing a storage appliance. I felt that we could have been an example of an exemplar of what the kinds of products I felt sun could develop, an independent sun could develop. But it was going to be. There’s a lot of like, like stuff that needed to be changed for that, and you needed leadership that really was very, very interested in that.
+
+[01:09:22] And it’s like, that just wasn’t like that. That’s not what we had. And in hindsight, it was probably time for a change. It was, you know, it’s like kind of the way a forest fire in a normal healthy forest fires is kind of a part of the life cycle of a forest and you need that to have, to have rebirth. And I think that, that, I mean, ultimately, I think that that son had succeeded, but had also run its course.
+
+[01:09:50] And it was, it was time for.
+
+Ryan:
+
+[01:09:52] Had its time.
+
+Bryan:
+
+[01:09:53] It had time. Absolutely had its time.
+
+Ryan:
+
+[01:09:56] Okay. And that next past take of yours you wrote in 2022, perhaps this shouldn’t have been surprising, but Musk has absolutely no idea what he’s doing. And so. And this is about the takeover of Twitter. And yeah, I actually don’t even know what’s going on Twitter because it’s private.
+
+Bryan:
+
+[01:10:12] Excuse me, I’ll. I will thank you to not refer to SpaceX that way.
+
+Ryan:
+
+[01:10:15] Oh, right.
+
+Bryan:
+
+[01:10:17] It has been acquired by Xai and then Xai has been rolled into SpaceX. So like we’re now, I guess Gwen Shotwell now runs. Runs Twitter.
+
+Ryan:
+
+[01:10:24] So I guess. Do, do you still agree that it’s. It’s run poorly?
+
+Bryan:
+
+[01:10:28] Oh, God, yes. Yes. Yeah, I agree that. I mean, because it. Yeah, yeah, definitely. It’s so. I mean, yes, yes. I mean, yes. I really, like, I literally feel dirty being specific about that. But when, I mean, when there’s a lot of. There’s rampant bad behavior on Twitter. Community notes. Yes, community notes. Great. Everything else, pretty much a tire fire.
+
+Ryan:
+
+[01:10:56] What’s your number one thing that this tire fire.
+
+Bryan:
+
+[01:10:59] The number one thing of tire fire is that they all will tell you this. The reason that we at Oxide don’t engage on Twitter. I can’t have an Oxide tweet that is sitting next to some of the tweets that I’ve seen. Oh, you see how it’s like the level of racism, bluntly, I mean, crazy racism. Crazy crazy racism. Crazy. Anti Semitism crazy and crazy. The anti Islam, just crazy hate crazy levels. The kinds of things that you literally could not say.
+
+[01:11:38] And they’re like, oh, well, it’s free speech. It’s like it’s not free speech. It’s so deeply offensive and reflective. It’s like, it’s so deeply offensive that I don’t want my content to be anywhere near it. I don’t want someone to be looking at that chat and looking at my content. I’m sorry, I’m just not going to do that.
+
+
+## 01:11:57 — AI boom and bust advice
+
+
+Ryan:
+
+[01:11:57] You live through a bunch of booms and busts and honestly, I don’t even know if we’re in a boom or a bust right now, I mean, AI is going crazy and there’s all these layoffs.
+
+Bryan:
+
+[01:12:09] Crazy. Yeah, that’s a good point. Yeah.
+
+Ryan:
+
+[01:12:11] What advice would you give, given your experience through the booms and busts for people who are in today’s market?
+
+Bryan:
+
+[01:12:18] Yeah, yeah. And I would say that some of this I do think is endemic. I mean, when I first moved out here, I’m like, oh, this is great. My. My grandfather was a petroleum engineer, and so I kind of grew up with stories of, like, plants that were gonna be built and then shut down or pipelines that were gonna be built and then shut down, like, everything. Tracking the price of oil. Right. Very oil. The oil patch is very boom and bust.
+
+[01:12:35] And I’m like, oh, this is great. I’m in software. Like, I’m immune from booms and bust. I remember thinking this, like, you know, you’re just like. And of course, looking back at it now, you’re like, oh, my God.
+
+[01:12:45] No, no. We are. They are a bit endemic. And they’re endemic for reasons that are somewhat endearing in that, like, we get so optimistic that we kind of get ahead of ourselves from an optimism perspective. We also get ahead of ourselves from a pessimism perspective. And the. And what I would say is, like, you gotta be really careful about listening to other people. People will tell you that this is gonna be the future or that thing is dead.
+
+[01:13:13] And you gotta be like, just be your own judge. I had people tell me that operating systems are done in 1996. I’m really glad I didn’t listen to them. Really glad I didn’t listen to them. People tell us, you can’t start a computer company in 2019. I’m really glad we didn’t listen to them. VC firms, we only fund SaaS. Those VC firms are like, well, it’s like SaaS is struggling right now. But I would also say similarly, like, if SaaS is in your heart, as an example, where people are like, right now, people are like, SaaS is going to be the Gen AI.
+
+[01:13:48] The LLM assisted coding is going to really put a squeeze on these SaaS companies. And I think there’s definitely truth to that. But if one’s heart is in that, you should ignore the pessimism or treat the pessimism and the optimism with a grain of salt. Be your own judge and be true to what you want to do. Don’t do the things that like, well, I’m doing this because it’s like a hot space. It’s like, you should do this because I think it’s.
+
+[01:14:18] And there are plenty of people for good reason. I mean, these things are amazing. I mean, where we are with respect to these LLMs is just bonkers. And you could easily say, I want to be very. Find a great deal of intrinsic appeal to that. But that’s the reason that you should be going into these systems is because you’re thinking like, no, no, this is. This is to. To quote Steve Jobs, this is the dent I want to kick in the universe.
+
+
+## 01:14:41 — When he was happiest in his career
+
+
+Ryan:
+
+[01:14:41] I notice your career, almost everything’s driven from fulfillment and intrinsic motivation. Is there a time in your career that you look at and say, that’s the happiest time of my career?
+
+Bryan:
+
+[01:14:54] Yeah, that’s a great question. We ask this at Oxide. We ask you, when have you been happiest and why? For exactly that reason. And I would say that, like, it’s not necessarily an era. It is times that I’ve been happy. I mean, bluntly, I’m pretty happy right now. Oxide’s great. The moments for me, and this was an important kind of question for me to reflect on as we were starting Oxide, and this is actually due to a friend of mine who had been at a startup, and he and I were taking a walk in San Francisco as kind of Steve and I are talking about bad ideas.
+
+[01:15:29] And he was like, you really need to answer for yourself, why do you want to do this? What is drawing you to start a company? And because it wasn’t financial return for me, and people should not start a company for financial return. That’s just not a good. That’s not good life advice. But what was drawing. Well, the thing that’s drawing me, actually, is that the moments that have been the happiest have been working on an incredible team and being on a team that.
+
+[01:15:55] Where everyone individually is like, I don’t think we can pull this off. Like, this is actually too difficult to pull off. And then everybody works together, compliments one another, and you pull it off. Man, that feeling is extraordinary. And the times that I’d had that I’d had it with D Trace, I had had it at Fishworks, I’d had it at Joyent, a couple of times with lx, with Triton. Those times have been like, oh, that’s what’s amazing to me.
+
+[01:16:24] And so, I mean, in many ways, like, the bedrock of Oxide is like, what if we found a company around. Part of the reason we were appealing, that larger problem was appealing to us is like, we’re going to be able to Attract an extraordinary team. And we have a team that is, it is so uplifting to be on a team. I’ve always said that the organizational model for, for Oxide is a heist movie. You know, you’ve got your safe cracker, you’ve got your getaway driver, your demolitions expert, right?
+
+[01:16:49] Like, heist movies are great because of that. And like, because it’s the, it’s the group coming together. Everyone’s skill set’s kind of coming in at exactly the right moment. And man, I love that. I love that so much. And Steve loves that. I mean, that’s part of our shared bond, is he and I are both very, very team oriented and we built a company around that. And it’s extraordinary. It is truly, truly extraordinary.
+
+[01:17:13] It’s why we’ve been able to pull off what we’ve been able to pull off with the small team that we’ve got. I think people are kind of shocked at how small a team that we’ve got, given what we’ve been able to pull off.
+
+
+## 01:17:22 — Top career regret
+
+
+Ryan:
+
+[01:17:22] When you look back on your whole career, is there a particular top regret that you have?
+
+Bryan:
+
+[01:17:28] I mean, I made an extraordinarily bad hire at Joyent. I think the worst hire in human history. Many people in Silicon Valley will say, like, well, that can’t be the worst hire in human history, because I feel I have made the worst hire in human history. And as I tell people, like, look, I’m happy to give up the crown, but you should know that my guy presented himself under an assumed name and just got off parole for violent felonies from San Quentin.
+
+[01:17:50] And it’s not what made him a bad employee. And usually people are like, no, no, no, I think you’ve made the worst hireful time. Mike, thank you, thank you very much. That was a bad experience. It was also very eye opening because everything I was doing about hiring was wrong. And we, after we rectified that situation and got him out, we stripped hiring to the studs and really rethought hiring from the, from the very first principles.
+
+[01:18:15] That hiring process, a very writing intensive process, one that really gets to intrinsic motivation, became the hiring process at Oxide. And there was a moment where I’m like, oh my God, like this extraordinary team at Oxide very much, I think, related absolutely to the hiring process that we have. This hiring process that I built because I made the worst hire of all time. I needed that guy.
+
+Ryan:
+
+[01:18:38] So you don’t regret, regret it?
+
+Bryan:
+
+[01:18:39] I don’t regret it. I don’t regret it. In fact, I’m even Like to kind of go back into the time machine and remove it. I think oxide, I don’t think no oxide makes it because I would have continued to hire the way I was hiring, which was naively, it was hiring not rigorously, it was not selecting people based on their values. So no, I absolutely needed it. So I think, and I view that way of a lot of things that have maybe not gone the right way, way, but all of those failures were really, really important and it’s very hard to go back and you don’t want to take those away.
+
+[01:19:14] I mean, if I go to the time machine, maybe I would take away the Usenet post and maybe that wouldn’t have any long lasting consequences. But boy, that’s about it.
+
+
+## 01:19:21 — Advice for younger self
+
+
+Ryan:
+
+[01:19:21] Awesome. And then last question is, if you go back to the beginning of your career knowing everything you know now, what advice would you give yourself?
+
+Bryan:
+
+[01:19:29] Jesus, don’t fuck it up. I would just think because I feel like so lucky. So I’ve been so lucky in so many regards. I’ve been in the right place at the right time, so many different times over and I’ve trusted my gut when sometimes that was not the thing that, when that was kind of a contrary thing to do. I mean, I would be scared to give myself advice because I would be worried that I would somehow tamper with what I feel has been an extraordinarily lucky career where I’ve been able to do so much with so many extraordinary people.
+
+[01:20:09] I’ve been blessed with so many incredible colleagues and that has been so essential for everything that I’ve done. And I wouldn’t want to do anything to endanger that. So I’d be going back to my past self. I’d be like, I got nothing to say. Just, yeah, I don’t want to screw anything up. Like I just. Because I, I feel that I feel really, really lucky. And it wasn’t always because of. Because again, it’s like I, I made mistakes along the way, but the mistakes became load bearing and important and I wouldn’t want to.
+
+[01:20:37] I wouldn’t want to not make those mistakes. Those mistakes were really important.
+
+Ryan:
+
+[01:20:41] Well, doesn’t get better than that. And thank you for your time today. Really appreciate it.
+
+Bryan:
+
+[01:20:45] Absolutely. Thank you for the thoughtful questions, really great conversation. And thanks for doing the. The hall of Shame here on, on the past tweets. I. That was a lot of fun.
+
+Ryan:
+
+[01:20:53] Yeah. Awesome. Thanks so much.
+
+Bryan:
+
+[01:20:55] Thank you.

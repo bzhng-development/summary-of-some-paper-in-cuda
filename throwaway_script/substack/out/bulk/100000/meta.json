@@ -1,0 +1,460 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/100000",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 156158787,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2025-01-31T14:03:14.698Z",
+  "updated_at": "2025-07-29T14:09:54.844Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "100000",
+  "social_title": null,
+  "subtitle": "Everything I learned after 2 years of writing",
+  "teaser_post_eligible": true,
+  "title": "100,000 🎉",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 3,
+  "reactions": {
+    "❤": 85
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "when-job-hopping-doesnt-make-sense",
+  "next_post_slug": "the-path-to-managing-managers",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/ba6f7fb1-ba99-4f28-9df5-dc50402b7613_1174x882.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 156158787,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Everything I learned after 2 years of writing",
+  "body_html": "<p>After two years of writing this newsletter, we reached 100,000 readers! This journey taught me a lot and made me much more confident in my writing ability.</p><p>Since <a href=\"https://www.developing.dev/p/why-engineers-need-to-write\">engineers need to write</a>, I figured it’d be helpful to share everything I learned about writing in the process. After 2 years and writing 100+ posts, I’ll summarize my notes on what helped me write better and grow the newsletter.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!DTpO!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F547cb1c5-25bf-4530-be40-a849a8577a6e_1384x1366.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!DTpO!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F547cb1c5-25bf-4530-be40-a849a8577a6e_1384x1366.png 424w, https://substackcdn.com/image/fetch/$s_!DTpO!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F547cb1c5-25bf-4530-be40-a849a8577a6e_1384x1366.png 848w, https://substackcdn.com/image/fetch/$s_!DTpO!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F547cb1c5-25bf-4530-be40-a849a8577a6e_1384x1366.png 1272w, https://substackcdn.com/image/fetch/$s_!DTpO!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F547cb1c5-25bf-4530-be40-a849a8577a6e_1384x1366.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!DTpO!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F547cb1c5-25bf-4530-be40-a849a8577a6e_1384x1366.png\" width=\"553\" height=\"545.8078034682081\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/547cb1c5-25bf-4530-be40-a849a8577a6e_1384x1366.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:1366,&quot;width&quot;:1384,&quot;resizeWidth&quot;:553,&quot;bytes&quot;:116612,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!DTpO!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F547cb1c5-25bf-4530-be40-a849a8577a6e_1384x1366.png 424w, https://substackcdn.com/image/fetch/$s_!DTpO!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F547cb1c5-25bf-4530-be40-a849a8577a6e_1384x1366.png 848w, https://substackcdn.com/image/fetch/$s_!DTpO!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F547cb1c5-25bf-4530-be40-a849a8577a6e_1384x1366.png 1272w, https://substackcdn.com/image/fetch/$s_!DTpO!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F547cb1c5-25bf-4530-be40-a849a8577a6e_1384x1366.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><h3>On Writing Well</h3><p>When I first started, I had a theory. Even though quality was my number one priority, I believed focusing on quantity was how I’d get there. That’s why I committed to writing weekly. Even though it was a lot of work, I forced myself to publish something every week. The results speak for themselves: Here’s an <a href=\"https://www.developing.dev/p/how-to-start-reviewing-code\">old post</a> vs a <a href=\"https://www.developing.dev/p/should-you-become-an-engineering\">new post</a> if you want to compare the quality.</p><p>If you want to improve your writing, I’d highly recommend this strategy. In addition to writing often, I recommend reading the first section of “<a href=\"https://www.amazon.com/Writing-Well-Classic-Guide-Nonfiction/dp/0060891548\">On Writing Well</a>” called “Principles.” That part of the book will help you improve your delivery regardless of your writing style.</p><p>After months of writing, I felt confident in delivering my message. However, I realized how well you structure your message is just a small part of writing something people want to read. Even more important is what you write about and how you manage attention. <br><br>Even the world’s best writer could only do so much with a boring topic. This was obvious when I was looking at the analytics since I put the same amount of effort into polishing each post, yet some posts did much better than others. For instance, <a href=\"https://www.developing.dev/p/a-new-era-of-writing-code\">this post on the hot topic of LLM-assisted dev tooling</a> did unusually well.</p><p>How I go about picking interesting topics:</p><ol><li><p><strong>Write about what I find interesting</strong> - Rather than asking what people want, I often think about what I wish I could have read earlier in my career. This led me to write some of my best posts on <a href=\"https://www.developing.dev/p/should-you-become-an-engineering\">switching to management</a>, <a href=\"https://www.developing.dev/p/scaling-yourself\">scaling yourself</a>, and <a href=\"https://www.developing.dev/p/how-to-onboard\">how to onboard</a>. Also, the career stories I’ve worked on (e.g. <a href=\"https://www.developing.dev/p/from-microsoft-intern-to-meta-staff\">Rahul</a>, <a href=\"https://www.developing.dev/p/new-grad-to-staff-at-meta-in-3-years\">Evan</a>) are based on similar stories that I loved and inspired me when I first joined Meta.</p></li><li><p><strong>Engaging on social media</strong> - Reading LinkedIn and Twitter gives me ideas and helps me learn what topics people are most interested in based on their engagement. It’s also a great testing ground for ideas since you get immediate feedback.</p></li></ol><p>Understanding how to manage attention was probably the most impactful part of learning to write online. Once you start posting, you’ll quickly learn how fast people’s attention drops off. <strong>People will only read the N+1th line if the Nth line interests them. Therefore, the first few lines of your writing are exponentially more important than the rest.</strong> That’s why I try to show the reader why they should care immediately.</p><p>For instance, in this article’s intro I:</p><ol><li><p>Talked about the value of writing (a relevant topic) and how this article will help the reader</p></li><li><p>Shared results that give me some credibility on the topic</p></li><li><p>Explained that I’ll condense 2 years of effort into a brief post</p></li></ol><p>You need to grab the reader’s interest at the beginning. If I had just launched into the topic without making the reader care, few people would read until the end. Understanding your audience is one of the most important parts of communicating effectively.</p><h3>Growing to 100k Subscribers</h3><p>Thankfully, Substack has kept all the metrics since I started, so I can tell you exactly where all the subscribers came from:</p><ol><li><p><strong>~69k</strong> from Substack recommendations</p></li><li><p><strong>~15.5k</strong> from LinkedIn</p></li><li><p><strong>~7.3k</strong> from cross promotions &amp; collaborations</p></li><li><p><strong>~4k</strong> from Twitter</p></li><li><p><strong>~2.7k</strong> from referrals</p></li><li><p><strong>~1k</strong> from Google searches</p></li><li><p><strong>~0.5k</strong> from Instagram/Threads</p></li></ol><p>Substack recommendations drove most of my growth (~69% of total subs). I was intentional about that since I realized piggybacking off the growth of others would create a powerful network effect. <strong>I’d recommend exchanging recommendations with other Substack authors in your niche with a similar audience size</strong>. I did this by subscribing to newsletters and replying to the welcome email to ask.</p><p>Aside from that, the second tactic that drove significant growth was posting on social media (~20% of total subs). The feeds of platforms like LinkedIn and Twitter are natural discovery engines for your work. <strong>Also, building a brand on social media has a snowball effect because as your account grows, it becomes easier to grow further because followers engage with your content and give you social proof</strong>. Because of this, the few accounts at the top grow easily while most people at the bottom get almost nothing. Growth at the beginning will be tough, but it’s worth it if you invest enough to break out. </p><p>Lastly, newsletter collaborations are a higher-effort method to grow (~7.3% of total subs). At first, I thought it would be a great tactic for growth if I wrote articles for other publications to get some of their subs. I did a few like <a href=\"https://seattledataguy.substack.com/p/how-to-fast-track-your-career-as\">this one</a> and <a href=\"https://read.highgrowthengineer.com/p/mentorships-role-in-my-staff-promotion\">this one</a>, but the results were underwhelming relative to their effort. The only collaboration that was worth it was <a href=\"https://blog.bytebytego.com/p/speedrunning-guide-junior-to-staff\">this one with ByteByteGo</a> which drove ~2k subs (0.2% conversion rate) since Alex has such a massive email list. <strong>I wouldn’t recommend writing fresh content for cross-promotion due to the low conversion rate</strong>. If someone wants to repost something you’ve already written though that’s a no-brainer.</p><h3>Monetization</h3><p>I’ve thought about monetizing but never did. Here are all the potential options I considered and why I didn’t choose them:</p><ol><li><p><strong>Sponsorships &amp; Ads</strong> - This felt like it’d create a conflict of interest between being credible and making money. Also, I felt like it traded off with quality since I’d have to put ads in the writing. Maybe one day I’ll find a way to do this that doesn’t trade off with credibility or content quality.</p></li><li><p><strong>Selling Courses - </strong>This one never appealed to me since it felt like a cash grab that’d extract more value than it added. Also I felt like doing it wouldn’t be that interesting or fun.</p></li><li><p><strong>Paid Newsletter or Community - </strong>I was thinking about doing a Q&amp;A column where paid folks could submit questions and I’d write tailored responses since many were asking for 1:1 mentorship. Seemed like a decent idea but I didn’t do it since I was drowning in work last year already.</p></li><li><p><strong>Writing a Book - </strong>Although I enjoy writing, books take a ton of time and the payout is uncertain. If you can write a best-seller, you can make a good amount ($1M+), but most books flop. Given that risk and that I’m already so strapped for time, I decided not to. Who knows though maybe one day I’ll write a book for fun rather than the anticipated payout.</p></li></ol><p>I’m lucky my full-time job pays me enough so monetization wasn’t a big focus for me.</p><h3>Future Plans</h3><p>Committing to writing weekly was a hell of an accountability mechanism. You have no idea how many Thursday nights I stayed up late (I wrote this at 3:31am) because I felt I promised you all an article on Friday. It gave me the needed motivation to stick it out.</p><p>A few weeks ago, I created a poll asking if people cared about the weekly cadence. The results were overwhelmingly in favor of not caring when the newsletter arrives as long as the quality is high. <strong>Moving forward, I’ll stop posting weekly on Fridays and instead invest in less frequent, more interesting posts.</strong> </p><p>Also, I want to free up some time to <a href=\"https://www.developing.dev/p/revealing-my-passion-project\">write about my passion project</a> on <a href=\"https://read.compose.llc/\">my other Substack</a> and <a href=\"https://www.youtube.com/@RyanLPeterman\">this budding podcast</a> I’ve been working on. I can tell I have a lot of room for improvement in my speaking ability and I want to get to a point where I feel confident in it.</p><p>Big thanks to everyone who has followed along since my weekly writing journey began. Although I believe writing has a lot of benefits even if no one reads it, <strong>it wouldn’t be the same without you all!</strong></p><p>As always, you can find more of my content at:</p><ul><li><p><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">LinkedIn</a></p></li><li><p><a href=\"https://twitter.com/ryanlpeterman\">Twitter</a></p></li><li><p><a href=\"https://www.threads.net/@ryanlpeterman\">Threads</a></p></li><li><p><a href=\"https://www.youtube.com/@RyanLPeterman\">Youtube</a></p></li></ul><p>Thanks for reading,<br>Ryan Peterman</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 100,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "After two years of writing this newsletter, we reached 100,000 readers! This journey taught me a lot and made me much more confident in my writing ability.",
+  "wordcount": 1381,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "bbec9c1f-66ea-461d-baa6-2a8acc4d8aa9",
+      "publication_id": 1340878,
+      "name": "Blog",
+      "slug": "blog",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        16.630434782608656,
+        105.3260869565217,
+        238.36956521739134
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        8.647826086956503,
+        54.769565217391296,
+        123.9521739130435
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        212,
+        228,
+        252
+      ],
+      "population": 2
+    },
+    "Muted": {
+      "rgb": [
+        124,
+        124,
+        124
+      ],
+      "population": 6
+    },
+    "DarkMuted": {
+      "rgb": [
+        97,
+        97,
+        97
+      ],
+      "population": 17
+    },
+    "LightMuted": {
+      "rgb": [
+        188,
+        188,
+        188
+      ],
+      "population": 16
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 85,
+  "comment_count": 15,
+  "child_comment_count": 8,
+  "audio_items": [
+    {
+      "post_id": 156158787,
+      "voice_id": "en-US-AlloyTurboMultilingualNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/156158787/tts/f1a18f74-e7a8-490c-898e-c57b58971249/en-US-AlloyTurboMultilingualNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 90004226,
+      "body": "Awesome work, Ryan! \n\nOne thing I’ve really enjoyed about your writing is that your reads are shorter than most other newsletters – yet still have quality content.\n\nExcited to keep learning and following your journey this next year 🚀",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Awesome work, Ryan!"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "One thing I’ve really enjoyed about your writing is that your reads are shorter than most other newsletters – yet still have quality content."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Excited to keep learning and following your journey this next year 🚀"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 156158787,
+      "user_id": 64096662,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2025-01-31T14:20:02.273Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Caleb Mellas",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/ef37ce7b-b266-40d1-8515-72fc66561fdc_828x779.jpeg",
+      "handle": "levelupsoftwareengineering",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 3
+      },
+      "reaction_count": 3,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "levelupsoftwareengineering",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Level Up Software Engineering 🚀",
+          "id": 1785490,
+          "base_url": "https://levelupsoftwareengineering.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 8,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    },
+    {
+      "id": 90020004,
+      "body": "This is incredible Ryan massive congrats you deserve it! Your incredible work ethic and ability to work at something so consistently is inspiring!!!",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "This is incredible Ryan massive congrats you deserve it! Your incredible work ethic and ability to work at something so consistently is inspiring!!!"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 156158787,
+      "user_id": 201111637,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2025-01-31T15:22:04.932Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Kevin Naughton Jr.",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/32751fef-8ccd-4ad3-a72d-c1aefb4654b7_400x400.jpeg",
+      "handle": "kevinnaughtonjr",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "kevinnaughtonjr",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "The Software Engineer Weekly",
+          "id": 2296047,
+          "base_url": "https://www.thesweekly.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 7,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

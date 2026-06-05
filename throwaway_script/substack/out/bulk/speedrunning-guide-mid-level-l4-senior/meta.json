@@ -1,0 +1,428 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/speedrunning-guide-mid-level-l4-senior",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 135850979,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-08-11T13:01:51.138Z",
+  "updated_at": "2024-01-08T06:17:19.986Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "speedrunning-guide-mid-level-l4-senior",
+  "social_title": null,
+  "subtitle": "",
+  "teaser_post_eligible": true,
+  "title": "Speedrunning Guide: Mid-level (L4) -> Senior (L5)",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 5,
+  "reactions": {
+    "❤": 59
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "speedrunning-guide-l3-l4",
+  "next_post_slug": "faang-career-ladder-senior-l5-vs",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!Jzr7!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa0dd13f4-1ea0-45e6-bc47-66dbfcf51f12_4539x1207.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Senior engineer (L5) is the first level that big tech recognizes as a “terminal” level. This means there is no pressure to continue to grow past this point. Aside from the fancy title and higher pay (extra ~$120k), you also get to take on more impactful work.",
+  "body_html": "<p><em>👋 Hi, this is <a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a> with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 10,000 readers this week 🙏 🎉</em></p><p><em>This week I’m continuing my “speedrunning guide” for big tech levels. Today’s edition is on how to get to Senior (L5) as fast as possible; enjoy!</em></p><div><hr></div><p>Senior engineer (L5) is the first level that big tech recognizes as a “terminal” level across all companies. This means there is no pressure to continue to grow past this point. Aside from the fancy title and higher pay (<a href=\"https://www.levels.fyi/?compare=Google,Facebook,Microsoft&amp;track=Software%20Engineer#\">extra ~$120k</a>), you also get to take on more impactful work. </p><p>These perks don’t come for free though; this promotion requires major behavior changes. In this guide, I’ll go over the fastest way to get promoted from Mid-level (L4) to Senior (L5).</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!Jzr7!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa0dd13f4-1ea0-45e6-bc47-66dbfcf51f12_4539x1207.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!Jzr7!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa0dd13f4-1ea0-45e6-bc47-66dbfcf51f12_4539x1207.png 424w, https://substackcdn.com/image/fetch/$s_!Jzr7!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa0dd13f4-1ea0-45e6-bc47-66dbfcf51f12_4539x1207.png 848w, https://substackcdn.com/image/fetch/$s_!Jzr7!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa0dd13f4-1ea0-45e6-bc47-66dbfcf51f12_4539x1207.png 1272w, https://substackcdn.com/image/fetch/$s_!Jzr7!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa0dd13f4-1ea0-45e6-bc47-66dbfcf51f12_4539x1207.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!Jzr7!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa0dd13f4-1ea0-45e6-bc47-66dbfcf51f12_4539x1207.png\" width=\"1456\" height=\"387\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/a0dd13f4-1ea0-45e6-bc47-66dbfcf51f12_4539x1207.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:387,&quot;width&quot;:1456,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:721297,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!Jzr7!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa0dd13f4-1ea0-45e6-bc47-66dbfcf51f12_4539x1207.png 424w, https://substackcdn.com/image/fetch/$s_!Jzr7!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa0dd13f4-1ea0-45e6-bc47-66dbfcf51f12_4539x1207.png 848w, https://substackcdn.com/image/fetch/$s_!Jzr7!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa0dd13f4-1ea0-45e6-bc47-66dbfcf51f12_4539x1207.png 1272w, https://substackcdn.com/image/fetch/$s_!Jzr7!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa0dd13f4-1ea0-45e6-bc47-66dbfcf51f12_4539x1207.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><h3>Logistics Refresher</h3><p>The same points about promotions in big tech <a href=\"https://www.developing.dev/p/speedrunning-guide-l3-l4\">from the last article</a> apply; here’s a quick recap:</p><ul><li><p><strong>“Lagging Promotions” in Big Tech</strong> - You need at least 6 months of consistent performance at the next level for promotion.</p></li><li><p><strong>Your Manager’s Role</strong> - They put together your packet and represent you to the promotion committee. You should stay in sync with them on if your performance is L5.</p></li></ul><p>As you go up the IC ladder, your manager will receive more pushback on your promotions. This is because there’s more ambiguity at higher IC levels. What does an IC8 even look like? Therefore you’ll need to <strong>work with your manager to gather feedback from the promotion committee</strong>. Your manager is just the messenger, but the promotion committee is the source of truth.</p><h3>The Strategy</h3><p>We discussed L5 expectations <a href=\"https://www.developing.dev/p/faang-career-ladder-mid-level-l4\">in a previous article</a>. Besides telling your manager about your goal of getting promoted fast, there are a few critical pieces to optimal L5 growth:</p><ol><li><p><strong>Find L5 Scope ASAP</strong> - Your manager or tech lead can help you out. Once you confirm you have L5 scope with your manager, you can just obsess about delivering it to guide you in the right direction.</p></li><li><p><strong>Focus On Team Leadership and Influence</strong> - Putting out code is not the most important thing anymore. Find opportunities to lead workstreams and influence your team. I provided some <a href=\"https://www.developing.dev/p/faang-career-ladder-mid-level-l4\">examples of what I mean by “team-level influence” in my L4 → L5 expectations article</a>. Shift time from raw code output towards these behaviors.</p></li><li><p><strong>Uplift Your Teammates</strong> - Look for opportunities to uplift and mentor others. These behaviors are necessary for your promotion to L5. Start these relationships early; you can’t rush mentorship.</p></li></ol><p>If you do this right, you can expect promotion on these timelines:</p><ul><li><p><strong>Promotion in 1 half (Exceptional)</strong> - This is rare since you need to start exerting team-level influence as soon as you join the team. I could see this happening for someone who was under-leveled and just got promoted to L4.</p></li><li><p><strong>Promotion in 2 halves (Great)</strong> - If you’re ambitious, I’d aim for this goal. It is possible to do this if you find L5 scope in your first half. If not, another half should secure your promotion.</p></li></ul><p>Easy to theorize, but what does this look like in practice? Here’s how I achieved L4 → L5 growth as a concrete example:</p><h3>My Growth Path</h3><p><strong>H1 (L4 Exceeds Expectations)</strong> - This half I wrapped up the workstream that got me promoted to L4 and picked up another L4 project. I spent a ton of time on engineering craft this half because I enjoyed it. I deprecated a few legacy systems that no one else would because they were dangerous and not that impactful. I didn’t exhibit any L5 behaviors this half.</p><p><strong>H2 (L4 No Rating) - </strong>My manager handed me an L5 workstream (~6 eng) to <a href=\"https://about.instagram.com/blog/engineering/cutting-threads-send-latency-in-half\">cut video messaging latency in half</a> that I led successfully. I also began a side project which turned into a multiple-half collaboration with another team. Lastly, I took on an intern who did a phenomenal job in helping me execute these two roadmaps I was leading. Although I started exhibiting L5 behaviors the pandemic canceled performance reviews this half.</p><p><strong>H3 (L4 → L5 Promotion, Greatly Exceeds Expectations)</strong> - My impact this half could’ve met expectations at the L6 level. I doubled down on the cross-org scope I created in H2 and developed a multi-half roadmap. I influenced and led another team to invest several engineers to <a href=\"https://about.instagram.com/blog/engineering/making-instagram-video-ads-performant\">revamp the IG video ads pipeline</a> with great results. I built out a second workstream and mentored another engineer to deliver it. This half I had massive impact, team-level influence, and mentorship which is what got me promoted.</p><h3>What I Learned</h3><ul><li><p><strong>The Skill of Tech Leading</strong> - If you grew from L3 → L4 right, you should be exceptional at landing code. The L5 behavior of team-level influence is just helping others do the same. In my first half of leading an initiative, I remember feeling unsure about it since I only had 2 years of experience. Leaning on my strong execution skills helped me become comfortable leading others.</p></li><li><p><strong>Working Hard Led To More Opportunities</strong> - I worked a lot and had a ton of workstreams in flight at the same time. This approach increased my chances of having one that had a ton of impact. At the time I didn’t know it and was just throwing myself at any problems that came my way. Looking back, it turns out that it was a great way to derisk my promotion.</p></li><li><p><strong>Focus On Impact</strong> - In my first half as an L4, I took on projects that were time intensive and not impactful. I did these migrations because I loved cleaning up tech debt. I would’ve had more impact if I influenced someone else to do them while I found L5 scope instead.</p></li></ul><div><hr></div><p>The promotion to senior engineer requires a shift in behaviors. It’s important to grow your skillset to accomodate for that. Practice your communication skills and shift your time from execution to more on leadership and influence. Once you find an L5 workstream, don’t let your foot off the gas. Obsess over getting shipping it no matter what it takes and you’ll get promoted fast.</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 10000+ software engineers from companies like Google, Meta, and Amazon who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p><p></p>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 10,000 readers this week 🙏 🎉",
+  "wordcount": 1044,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "3ef0124c-3ef3-40c1-b4d8-de1f82d7695c",
+      "publication_id": 1340878,
+      "name": "To Senior",
+      "slug": "to-senior",
+      "hidden": false
+    },
+    {
+      "id": "66545929-573e-4041-bd90-4d24196b9050",
+      "publication_id": 1340878,
+      "name": "Speedrunning Guide",
+      "slug": "speedrunning-guide",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        21.7021276595745,
+        233.2978723404255,
+        103.08510638297867
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        11.285106382978734,
+        121.31489361702127,
+        53.604255319148905
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        212,
+        251,
+        227
+      ],
+      "population": 137
+    },
+    "Muted": {
+      "rgb": [
+        122,
+        125,
+        123
+      ],
+      "population": 132
+    },
+    "DarkMuted": {
+      "rgb": [
+        80,
+        83,
+        81
+      ],
+      "population": 132
+    },
+    "LightMuted": {
+      "rgb": [
+        177,
+        211,
+        192
+      ],
+      "population": 29
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 59,
+  "comment_count": 14,
+  "child_comment_count": 6,
+  "audio_items": [
+    {
+      "post_id": 135850979,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/135850979/tts/2f7ed751-115f-40fc-b084-b0d54e8ea614/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 22242183,
+      "body": "This is a great guide. Another small thing I would mention is that ideally your work fits into an easy to understand narrative, like “I helped reduce latency, resulting in cost savings for the org + higher retention for users” or “I increased scalability through automation of manual processes and automated monitoring/alerting of our data pipelines”",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "This is a great guide. Another small thing I would mention is that ideally your work fits into an easy to understand narrative, like “I helped reduce latency, resulting in cost savings for the org + higher retention for users” or “I increased scalability through automation of manual processes and automated monitoring/alerting of our data pipelines”"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 135850979,
+      "user_id": 2794641,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-08-12T01:27:35.088Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Engineer's Codex",
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe324dc5e-8be6-4d9a-a32a-61a938fdc0cc_1024x1024.png",
+      "handle": "engineerscodex",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "engineerscodex",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Engineer’s Codex",
+          "id": 1748074,
+          "base_url": "https://read.engineerscodex.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 7,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    },
+    {
+      "id": 22219996,
+      "body": "Thank you so much for a detailed guide, Ryan. This is super insightful!",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Thank you so much for a detailed guide, Ryan. This is super insightful!"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 135850979,
+      "user_id": 7432660,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-08-11T16:59:17.482Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Aditya Deshpande",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/ce330d64-14a9-4b93-a8d1-edae64c99c0b_144x144.png",
+      "handle": "adityadeshpande524088",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "adityadeshpande524088",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 7,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

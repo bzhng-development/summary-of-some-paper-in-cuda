@@ -1,0 +1,435 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/revealing-my-passion-project",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 151358844,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-11-08T14:02:20.361Z",
+  "updated_at": "2024-11-08T14:05:02.103Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "revealing-my-passion-project",
+  "social_title": null,
+  "subtitle": "And How You Can Take Staff Behaviors With You Anywhere",
+  "teaser_post_eligible": true,
+  "title": "Revealing My Passion Project ",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 3,
+  "reactions": {
+    "❤": 85
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "staff-at-airbnb-by-age-26-zach-wilson",
+  "next_post_slug": "how-i-ship-projects-at-big-tech-companies",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!XE25!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F440c1cae-757e-4e78-b912-5640ab41f24b_840x456.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 151358844,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "And How You Can Take Staff Behaviors With You Anywhere",
+  "body_html": "<p>Last month I was in China for a passion project I’ve been working on. After spending ~$30,000 on it, I’m excited to share what it is. Most projects I work on are internal to Meta so I can’t share how I got things done.</p><p>I’m building the ergonomic keyboard I wish existed since I have problems with the ones on the market today. As I worked on the project, I realized I used many behaviors I learned when getting to Staff at Instagram.</p><p>Today, I’ll share how I got this project off the ground and how it demonstrates the behaviors you learn as you grow to Staff in big tech.&nbsp;</p><p>The high-level steps of technical leadership (<a href=\"https://www.developing.dev/p/the-tech-leads-playbook\">past article here</a>) are:</p><ol><li><p>Setting direction</p></li><li><p>Getting alignment and staffing projects</p></li><li><p>Executing the roadmap</p></li></ol><p><em>Note: as usual, I am not sponsored and there are no affiliate links in this article</em></p><h3>Step 1 - Setting Direction</h3><p>Playing a lot of tennis when I was young gave me wrist problems. Since I still have a long career in software engineering ahead of me, I want to make sure my wrists last. That’s why I’ve been a heavy ergonomic keyboard user for a while now.</p><p>After doing a lot of research, I could never find exactly what I was looking for. My most important criteria are:</p><ul><li><p><strong>Ergonomics</strong> - A split keyboard with tenting. This helps you position your wrists to prevent pain. It makes a big difference for me.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!XE25!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F440c1cae-757e-4e78-b912-5640ab41f24b_840x456.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!XE25!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F440c1cae-757e-4e78-b912-5640ab41f24b_840x456.png 424w, https://substackcdn.com/image/fetch/$s_!XE25!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F440c1cae-757e-4e78-b912-5640ab41f24b_840x456.png 848w, https://substackcdn.com/image/fetch/$s_!XE25!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F440c1cae-757e-4e78-b912-5640ab41f24b_840x456.png 1272w, https://substackcdn.com/image/fetch/$s_!XE25!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F440c1cae-757e-4e78-b912-5640ab41f24b_840x456.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!XE25!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F440c1cae-757e-4e78-b912-5640ab41f24b_840x456.png\" width=\"840\" height=\"456\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/440c1cae-757e-4e78-b912-5640ab41f24b_840x456.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:456,&quot;width&quot;:840,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:523227,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!XE25!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F440c1cae-757e-4e78-b912-5640ab41f24b_840x456.png 424w, https://substackcdn.com/image/fetch/$s_!XE25!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F440c1cae-757e-4e78-b912-5640ab41f24b_840x456.png 848w, https://substackcdn.com/image/fetch/$s_!XE25!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F440c1cae-757e-4e78-b912-5640ab41f24b_840x456.png 1272w, https://substackcdn.com/image/fetch/$s_!XE25!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F440c1cae-757e-4e78-b912-5640ab41f24b_840x456.png 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">Examples showing a normal vs split keyboard; guess how I took these pictures.</figcaption></figure></div></li><li><p><strong>Standard 75% layout (like a Macbook)</strong> - I didn’t want to relearn the keyboard layout I had used my whole life. Many ergonomic keyboards have unusual layouts:</p></li></ul><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!Z58i!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F36e5dd14-ac40-46fb-a60d-af85d1e59fda_780x728.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!Z58i!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F36e5dd14-ac40-46fb-a60d-af85d1e59fda_780x728.png 424w, https://substackcdn.com/image/fetch/$s_!Z58i!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F36e5dd14-ac40-46fb-a60d-af85d1e59fda_780x728.png 848w, https://substackcdn.com/image/fetch/$s_!Z58i!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F36e5dd14-ac40-46fb-a60d-af85d1e59fda_780x728.png 1272w, https://substackcdn.com/image/fetch/$s_!Z58i!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F36e5dd14-ac40-46fb-a60d-af85d1e59fda_780x728.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!Z58i!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F36e5dd14-ac40-46fb-a60d-af85d1e59fda_780x728.png\" width=\"780\" height=\"728\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/36e5dd14-ac40-46fb-a60d-af85d1e59fda_780x728.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:728,&quot;width&quot;:780,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:515865,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!Z58i!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F36e5dd14-ac40-46fb-a60d-af85d1e59fda_780x728.png 424w, https://substackcdn.com/image/fetch/$s_!Z58i!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F36e5dd14-ac40-46fb-a60d-af85d1e59fda_780x728.png 848w, https://substackcdn.com/image/fetch/$s_!Z58i!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F36e5dd14-ac40-46fb-a60d-af85d1e59fda_780x728.png 1272w, https://substackcdn.com/image/fetch/$s_!Z58i!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F36e5dd14-ac40-46fb-a60d-af85d1e59fda_780x728.png 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">Most people aren’t willing to learn this non-standard layout. I figured even if I learned one of these, I didn’t want to maintain muscle memory for two keyboards (one for my Macbook and one for these)</figcaption></figure></div><p>When you look at all the available ergonomic keyboards on the market today, many of them are:</p><ul><li><p><strong>Too ergonomic </strong> - See examples above; they are trying to lay out keys to align with the shape of your hand.</p></li><li><p><strong>Not ergonomic enough</strong> - Some popular keyboards <a href=\"https://www.amazon.com/Logitech-Wireless-Ergonomic-Keyboard-Wrist/dp/B07ZWK2TQT\">like this one</a> have a little tenting and are not split. These don’t fix the wrist pain for me:</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!5enf!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ff879e4c9-6505-45a0-9e85-ba41b04593e9_527x348.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!5enf!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ff879e4c9-6505-45a0-9e85-ba41b04593e9_527x348.png 424w, https://substackcdn.com/image/fetch/$s_!5enf!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ff879e4c9-6505-45a0-9e85-ba41b04593e9_527x348.png 848w, https://substackcdn.com/image/fetch/$s_!5enf!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ff879e4c9-6505-45a0-9e85-ba41b04593e9_527x348.png 1272w, https://substackcdn.com/image/fetch/$s_!5enf!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ff879e4c9-6505-45a0-9e85-ba41b04593e9_527x348.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!5enf!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ff879e4c9-6505-45a0-9e85-ba41b04593e9_527x348.png\" width=\"527\" height=\"348\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/f879e4c9-6505-45a0-9e85-ba41b04593e9_527x348.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:348,&quot;width&quot;:527,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:290230,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!5enf!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ff879e4c9-6505-45a0-9e85-ba41b04593e9_527x348.png 424w, https://substackcdn.com/image/fetch/$s_!5enf!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ff879e4c9-6505-45a0-9e85-ba41b04593e9_527x348.png 848w, https://substackcdn.com/image/fetch/$s_!5enf!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ff879e4c9-6505-45a0-9e85-ba41b04593e9_527x348.png 1272w, https://substackcdn.com/image/fetch/$s_!5enf!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Ff879e4c9-6505-45a0-9e85-ba41b04593e9_527x348.png 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div></li><li><p><strong>Poor design and build quality</strong> - Keyboards that have the right level of ergonomics are often poorly made, like the Kinesis Freestyle2 (<a href=\"https://www.amazon.com/Freestyle2-Ergonomic-Keyboard-Standard-Separation/dp/B00CMALD3E/\">all plastic, lots of wasted space, multiple wires</a>)</p></li></ul><p>Yet, I have been using the <a href=\"https://www.amazon.com/Freestyle2-Ergonomic-Keyboard-Standard-Separation/dp/B00CMALD3E/\">Kinesis Freestyle2</a> since it has a standard layout and the right amount of ergonomics. It gets the job done, but the design and build quality are poor. Can you imagine Apple or Logitech putting out a product like this? Also, the <a href=\"https://www.amazon.com/Accessory-Freestyle2-Ergonomic-Keyboard-Supports/dp/B008BVNQW4\">plastic legs you need to purchase</a> for tenting cost half the price of the entire keyboard, which feels like price gouging. </p><p>I did some serious searching for a better option and never found anything that was perfect. Given that I couldn’t find what I wanted, I considered building an ergonomic keyboard that is easy to use and beautifully designed.</p><p>I started by writing a direction doc which is one of the first things I do when resolving ambiguity in a project. I wrote down my thoughts on the current problem and why it should be solved. As I flushed out the document a lot more became clear. It also became a central place to pull in all my research and opportunity sizing on if it was worth doing.</p><p>Many people think that writing docs is just overhead that big tech engineers are forced to do. To me, writing helps engineers think through the problem and get clarity. It’s an added benefit that you have an artifact to share with others.</p><p>After thinking through the opportunity sizing I felt I had decent odds of making back my initial investment. Also money aside, I was excited to work on the project since there’s something satisfying about building what you want. These reasons made me feel it was a worthwhile project so I started thinking through the roadmap.</p><h3>Step 2 - Getting Alignment and Staffing Projects</h3><p>I decided it would be a good idea to build a prototype to confirm technical details, but I knew I couldn’t do it alone. I felt confident I could write quality firmware in a reasonable amount of time, but learning how to lay out the PCB and do the CAD would take too long. Not to mention that quality would be a big risk if it was my first time doing it.</p><p>I knew I needed help with the electrical engineering and industrial design for my project. Here’s how I staffed that work:</p><ol><li><p><strong>Electrical Engineering</strong> - Since quality was important, I felt it’d be risky to hire someone from Upwork. So I reached out to electrical engineers I went to UCLA with. One of them was interested in the project so I shared my strategy doc with him and talked over it. He was excited about the vision since engineering quality was important and could see the logic behind the plan, so he joined me.</p></li><li><p><strong>Industrial</strong> <strong>Design</strong> - For this product to succeed, it needs to be beautifully done. There are already incumbents that get the job done with so-so designs. I found a designer whose work I admired online and reached out. Again, the doc was critical for communicating the project vision, which he thought was compelling. He ended up joining too.</p></li></ol><p><a href=\"https://www.developing.dev/p/how-to-influence-without-authority\">Influence without authority</a> is one of the most important skills needed to build teams and get people going in the same direction. That’s why it’s so important for growing to Staff. Aside from promotions, you can see how it was useful here. Without their help, this project would not be possible.</p><p>I think one interesting takeaway from this process is how important writing was. Writing down the plan gave me a clearer picture of what I wanted to do and why it seemed like a good opportunity. Having this clarity made me much more compelling in conversation. Sharing the writing was also an easy way to convey the vision.</p><h3>Step 3 - Executing the Roadmap</h3><p>Now that we have the right team on the project all that is left is to get it done. This is the “easy” part. I say that with quotes because there’s still a lot of challenging work left. However, the remaining problems have a lot less ambiguity. </p><p>This is often the case for new projects; there’s more uncertainty in defining a new direction than in carrying out an existing solid plan. That’s why you often see high-level engineers come in and resolve all the ambiguity, then leave projects once they are on a steady course.</p><p>For execution, I do whatever the team needs for the overall initiative to be successful. This doesn’t mean just writing firmware. Some examples of work I’ve had to do:</p><ul><li><p>Learn and figure out how manufacturing works (visiting China)</p></li><li><p>Owning and protecting the product vision</p></li><li><p>Project management across functions</p></li><li><p>Reviewing work outside of my immediate domain (hardware, mechanical, design)</p></li></ul><p>This level of ownership drives me to solve whatever problem is needed. It’s an important part of technical leadership which I learned at Instagram. The main difference is that the work on this project is a lot less software engineering. It’s been a lot of fun learning these other domains throughout the process.</p><div><hr></div><p>I hope this was a helpful example of some Staff-level behaviors. You can imagine a similar story if you find some underinvested area on your team. Write about the problem and the benefits of solving it. If you’re compelling enough, then you can get people to join you.</p><p>This story also shows that you can take Staff-level behaviors with you no matter where you go. A lot of what you need to lead in big tech will help you elsewhere too.</p><p>It’s been a lot of fun working nights and weekends on this project. I’ve been learning a lot about consumer electronics and entrepreneurship. No one knows if this project will succeed or not. All I can promise you is that if I learn something I think will be interesting to you, I’ll share it.</p><p>I don’t want to spam this email list since not all of it is relevant for software engineering career growth, so I plan to <a href=\"https://read.compose.llc/\">write more about the project here</a>. Consider following if you want to see if we succeed, learn about the process, or you’re interested in the keyboard itself:</p><div class=\"embedded-publication-wrap\" data-attrs=\"{&quot;id&quot;:2734951,&quot;name&quot;:&quot;Compose&quot;,&quot;logo_url&quot;:&quot;https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F356b217f-7482-4038-b61c-b32aa5099908_1280x1280.png&quot;,&quot;base_url&quot;:&quot;https://read.compose.llc&quot;,&quot;hero_text&quot;:&quot;Building a low-profile, entirely wireless, ergonomic keyboard.&quot;,&quot;author_name&quot;:&quot;Compose&quot;,&quot;show_subscribe&quot;:true,&quot;logo_bg_color&quot;:&quot;#ffffff&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"EmbeddedPublicationToDOMWithSubscribe\"><div class=\"embedded-publication show-subscribe\"><a class=\"embedded-publication-link-part\" native=\"true\" href=\"https://read.compose.llc?utm_source=substack&amp;utm_campaign=publication_embed&amp;utm_medium=web\"><img class=\"embedded-publication-logo\" src=\"https://substackcdn.com/image/fetch/$s_!8Vw4!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F356b217f-7482-4038-b61c-b32aa5099908_1280x1280.png\" width=\"56\" height=\"56\" style=\"background-color: rgb(255, 255, 255);\"><span class=\"embedded-publication-name\">Compose</span><div class=\"embedded-publication-hero-text\">Building a low-profile, entirely wireless, ergonomic keyboard.</div></a><form class=\"embedded-publication-subscribe\" method=\"GET\" action=\"https://read.compose.llc/subscribe?\"><input type=\"hidden\" name=\"source\" value=\"publication-embed\"><input type=\"hidden\" name=\"autoSubmit\" value=\"true\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email...\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"></form></div></div><p>Thanks for reading,<br>Ryan Peterman</p>",
+  "truncated_body_text": "Last month I was in China for a passion project I’ve been working on. After spending ~$30,000 on it, I’m excited to share what it is. Most projects I work on are internal to Meta so I can’t share how I got things done.",
+  "wordcount": 1378,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "f4df2d6e-046e-448c-b0bf-6dd4ae5a5a6a",
+      "publication_id": 1340878,
+      "name": "To Staff",
+      "slug": "to-staff",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        163,
+        115,
+        73
+      ],
+      "population": 533
+    },
+    "DarkVibrant": {
+      "rgb": [
+        132,
+        92,
+        36
+      ],
+      "population": 1
+    },
+    "LightVibrant": {
+      "rgb": [
+        249,
+        188,
+        132
+      ],
+      "population": 11
+    },
+    "Muted": {
+      "rgb": [
+        175,
+        140,
+        80
+      ],
+      "population": 55
+    },
+    "DarkMuted": {
+      "rgb": [
+        91,
+        59,
+        44
+      ],
+      "population": 55
+    },
+    "LightMuted": {
+      "rgb": [
+        203,
+        171,
+        155
+      ],
+      "population": 360
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 85,
+  "comment_count": 26,
+  "child_comment_count": 13,
+  "audio_items": [
+    {
+      "post_id": 151358844,
+      "voice_id": "en-US-ChristopherMultilingualNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/151358844/tts/f6145d6b-f0bd-4f6e-88b0-689f3efb62d0/en-US-ChristopherMultilingualNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 76184913,
+      "body": "Awesome project! Looking forward to following along.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Awesome project! Looking forward to following along."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 151358844,
+      "user_id": 14824538,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-11-08T15:00:35.770Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Andre Nader",
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fbucketeer-e05bbc84-baa3-437e-9518-adb32be77984.s3.amazonaws.com%2Fpublic%2Fimages%2F84ada029-6f66-4d8f-89af-e69d93446845_1648x1872.jpeg",
+      "handle": "andrenader",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "andrenader",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "FAANG FIRE",
+          "id": 82380,
+          "base_url": "https://www.faangfire.com"
+        }
+      },
+      "user_bestseller_tier": 100,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": 100,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "bestseller",
+          "tier": 100
+        },
+        "subscriber": null
+      },
+      "score": 7,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 180322782,
+      "body": "Subscribed to the Compose newsletter, I have been looking for the exact same split keyboard that you're describing (and using Kinese FS2 too due to a lack of a better option)! Wireless split with tenting and no change from traditional MacBook keyboard - I want to be able to switch b/w the split keyboard and my Macbook seamlessly. ",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Subscribed to the Compose newsletter, I have been looking for the exact same split keyboard that you're describing (and using Kinese FS2 too due to a lack of a better option)! Wireless split with tenting and no change from traditional MacBook keyboard - I want to be able to switch b/w the split keyboard and my Macbook seamlessly."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 151358844,
+      "user_id": 353974543,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2025-11-23T13:20:15.820Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Abhi",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/4ef7916e-7351-4d05-94d8-45f96598754e_144x144.png",
+      "handle": "justrebel",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "justrebel",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "3 replies by Ryan Peterman and others"
+    }
+  ]
+}

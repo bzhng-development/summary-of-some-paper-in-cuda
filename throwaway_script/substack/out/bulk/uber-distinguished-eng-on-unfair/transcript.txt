@@ -1,0 +1,687 @@
+Joakim Recht grew from Senior to a Distinguished Engineer at Uber and I asked him what it took to get there. We covered his full career including the project that got him promoted, what makes a great software engineer, and learnings from promo committees.
+
+Check out the episode wherever you get your podcasts: YouTube, Spotify, Apple Podcasts.
+
+
+## Timestamps
+
+
+00:00:56 - Distinguished promo project
+
+00:19:07 - How to grow your influence
+
+00:22:38 - Unfair promo story
+
+00:33:09 - On delegation
+
+00:39:05 - Why engs don’t trust management
+
+00:47:58 - Politics as he grew
+
+00:57:00 - How to pick mentees
+
+01:03:22 - Why he left Uber
+
+01:15:16 - Biggest Uber eng mistake
+
+01:20:15 - Uber scandals
+
+01:24:35 - Advice for younger self
+
+
+## Transcript
+
+
+
+## 00:00:56 — Distinguished promo project
+
+
+Ryan:
+
+[00:00:56] What was the initial problem that you were solving and the story behind the project that eventually got you promoted to distinguished?
+
+Joakim:
+
+[00:01:03] Not that long after I started at Uber. We were at the local office in Denmark. We had been tasked with building a new data store for Uber. Previously, it ran on just a PostgreSQL single instance, just a big machine and a lot of replicas, but a single database.
+
+[00:01:21] That was projected to run out at a certain point in time. So before that point, we had to have a new data store in place. In the office, we were building a new object store called Schemaless. There’s stuff about that out there. It’s based on sharded MySQL. My job was primarily handling all those MySQL shards, managing and operating them, monitoring, scaling, all that stuff.
+
+[00:01:50] In the early setup, it was pretty bare metal. Puppet and MySQL. Every time you had to do a master promotion or any kind of maintenance or replacement, you had to do some Puppet management, log in, and hope for the best. It was pretty hard.
+
+[00:02:12] It got harder because the system scaled more. At that time, containerization was a fairly new concept.
+
+[00:02:27] Some people were using it, some weren’t.
+
+[00:02:29] Kubernetes, I think, was just released in the first alpha version around that time. At some point, we started talking about it. Why don’t we run the databases in Docker so we can run different MySQL versions more easily, but we don’t have to have the entire host?
+
+[00:02:50] We can run multiple databases on a single host. When you run these sharded MySQL things, it’s a bit expensive if you want your own database. It requires at least nine physical servers to run a database, and it gets pretty expensive. Why don’t we virtualize some of that so we can improve utilization? It becomes much easier to manage if we also take that idea, which is common now but was uncommon back then, to define what we want to have, like a goal stage or an intent.
+
+[00:03:30] Then have a system that can take you there. You don’t have this procedural promote a new master or replace something. You just say we want a cluster that needs to have nine, we want a database with nine individual clusters, three nodes each, and make that work.
+
+[00:03:47] That was basically the idea. We built that for Schemaless first, and it worked out pretty well.
+
+[00:03:55] There was a whole ecosystem around that, including monitoring, management, and version control. It was like GitHub.
+
+[00:04:05] I have a somewhat aversion to GitHub because it’s a one-way thing. You push something and hope for the best. There’s no feedback involved. You don’t know if stuff is going to work or not, or how far it is, and there’s no orchestration. We built a whole orchestration layer and monitoring on top of a traditional GitHub strategy.
+
+[00:04:27] That took off and made us much better at scaling, monitoring, and operating. Over time, we thought, okay, we did that for that part. The next idea was, why don’t we do that for all the different databases we run?
+
+[00:04:47] It was what became the efforts to build something similar that can work for any kind of stakeholder technology. Ideally, we have a single team that can operate an entire fleet, doing host maintenance, database management, scaling, all that stuff. Previously, every database technology had its own team attached to it.
+
+[00:05:14] They did bare metal, host management, monitoring, provisioning, decommissioning, database management, all that stuff. Everybody had their own tool chain, which was super wasteful. The idea was, can we make a single platform that can handle all that?
+
+[00:05:32] That became a whole thing. It took a while for many reasons. There’s organizational resistance because many teams built their own tool chain. From a local point of view, it doesn’t make any sense. It took a while to convince everybody it was a good idea, roll it out, and get it to work with technologies that are not inherently cloud-ready or container-ready, like HDFS or Kafka, which were notoriously bad at moving stuff around dynamically.
+
+[00:06:21] Host names are encoded everywhere, and pod numbers, and you need to shuffle data, and there’s no good way of shuffling data. Getting all that to work took a lot of time. This project grew in scope from managing our own team stuff to managing the entire company on the stakeholder side.
+
+[00:06:53] When I left, it was running all the stakeholder workloads. I don’t remember the exact numbers, but when I left, I think we had around 120,000 physical servers under our control and around half a million databases, all co-located and operated by a team of about 20 people, which is pretty insane. There were still database teams for specific databases like Cassandra and MySQL, but just the fleet management part of it.
+
+[00:07:30] The ability to operate a cluster with a single click, or rotate, decommission data centers, or commission new data centers, all that stuff, which usually takes a lot of manual effort, got pretty advanced over time.
+
+Ryan:
+
+[00:07:48] And my understanding, the initial motivation was two main things.
+
+[00:07:53] One is the fragmentation of the machine. So not everyone needed a full instance. So you could save a lot of capacity. And then the other one, it sounds like maybe even the bigger one is the dev velocity or the engineering time savings because you don’t need as many production engineers to manage all of these instances.
+
+Joakim:
+
+[00:08:12] And also just the consistency of that part. You want the same availability all over the place. You don’t want to have everybody invent ways of making sure that servers are working. When do you discover something is broken? When, how do you discover that a disk doesn’t work or whatever it might.
+
+[00:08:31] You don’t want everybody to go around doing that by themselves. You kind of want that to just be done once.
+
+Ryan:
+
+[00:08:36] It sounds like you didn’t have a grand plan for it to eventually be all of managing all of Uber’s stateful workloads. So what is it that you saw at the beginning and had you convince people that you should start using Docker for databases?
+
+Joakim:
+
+[00:08:54] Well, so one of the good things about Uber, and especially in the old days, was there was just a lot of freedom.
+
+[00:08:58] That freedom also came with a lot of cost. I think at some point somebody counted that we were using at Uber, there were like something like 52 maybe different databases, technologies in use in the company, which is like, that’s a lot.
+
+[00:09:14] But on the other hand, we also had the freedom to basically pick what we wanted. So the decision was a fairly busy one because we didn’t have to, like, there were not a lot of people who had to be involved in it. There was some people, but there was not a lot of people who had to be involved in it.
+
+[00:09:33] So in that sense it was fairly easy on the first thing because we just did it for our team by ourselves. And that was how Uber operated for better, for worse. So that part was pretty easy. I think the harder part was when we kind of realized we should really be doing this for everything.
+
+[00:09:53] That it became a bigger project to kind of convince people that it’s the right thing. And we also did not try to convince everybody at the same time. We said, we’re going to build this thing. The long term idea is to do it for everything. But we’re going to start, it would be a very incremental effort going to start with the stuff that we own in our office.
+
+[00:10:18] Then we are going to do the things that are owned by our friends in other departments. And then we’re going to broader and broader to people who are more resistant to stuff like this that we kind of knew upfront.
+
+[00:10:36] We also knew that we are not going to have a ready platform from day one anyway, so we don’t want to have everybody on day one.
+
+[00:10:46] But maybe it was like, I don’t want to force anything down anybody’s throat. So I just want to build, I prefer to build something and ensure that it works and then people can kind of say, okay, that maybe isn’t that bad then if you say, I can see it works somewhere.
+
+[00:11:05] So a more incremental approach to the whole thing. And I think that helped a lot.
+
+Ryan:
+
+[00:11:10] It also took a very long time when you said there were challenges when you were influencing the other teams to adopt this. What was the main pushback that you’d hear and how did you convince people?
+
+Joakim:
+
+[00:11:24] Well, I think one pushback is just that we already have something and it works, so it’s a waste to do something else.
+
+[00:11:31] I can see that argument, but it’s also a kind of local perspective. It’s not a global perspective. When we built this, it was more from a company-wide perspective of wanting to improve the general state of stateful workloads. We don’t just want to improve your thing.
+
+[00:11:52] It does also come with a little bit of, yeah, some things will be much nicer, but some things would also be kind of annoying. For example, because Uber didn’t and still doesn’t have a full software-defined network where you can just virtually move app IP addresses around and host names. If you get a new host, you get a new host name, you get a random port number, and that’s it. You can’t do a logical move of something, and for some storage technologies, it makes it really hard. That’s pretty annoying. From a local team perspective, it can be quite frustrating if you have tooling that works and now you have to rebuild it in a very different paradigm. It seems like a waste of time, but it really isn’t because you get large-scale benefits, and you get a lot of stuff for free.
+
+[00:12:53] For example, at some point, we were like, okay, we built a basic platform. Now let’s look at NUMA. NUMA is the whole hardest memory attached to CPUs. If you’re running databases, particularly stuff that needs to do a lot of data shuffling, it’s nice that the memory is aligned with the CPU that the process is running on.
+
+[00:13:13] How do you make that happen in a nice way? Also, from a scheduling perspective, when you need to do feature optimization, you need to take that into account. Both the actual runtime needs to schedule, but also the actual scheduler needs to be able to see how to best allocate the CPUs to memory.
+
+[00:13:34] That’s a pretty hard thing to do, and it’s not something you get around to doing yourself, but when you have a platform like this, you kind of get it for free. I think the more of this stuff we built, the more people were like, yeah, that’s pretty nice.
+
+Ryan:
+
+[00:13:46] It sounds like this effort was kind of a bottoms-up effort where you and some engineers realized this is a good idea and then it gained traction.
+
+[00:13:57] I’m curious, as the initiative evolved, did leadership start to get involved at some point and how’d that evolve? We could really only get so far, because all,
+
+Joakim:
+
+[00:14:07] especially because back then Uber, the stateful part of Uber was basically split into two. One was the online, real online databases, MySQL, PostgreSQL, Cassandra, stuff like that.
+
+[00:14:20] And then there was all the data stack,
+
+[00:14:22] HDFS, Kafka, Pinot, all that stuff. And that ran in a completely different org. We had no, the management chain from that actually more or less went through the CEO and back down. So they were like, this thing you’re talking about, it sounds pretty nice, but we really don’t care.
+
+[00:14:39] But then at some point there was some reorging going on, but also we got more and more support of the management chain to say this by now, this is something you have to do and support. They just said, okay, this early thing is the future and you will not be allowed to have your own service any longer.
+
+[00:15:03] If you want to run something, that’s where it runs. And that of course helped a little bit also with adoption because there will always be if you have the full personal thing, there will always be strikers or people will just say, we don’t want to, or we have our own thing going.
+
+[00:15:20] It’s super hard to create full alignments if you’re just yourself,
+
+[00:15:25] no matter how nice the thing you have is, there’s always going to be somebody out there who’s not going to be convinced.
+
+Ryan:
+
+[00:15:30] I mean, it’s a huge undertaking and I feel like when you talk about the end state of the entire company, the scale of databases all running through this one platform that distinguished scope makes a lot of sense.
+
+[00:15:43] I’m curious for people who are wanting to know about the career side of things, how did that look at each step when your career was growing through that? I think in general,
+
+Joakim:
+
+[00:15:55] There are many opinions on how you get promoted, what triggers the promotion, whatever.
+
+[00:16:02] I have a somewhat naive perspective on it that is fairly fair, is not always fair, but it’s pretty fair. And it’s tied to the scope of the work that you’re doing, the amount of people you influence with what you’re doing. That’s how I see it. And so for something like Odin that had this natural progression of first you’re doing it inside your teams, then you’re doing it inside your local org, then you’re doing it inside the wider platform org.
+
+[00:16:39] And then it goes even beyond that. And that kind of reflects the job level. The more people you have under your influence, it’s not a direct input, but the more people who are affected by what you do well, the higher you get in the level.
+
+[00:17:01] So if you’re actually able to run a project of that scope to success, then I think that a promotion will happen. Or not a promotion, but a number of promotions will happen automatically. And not just for you, but the entire team. It kind of drags a lot of people along. Now of course you could say I was maybe a bit lucky in the sense that I had a single project for a very long time and a lot of people kind of get shuffled around and then do a project, other project canceled or fails and then you have to do something else.
+
+[00:17:34] It gets much harder to ride that expansion. Not impossible. I’ve seen many cases where it’s definitely possible, but it’s just much easier when the project you’re working on has that natural scope expansion. So my promotions to a very large degree followed that work.
+
+[00:17:59] First I did some other work before we got to the whole state hall thing. And then I did the first version of it, I think that got me a promotion and then we did more and we kind of expanded to standard by SQL and Cassandra and that got me another promotion to, I forget the, because the title names changed a bit on the way.
+
+[00:18:25] But that probably got moved to principal engineer. And then when it was more, it wasn’t done done, but it was like sets, like it really didn’t require me any longer. It was maybe handed off to the team, and I could do other things. That really took me to the distinguished engineer level.
+
+[00:18:48] But that was a very natural progression. It was not a progression. That was not the reason why we were doing it. It just followed the work that we were doing quite nicely.
+
+
+## 00:19:07 — How to grow your influence
+
+
+Ryan:
+
+[00:19:05] Right. I mean, those are the best kinds of promotions.
+
+[00:19:08] It sounds like you’re saying that the levels, obviously they’re tied to your impact, which is tied to the scope of your influence. And so I guess the natural question then is what are the typical ways to have your work influencing more and more engineers?
+
+Joakim:
+
+[00:19:27] So, I have this personal thing, I just don’t like doing things too many times.
+
+[00:19:32] I just, I really don’t like it. I think I might have written something about the lazy engineer at some point, which, yeah, I like putting these weird titles on things, but the idea that if I’ve done something, for example, if I’m operating a database and I need to replace the host, and I’ve done that manually a couple of times, I don’t want to do it any longer.
+
+[00:19:58] So that needs to be automated to some degree or abstracted away or whatever it might be. And so I think that’s, it’s not the only thing, but I think for me, there’s a major driver because then I’m like, why do we have this waste in our systems or in our processes? And I really didn’t start thinking about maybe not just your own waste, but also the waste of other people.
+
+[00:20:25] I think that’s where you get into that scope expansion. You start thinking about your own stuff in your team, and you expand from there. So that’s how I think about it. I don’t think about it as, and it’s not like, oh, I need to get a promotion or whatever.
+
+[00:20:41] I just have this natural thing. And it can be pretty annoying sometimes because you can tend to rabbit hole a little bit also, or it’s what we call a depth-first approach to everything. Where I’m doing this other thing, but suddenly, this is annoying me.
+
+[00:21:00] I need to build this tool. But the tool is also annoying to build. So I have to build the build system, or I have to improve the build system, but the build system is also annoying, so I have to like, whatever. And then you take it on a long chain of completely sidetracking what you should actually be doing.
+
+[00:21:16] That’s kind of the danger of it. But to me, I think it just drives a lot of this, like how do you actually improve? Systematically and systemically, like the company and the processes and, in particular, your engineering organization. That’s why I’m focused, but it can also touch other things, but mainly engineering.
+
+Ryan:
+
+[00:21:40] I see the natural leverage that comes from it. ‘cause if you build some tooling or something like that, that software can then act on your behalf and help others. And then that’s kind of how you scale yourself.
+
+Joakim:
+
+[00:21:55] Yeah. So we always talk about this whole thing about how do you scale yourself?
+
+[00:22:00] How do you become a force multiplier? And it’s something I would like, it’s always like, I know then you can mentor people or you can kind have whatever you can step, we can start doing more design so we can push that down. I like the idea of you become a force multiplier by allowing other people to work better and faster.
+
+[00:22:23] Or maybe not even work at all, ideally on the thing that they’re working on. Take that problem away. Think about how do we actually take the problem that you have out of the equation? Because I think that’s the most fundamental thing you can do. Exactly the thing you’re doing.
+
+[00:22:37] If you don’t have to do that any longer, what could you be doing?
+
+
+## 00:22:38 — Unfair promo story
+
+
+Ryan:
+
+[00:22:38] One thing you mentioned, we were talking about promos, is you said they’re typically fair and they’re based off of the impact of your work. But I’m curious, it sounds like you have some experience when promos are not fair, or what does it mean when you’re saying promos are not fair sometimes?
+
+Joakim:
+
+[00:22:57] Well, I think it can mean a lot of things. I have been part of promo committees for a very long time, and the promo committee structure has also changed a lot. The first time I was in a promo committee was, I think, one of the scariest experiences of my life.
+
+[00:23:17] The first form of commission I was in was basically for the entire platform engineering. I forget how many we were, but it was all the managers, VPs, senior directors, and senior engineers in a room for an entire day. Somebody says, let’s go through all our employees, all our 18 years, just all of them.
+
+[00:23:53] The manager talks about how good they are and if they should get promoted. There were 200 or 500 years, an insane number. There was no preparation, no material. It was just the manager saying what they thought, and obviously, they all thought everybody should be promoted.
+
+[00:24:13] Then somebody suggested we should have some kind of structure, like a point system. Is this how it works? It was back then apparently. In a setup like that, it gets super unfair because it all depends on how good your manager is at presenting your case. If you have a bad manager, you have a bad case. You might have a very good manager, but your work is bad. In that sense, there’s a lot of unfairness going on, which I think also led to some of the early day Uber culture issues. Not just that, but it was part of it.
+
+[00:24:54] Things did get more structured, but it is just super hard because there’s no way you can objectively judge how a person is doing. There are so many dimensions, so many things. You’re not operating in isolation. Maybe the thing you were doing depended on another team, and that team didn’t do what they said they would do. They ghosted you or whatever. That’s not your fault. Or maybe you had the project, it was almost in production, then it gets canceled by management for various reasons. Not your fault. Are you then not getting promoted or are you getting promoted?
+
+[00:25:43] If you’re getting promoted, then on what basis? Is it just because you wrote a lot of code, but the code was never used and nobody ever saw it again? It’s hard because sometimes you did a really good effort, and we don’t want to demotivate you completely by saying, because it didn’t go to production, it was not your fault, you’re not getting a promotion. Other times, you just have to make the thing where you really haven’t proven anything yet. You did a lot of good work, but it was not your fault, but you’re not getting promoted. Ideally, there’s fairness all around. But because it’s a human process, there’s a fair amount of unfairness.
+
+[00:26:28] There are a lot of people who don’t really understand what it means. They think it’s super unfair because they think they did really well compared to maybe the team. But it’s also because the team is not very good, or you lived on an island and hadn’t realized there’s another world out there that’s actually very different.
+
+[00:26:56] In the early days, Uber used to be a Python shop. First a Java, Python shop, then it went into a Go kind of shop, and nobody knew Go. There was a lot of people just trying things out. You would encounter these groups of people who had been under their own influence. You look at what they have produced and think, this is no good. Even though maybe one of you is better than the other, as a whole, it’s just not good. We cannot promote you because you need to look at what’s going on over here.
+
+[00:27:43] That can feel super unfair to those people because they were not prepared for what they actually went into. I think that’s also why I made this effort of trying to describe how you can actually get promoted. What does it mean? It’s not about beating the promo committee, which is just a catchy title, but more about what it actually means to be a software engineer at Uber.
+
+[00:28:18] You have ideas about what that means, but actually, there is a way to be a software engineer at Uber. That way is different than Meta or Google. It’s important to be aware of that because otherwise, you work towards something that was not the thing it should have been.
+
+[00:28:40] That can create a lot of frustration and disappointment. It’s too bad that people can’t get into that state and don’t get the correction along the way. They go all the way to promo, have prepared a package, written a lot of stuff, gotten feedback, peer feedbacks, and then the promo committee is like, nah, it’s no good.
+
+Ryan:
+
+[00:29:08] Yeah. You said you wrote that piece that was how to beat the promo committee, and it’s basically the way that you grow as an engineer at Uber. It’s not focused on the specifics of the promo packets. It’s actually focused on how you become a stronger engineer.
+
+[00:29:26] What was in there?
+
+Joakim:
+
+[00:29:30] Mainly just as you say, good engineering practices. Good engineering practices and something that I found surprising during all my years at Uber, which is, a software engineer needs to write code. If you’re not writing code, you’re not a software engineer.
+
+[00:29:46] I know that some people find that pretty controversial. I don’t know why, but apparently it is. That applies to any level. If your title includes engineer, you should be writing code. It might be different how much code you write, but you should be writing code on a regular basis.
+
+[00:30:05] To me, regular basis means every day. I know for some people it might mean once a week or whatever, but to me, it’s every day, ideally. I think the main advice in that thing was really just write code. Don’t mess around. Don’t overthink it either.
+
+[00:30:30] Don’t think, oh, I need to write advanced code or whatever. The higher my level, the more advanced my code has to be. No, just write code. If you do that, I have never seen anybody who will not grow along with that.
+
+[00:30:50] Just keep writing the same code, doesn’t make any sense. I think the main advice was actually just that, just write code, also write good code. The secondary advice is to make good commit messages and make sure the review code is nice to review. Also, just standard software practice, which people kind of forget about. Many people might not have learned it because normally you don’t actually learn real-life software engineering out of college. It is all theory, but in real life, there’s a craftsmanship to it that you have to learn.
+
+[00:31:33] You don’t learn that in isolation. It’s almost impossible to learn it by yourself. These days you can get a lot of help from AI and whatever, but you have to see somebody doing it in order to improve. I think that was really the main thing. There’s a ton of other smaller things about it because you also need to be able to articulate what you’re doing, like design documents.
+
+[00:31:58] You also need to be out there. One of my other philosophies is running code beats perfect code any day. You can always come up with weird cases, but in the big picture, running code will always beat perfect code or beautiful code.
+
+[00:32:24] As a software engineer, that can be pretty hard because some people are really, oh, no, it needs to handle the cases and blah, blah, blah. I’m just much more of, yeah, just do something. If you do the perfect thing, you get tied up in this, oh, in order to submit code, I have to have the entire thing and it must handle all cases.
+
+[00:32:51] Then you start working on something, and then you refactor and do some more. Even after a month, you do a commit, and that’s just not useful because you did not get any feedback. Nobody else saw it. You might be in a completely wrong direction.
+
+
+## 00:33:09 — On delegation
+
+
+Ryan:
+
+[00:33:09] What one common advice I hear when people are thinking about growing in their career is that they have to scale themselves. And that often points them towards being more and more of a delegator and more and more of a tech lead. And they start getting into this zone where they’re in these high level discussions in the design docs, but not actually writing any code.
+
+[00:33:35] What’s your thought on that? ‘cause that’s a very common thing that people will push on. Higher level engineers say, stop writing code, go and delegate.
+
+Joakim:
+
+[00:33:45] Personally I don’t subscribe to that idea at all. I see that a lot. This is also just about what you find interesting.
+
+[00:33:57] And I just like finding jobs. I just do, I have always liked it. It’s just what I like to do. If I didn’t have anything else to do, this is what I do. If I didn’t have a job, I would probably also do it. I just like it. I think there’s also a very big overlap between the writing of code and the ability to perform.
+
+[00:34:24] At any level. To me, there are many facets to it. I think one thing is if you’re not writing code, you lose touch with the system. Not on day one, of course, because on day one, if you stop writing code, it’s fine because you remember what was going on.
+
+[00:34:45] But the system evolves all the time and you forget how it is. You can probably get a more high-level view of what’s actually going on inside the machine. That just means it gets harder for you to design for the future. The designs you come up with will be more decoupled from reality and might be idealistic. When it gets to actually implementing, it’s handed off to somebody else and they’re like, what is this?
+
+[00:35:20] And who came up with this? Oh, that’s that guy with the whiteboard and the documents. Who’s that to say what we should be doing? ‘Cause the actual problems we have are like this. I think that’s one major thing.
+
+[00:35:43] Tied to that is how do you actually build a team? Because as you say, you need to scale yourself, that’s for sure. I think another way of saying you need to scale yourself is you need to enable as many people to work as efficiently as possible. Which I think is a bit different than just scaling yourself.
+
+[00:36:08] The scaling yourself, the size of you, the kind of cloning yourself, usually it doesn’t quite work. But if you need to make your team, when I say your team, the people around you, the people you’re supposed to influence, if you’re supposed to affect change, whatever the change might be, it is much easier to do if they trust you, they know what their pain points are, and they know that if you say something, it usually works out or if they say something then you listen to them.
+
+[00:36:48] That decoupling kind of hurts in that sense because you get new people in. Of course, the people you worked with before will know you, so they’re kind of okay, but people start rotating in and out so you lose more touch with both the people and the system. That over time gets you to a pretty bad state where you’re doing a lot of designs and documents and talking and reviewing.
+
+[00:37:17] But you lose more touch with what is actually going on. There might be an Uber thing, but you get more hostility also. People won’t tell you to your face, but everybody will think, oh, who’s that asshole? Or who’s that kind of guy to come and say whatever?
+
+Ryan:
+
+[00:37:37] So you’re saying if you’re not hands-on, you lose trust and then people won’t tell you that you’ve lost trust and then if you try to influence them or convince them, they’re gonna not go your way.
+
+Joakim:
+
+[00:37:52] Yeah, I think at least I’ve seen that a lot. And the other thing is if you’re not in there, then at least personally, I don’t want anybody to tell me what I’m supposed to do.
+
+[00:38:09] It’s not, I’m not open input, really like to talk about it, but if you don’t have skin in the game, I think you should stay out of my things. And then I will also promise to stay out of new things. If you ask for help, more than willing to help. If I ask for help, I hope that somebody will help.
+
+[00:38:32] So that whole thing about if you kind of do this top down, oh, by the way, now we’re supposed to do this. People don’t really know. You don’t know where you’re coming from. Don’t know why you’re saying what you’re saying. That just creates a lot of mistrust and in some cases just plain hostility.
+
+[00:38:48] Or maybe in the worst case, people will come say, yeah, that’s a pretty good idea. And then they will just completely gaslight you. And that’s like, go back and not do any of the stuff that you talked about, which is probably the most annoying outcome that you can get.
+
+
+## 00:39:05 — Why engs don’t trust management
+
+
+Ryan:
+
+[00:39:09] You said somewhere, if a VP says the exact same thing an engineer does, engineers will still not fully trust the VP. And so, yeah, my question is why don’t engineers trust management?
+
+Joakim:
+
+[00:39:26] I think it’s back to that, that if you have somebody who you feel doesn’t really know what they’re talking about, to some degree, they might have an idea, but that idea might be completely off because they haven’t spent the time to understand what is actually going on.
+
+[00:39:46] It might be that they’re completely right, but it’s just, I don’t know if it’s just human nature or if it’s just me. But I just know for myself and from other people I’ve seen, it’s like somebody says something and if you don’t have a connection to them, then it’s just hard to take at face value.
+
+[00:40:14] If face value is all it is or force like authority, if authority is the only thing, it just, at least in, so this might also be a super local thing here, like a Danish thing, because there’s basically no structure anywhere. But it’s also a thing in the Bay Area where authority itself doesn’t really get you all the way.
+
+[00:40:46] And again, people might say, yeah, no smile and yeah, that’s nice, but if you don’t truly believe it, and I have just seen so many times where people say, yeah, that’s nice and they don’t mean it. And if you don’t mean it, then how are you supposed to successfully implement the project?
+
+[00:41:07] Maybe it gets done, but it would be a bit like, if people don’t think it’s a good idea, they don’t take ownership, it’s just not going to be really nice. So I think that just takes effort and it takes much more effort than you would like it to be.
+
+Ryan:
+
+[00:41:25] You had to influence a ton of people in getting your project to scale across Uber. So how do you influence other engineers then and avoid that situation you’re talking about?
+
+Joakim:
+
+[00:41:39] There’s probably always going to be somebody somewhere who’s never going to be convinced.
+
+[00:41:47] They just never go for a hundred percent. It’s like that’s one thing at least. But to me it’s really like, I just believe a lot in leading by example. If you say, this is what we’re going to build, then you help building. You also take a lot of the pain. And I think in particular, another thing that can very quickly happen is that the higher level you get, the more you can concentrate on the hard stuff, the stuff that only you can do.
+
+[00:42:25] But that’s really not a lot that only you can do. There might be a couple things, but it’s really not a lot. So all the other stuff, there’s some tendency for people to say, oh, because I came up with the idea, I should also implement the most interesting stuff or the new algorithms or whatever.
+
+[00:42:45] Or I should play with the fun stuff. And sometimes you do that, but I think most of the time you should really dedicate that down. You should dedicate the hard stuff down, not just keep the easy, not the easy stuff, but the stuff that is kind of boring. You should just do that yourself.
+
+[00:43:05] ‘cause again, you don’t have to prove anything any longer. Once you have reached a certain level, you don’t have to prove anything. You do what you want. And so at that point, it’s much better to, in my view at least, push down the hard stuff to the people who can barely manage it and then help them, make sure that they do it.
+
+[00:43:23] They’re kind of in the right direction. And then let them work with that rather than take that yourself and then delegate all the shit work. That doesn’t help anybody. And we had this expression of shoveling shit. It’s not a nice expression, but it is what it is.
+
+[00:43:40] Sometimes there’s just, in order to do something, there’s just some really shit work in there. And if you take that work, and the other people do the fun work, that will also give you a lot of credit, but it will also allow them to grow much faster.
+
+[00:44:01] ‘cause if they get challenged, the rest of the team, they work much faster. They grow much faster. And that’s to everybody’s benefit. So that whole thing that’s also, yeah, the coding leading by example and leading by example just means writing code, to a very last degree. And then taking some of that stuff that you don’t really want to do might also be improving documentation or fixing widow bug, whatever it is.
+
+[00:44:33] And there’s not a lot of glory to it. There’s usually not a lot of glory to it. But I’m a very strong believer in stuff like that.
+
+Ryan:
+
+[00:44:46] Interesting. Yeah, that’s the opposite advice I usually hear, usually as you go up, people say you gotta do the hardest parts, the most impressive ones as well.
+
+[00:44:55] Complex ones to warrant it being worth your time and you push out all the easy stuff to anyone that can handle it, that’s not you. What’s the downsides of doing it that way?
+
+Joakim:
+
+[00:45:06] Yeah, but it’s also because it usually turns out that the easy stuff is easy because it might be easy to do, but then you’re like, oh, this thing, why, what again?
+
+[00:45:19] Why are we doing this? And then you start thinking, oh, how can we avoid doing that? So you take some of the easy stuff, and it usually turns out to expand into something that is not trivial any longer. That actually did require you to come in. It was not the intentional purpose.
+
+[00:45:41] But when you come in and look at why do we have this many bugs? What is this? And then you start thinking about, is that because we have bad reviews, because we have bad testing, or something else? Then you can start thinking, how do we make that better?
+
+[00:45:58] I have heard that same advice a lot of times. And I had a lot of people come before, after control committees or mentoring or whatever, saying, how do I get the right project so that I can get promoted? Or how do I grow my scope? And my advice has always been the same, more or less.
+
+[00:46:23] Forget about that part and just start writing some code. Focus on that. Just do something that works. Doesn’t have to be great. Focus on something that works. And every time you do something, think about are we doing the right thing here? Because in a lot of cases, when you build something, you actually introduce small work to other people.
+
+[00:46:46] You build a system and then you’re like, oh, this is nice for us. But then it turns out that for other people, now they have more work because they have more systems to manage or they need to configure something else and have more stuff in their head. Think about what is the net overall result of what you’re doing and how can you make that better?
+
+[00:47:08] It doesn’t have to be big things.
+
+[00:47:11] But if you’re always working with that in mind, my philosophy is that then the other thing will come. You don’t have to be like, oh, I must find something. People will come. And I have seen it not many times because there are not many, but I have seen a lot of times where people are like, oh, I need to be promoted and I need to find the right scope.
+
+[00:47:35] Just relax about that part and focus on providing value. ‘Cause once you do that, the other thing will come, in most cases, again, back to the fairness part. Where it doesn’t come in and click too bad, but in most cases it does. And I think it’s, to me, by far, the most successful way of getting there.
+
+
+## 00:47:58 — Politics as he grew
+
+
+Ryan:
+
+[00:47:58] I’m curious as you advance in your career, ‘cause I think this is a common thing some people experience, did your role become more political?
+
+Joakim:
+
+[00:48:07] I’m always like, yeah. What does political mean? Exactly. So I think there are a couple of things to it. Of course, you have to talk to more people. So there’s more talking and there’s more fighting.
+
+[00:48:22] ‘Cause you have to promote your ideas. Well, only you have to remove your ideas, but not probably worse. You have to listen to other people’s ideas all the time. And because they also want something, I think maybe you don’t have an opinion or you think that is not that nice.
+
+[00:48:38] In that sense, there’s a lot of fighting going. I think you also get much more exposed to the realities, like when you’re a junior engineer, you kinda have, oh, we’re doing engineering, and then somebody else has a grand plan, they all know what’s going on.
+
+[00:49:02] It’s all under control. Then you realize at some points nobody’s in control.
+
+[00:49:09] There’s an illusion of control, but there’s just people randomly getting ideas and pushing them out. I think that part is pretty scary, as a rational engineer, to get to the point where, okay, so we’re making decisions just based on nothing or because you had a vision.
+
+[00:49:37] While you were in the shower? I don’t know. Or you talked to some other guy who also doesn’t know what they’re talking about. And now that’s the crazy, it’s that politics, maybe it is. But you get more and more subjected to that part. And I think that’s pretty scary.
+
+[00:49:56] And it’s also definitely not for everybody. I didn’t like it at all. I didn’t particularly like it. I can abstract from it. I can just do my own thing. But if you get sucked into that, and a lot of people get sucked into that because there’s so much like, oh, we could also do this and let’s do a big plan for whatever.
+
+[00:50:14] And then that takes weeks and weeks to do a plan and go, okay, now we did that. Hooray. And then there’s the whole idea of somebody came up with an idea and now that needs to get implemented and there’s a lot of pushback and all this stuff.
+
+[00:50:33] Of course, everybody has ideas. Who gets heard? How do we get your idea in? So there’s a lot of that. My personal approach to all that was really back to the whole thing about I don’t need anybody to tell me how I need to do my things. So I also don’t want to tell other people how to do their things.
+
+[00:50:56] I have never been a career planner as such. I have a very strong aversion to projects that I can just see as stupid or dead ends or whatever you call them. I just stay away from them, let somebody else do that.
+
+[00:51:19] And that might be a little bit unfair to those other people sometimes. But that’s kind of how I kept my sanity was basically say, well, okay, this thing, I think you should like, fine. You are already enough people. You have plenty of people. I don’t need to build ball. I have my own thing over here that I can do.
+
+[00:51:40] I don’t need all that stuff. And of course, as long as my thing is significant enough. ‘Cause if you don’t have anything to do, then you need to engage with something. But as long as you have something going on yourself that can fill out your scope, then I just say no, a lot.
+
+[00:52:01] Some people might also say too much. But that’s kind of my way of staying a bit away from all that because there is a lot of noise and I don’t know, I just like to be blunt about it, just like change stupidity in my view. But I think some people probably call it politics.
+
+[00:52:23] I don’t know. But I also have very low patience for it. First off, I think if you’re doing something, let’s talk about it and do it. I don’t want to talk about we should do something and we talk about that for hours or days or whatever. And then at the end of it, we say, yeah, we will actually do it next year.
+
+[00:52:41] And like, okay, that was just a pure waste of time.
+
+Ryan:
+
+[00:52:44] One thing that I hear from some friends is they want to avoid all that stuff, so they don’t want to get promoted because then the expectations get higher. So I’m curious, is any part of you regret getting promoted to such a high level and having to deal with politics?
+
+Joakim:
+
+[00:53:03] Okay. There were times where this is just if only, but I have heard. But again, it really also depends on how good you are at resisting pressure and just being yourself, resting in yourself. It’s like, I know some kind of voodoo stuff, but.
+
+[00:53:26] How confident are you in yourself and do you care? How much do you care about other people’s opinions? If you care a lot, it’s hard. If you don’t care too much, it’s okay. The good thing about our remote office in Denmark, small office in Denmark.
+
+[00:53:51] We worked a lot with the teams in San Francisco. The good thing about that is that our daytime was uninterrupted. We basically did whatever we wanted. The bad thing is we have meetings in the evening, but you actually had a day’s work, normal work. You could just do whatever you want and then you have meetings in the evening, and that creates this nice balance. You cannot get fully sucked into it.
+
+[00:54:19] You only get a couple of hours every day to get sucked into it, which I think helps a lot. Just having the physical distance and the time zone distance actually helped a lot in that, because a lot of other people were like, oh, then you pass some VP in the hallway that, oh, could you please come along?
+
+[00:54:37] But we couldn’t do that.
+
+Ryan:
+
+[00:54:41] So I think that also helped a lot. We talked a little bit about influence and just last question on this, I found somewhere that you said the best outcome is when the other person thinks the idea is theirs. Can you elaborate on what you mean by that?
+
+Joakim:
+
+[00:54:58] Yeah. And it’s not like it doesn’t happen very often, but those are the best days when I hear somebody talking to somebody else. When I overhear a conversation, maybe in the office, somebody talking to somebody else about an idea I had originally that they didn’t like.
+
+[00:55:22] Then maybe call months later or whatever. It’s like they’re saying it and they’re not saying that I said it, they’re saying it with conviction. And it can be just small stuff, but it can also be a bit larger. Some larger things. Let’s just say you have resistance on where you need to rebuild something because you already had the tooling.
+
+[00:55:42] But now if you were actually using, you actually had the benefits, but initially, you were not able to see through that and go beyond what you had yourself and see the benefits of the other thing because you were looking only at the cost. But after a while, you might have realized that this is actually a good thing.
+
+[00:56:02] Without having been forced into that, a seed was planted, and then that kind of grew into something, and then suddenly that person is actually aligned and you didn’t do a lot. Maybe you nudged a couple of times, or there was a team kind of, not a conscious team effort, but you get into an environment and it kind of changes you a little bit.
+
+[00:56:27] I’ve seen it not many times, but I’ve seen it a couple of times. It’s just the best feeling. And it’s not the best feeling of, oh, you are right. It is just, to some degree, a proud feeling of those guys, they learned, they’re on the right track now, and it was without force.
+
+[00:56:49] There was no force involved. It was not just because it was forced into them. We just need to do this. They were actually like, oh yeah, exactly. Good. Yeah. Let’s do this.
+
+
+## 00:57:00 — How to pick mentees
+
+
+Ryan:
+
+[00:57:01] I saw somewhere that you had some unconventional advice for picking mentees or just something that I hadn’t heard before.
+
+[00:57:08] Where you pick mentees specifically outside of your org and you try to disperse them to increase your influence. I’m curious to hear more about how do you pick mentees?
+
+Joakim:
+
+[00:57:21] So mentoring in general is a very, I know it sounds so nice and appealing, but it’s also when you look at how the whole thing about scaling yourself, it’s super efficient.
+
+[00:57:36] Because there you kind of paralyze it. You are one person, you’re talking to one other person, and there’s only so much time, you only have so much time. So it is just super hard to get high value out of that. To me, it was really always mainly just about having a network and having conversations that are two-way conversations.
+
+[00:58:03] It’s not just me providing whatever, it’s all them talking about something. And that’s where if you go, if you all mentoring inside your own team or org, it’s like. Who’s actually learning what now? And that close range mentoring, I think you can, that is much easier to do at, not at scale, but you can kind of talk to people in a group setting more easily about career advice or whatever.
+
+[00:58:33] You could do a bit of informal, oh, what about that? And what about, but it doesn’t have to be scheduled or structured in that sense where if you go to people you don’t really know or are further away from you, there’s more work. And you also have to, there’s also more benefit for you, because you could learn something about what they’re doing.
+
+[00:58:53] You can give them more input on what they could be doing or why they’re doing what. And so that is, I think it’s nice. It’s nice if you actually have to spend the time to actually do it so that you also get some kind of benefits, but also so that you can kind of plant seeds elsewhere.
+
+[00:59:10] Because I’ve also seen a number of times actually that people come in and say, oh, how do I get promoted? I only get shit projects and whatever. But then you kind of, once they start thinking about, oh, maybe that’s another way of thinking about the whole thing, another way of working that will kind of rub off inside the teams.
+
+[00:59:36] So you’re kind of planning a small seat there that, again, it will take a while, but might actually do positive change, not only through the EE but also the rest of the team and even through the rest of the org. So that’s why I prefer to have people who are not super close.
+
+Ryan:
+
+[00:59:53] Do you have advice for mentees on how to signal their potential to mentors?
+
+[01:00:01] So I imagine at some point you had probably more asks for people to be mentored by you or spend time with you than you had time for. But let’s say someone’s really promising and they really want to mentor from some person, what would be your advice on how can they set that up in a very natural way?
+
+Joakim:
+
+[01:00:22] I would probably start not just by asking, oh, can you do mentoring? Because mentoring can feel like a big thing and a responsibility that you might not actually want.
+
+[01:00:38] So it might be more like, oh, can you help with something specific? Or can we just talk about a design or a product we’re building or whatever. Just have a conversation and then you can take it from there. I think that’s one thing you can do. If it’s about how do you actually approach in the first place, of course, always.
+
+[01:01:02] Cold call. And it works most of the time. I usually didn’t have that many people,
+
+[01:01:07] reach out,
+
+[01:01:09] but there were a couple of times. But then also just show up, ask questions. I had a lot of presentations in different offices, and I always like when people come up and talk and ask.
+
+[01:01:26] So if you ask good questions, I think that’s a good signal of interest. And then it’s also on the mentor to say, well, what you come and say is really not what you should be saying.
+
+[01:01:55] And I don’t think that should disqualify. ‘Cause that’s the whole point. They need mentoring. They might not actually know what to say. So once you do mentoring, don’t disqualify just because they didn’t send the right resume or whatever.
+
+[01:02:13] But they do have to have some willingness to learn. And I think you can gauge that from a short discussion of what are they doing, what are the outlooks, what have they been doing, what are they thinking? And see how they react to your thing.
+
+[01:02:32] And that might take a while. I’ll take just a bit of time, 10, 15 minutes. And that’s, I think the other thing is, to me, mentoring is much better if it’s just pretty informal. Uber has been through a number of different mentoring systems or platforms or projects or programs or whatever.
+
+[01:02:55] And I’m like, I don’t want a plan. And I don’t want a schedule. I don’t want anything because it’s all individual what people want or need. So also just don’t make it more than it has to be. And also don’t be afraid to say, okay, I don’t think we’re done. Or I don’t think we’re going to get more out of it.
+
+[01:03:21] I’m not going to get more out of it. So this like, yeah. It was. nice
+
+
+## 01:03:22 — Why he left Uber
+
+
+Ryan:
+
+[01:03:23] Coming to the end of your career story. I know eventually you left Uber and I’m curious, what’s the story behind you leaving Uber?
+
+Joakim:
+
+[01:03:32] It is not a nice story, unfortunately. I don’t think so. It is because I was actually pretty happy at Uber, and surprisingly so, because when I joined Uber, it was a crazy high-paced place.
+
+[01:03:50] When I joined in 14, it was also a very hot place to be. People were coming from Google, Netflix, Amazon, Apple. Uber was kind of the place people were going to. And then you get a bit of imposter syndrome because I didn’t come from big tech, I came from small tech.
+
+[01:04:10] So I was like, all these people are much better than me, so what can I do? I kind of hit the ground running and never stopped. You can only do that for so long. I saw when I joined, and again, I didn’t have a plan, but I wouldn’t be surprised if I’m out of there after three or four years because it’s a pretty intense environment.
+
+[01:04:42] It turns out it was intense. Also turned out that all those people who came from other places were not that much better than me after all. It turned out they were also just human. Maybe more importantly, they changed jobs much more frequently, which means it’s really hard to keep a long project running and get the long-term benefit of that.
+
+[01:05:12] But even with the high pace environment and the performance management and the promos and all that stuff that is not natural to a Danish work environment, it was also just a whole lot of fun. We had an office with a very outsized influence. We had a lot of senior engineers compared to our small office, but we had very senior ideas more or less from the get-go, and we just kept on getting more.
+
+[01:05:49] We grew most of them internally. A lot of people grew to high levels. In our office, we grew true distinguished engineers, which is out of, at that point, 70 people, out of four and a half thousand engineers. That’s pretty insane. It was a lot of fun, and the projects we were working on were very challenging and satisfying to work on.
+
+[01:06:20] It was all the stuff that if you’re just in a normal company somewhere, you go to a conference or read blog posts, and you read about these people who get to do these optimizations and automations, like, if only we had that. But we had that. A lot of good stuff. Unfortunately, it just happened that management changed, and that created a change in engineering culture. More and more people did not like it. My manager decided to leave at some point. He was my local manager, who was also a site lead.
+
+[01:07:06] He decided to leave. Then the first distinguished engineer in our office decided to leave. At around the same point, other people started to leave. A lot of people left in the US also, and that just meant that it got less and less fun. There was more top-down management going on.
+
+[01:07:26] Initially, it was very engineering-oriented, especially in platform engineering where I was. Not necessarily only driven by engineers, but engineers were part of the process. When you’re deciding something, you were there. It was not always the thing you wanted to do that was decided, but at least you were there. You understood the reasoning. You could stand behind it, almost no matter what. But it kind of went to a place where it was just like, oh, now we need to do this.
+
+[01:08:01] And you’re like, that seems pretty stupid. There was this decision of going to cloud. Uber had on-prem, was operating on-prem, had benefits and downsides. There was a decision that we should move to cloud. The decision was based on price, that it was going to be cheaper to run on cloud, and no engineer believed that. It also turned out not to be true. The only thing that turned out to be true was that we had to cut the cost of the platform by almost 50%. Then it was cheaper. But we could have done that on-prem and had it even cheaper.
+
+[01:08:53] That whole top-down management led to a full-on drain of especially Indian engineers. Nobody really wanted to be part of it any longer. Nobody wanted to be left out any longer to some degree also. At some point, I was also like, I could stay, but staying would mean that I would have to work in an environment where I wouldn’t be able to stand behind the decisions that were made.
+
+[01:09:19] As a senior engineer, if you are not behind the decisions that are made, it’s really hard. One of my peers or one of the managers actually said to me when I was like, I think I’m gonna leave. He was like, why not just stick around and do your own thing and just take the money? The money’s pretty nice, but I don’t think I can do it. I don’t think I can witness what other people are going through and just do my own thing. I just don’t think I can do it. So at that point, I was like, then I have to leave.
+
+[01:10:01] I’ve tried enough to change how things are done with no effect. That just means in my view, that Uber does not have the need for me at that level. Simple as that. At that point, I have to leave. To me, it’s a pretty sad thing because it’s a self-inflicted thing that Uber did for no good reason in my view. It just lost so many really good people. Mostly to Databricks by now, by the way. But whatever, there’s parallel work going on there.
+
+Ryan:
+
+[01:10:42] What made you wanna go to a startup instead of maybe Databricks or a big company again?
+
+Joakim:
+
+[01:10:47] Yeah, so I think there are two parts to it.
+
+[01:10:50] Databricks is pretty nice because they had a local office. I’ve opened a local office. A lot of people moved there. A lot of people are new. But also just to build more infrastructure and more or less to build the same thing we have built once. We already built it.
+
+[01:11:09] It wasn’t that bad. I don’t know if I want to do it again. Yeah, it was a lot of fun, but maybe if I’m moving somewhere, there should be some kind of change. It’s nice to have a cultural change.
+
+[01:11:27] It’s nice, but it would also just be nice to do something else. The other thing is, it’s nice to be a senior engineer, but it’s also scary when you change jobs. Suddenly you get into an environment where you don’t know anybody, they don’t know you, you have no reputation.
+
+[01:11:49] Well, you have some reputation from the outside, but you have no personal reputation. What I have seen a lot of times is people come in super senior, and they come in to fix something. Usually, they’re like, oh, they fix this thing over here. They will come in and fix it for us also.
+
+[01:12:09] It’s just never that simple. There’s almost no chance that you can take whatever you did over there and apply it again with success. It just doesn’t happen. Those people are in for a very rough ride because they will face resistance from everybody.
+
+[01:12:27] Not everybody, but they face a lot of resistance. Everybody will say, yeah, we told you, and will more or less cheer when they fail. It’s not super attractive to be a senior leader like that because the expectations when you come in are so high. Some companies do quite well because they say, well, we couldn’t start slow and embed you into the team or whatever.
+
+[01:12:53] You’re not from day one, but still there’s a lot of catching up to do and you have to prove yourself. It’s not that it’s kind of redundant. I’m not saying that I didn’t want to do it at all, but I just didn’t want to do this. Let’s all move to another company, which just do the same.
+
+[01:13:12] If you’re doing something, we might as well do something real, like drastic. The drastic thing is just to take the complete opposite of four and a half thousand engineers to really dear, whatever it is. That was basically my reasoning around it.
+
+[01:13:32] We can always do the other thing, can always just go to Databricks or one of the other places, can even go back to Uber if you wanted to. I don’t want to, but there are always other options.
+
+[01:13:49] Doing the startup thing is like, if you’re doing it, then yeah, why not just go all in on that? That was my kind of thinking around it.
+
+Ryan:
+
+[01:13:58] Right. And since you’ve joined the startup, how has it been compared to your expectations?
+
+Joakim:
+
+[01:14:06] It has been very interesting. I would say it has been a lot of fun.
+
+[01:14:11] We have an AI enterprise automation startup going. It is super interesting and we built so much stuff every day. We are kind of navigating a space that nobody has ever been in before. You have to really be on the edge always, which I like, and we’re building a product.
+
+[01:14:36] We’re not just building infrastructure. I love building infrastructure, but it also gets you very disconnected from the reality, where here we’re building the entire thing. I just like that a lot. I don’t like the fundraising and, oh, we’re about to run out of money, and then what? That whole thing can be a bit stressful. It’s been good. It’s been harder than I thought it would be. Fun. Now, I would say. Still worth it. Not in money. Yes. I hope it will eventually.
+
+
+## 01:15:16 — Biggest Uber eng mistake
+
+
+Ryan:
+
+[01:15:16]  Coming to the end of the conversation, I wanted to ask you some career reflections.
+
+[01:15:22] So is there an engineering mistake or the biggest engineering mistake that you saw happen at Uber that was only obvious in hindsight?
+
+Joakim:
+
+[01:15:35] I think it’s hard because there were a lot of choices that did not scale, but at the point where they were made, it was kind of the right choice, which just, it got so painful later.
+
+[01:15:48] Does that mean that you’d have done it differently or originally? I don’t necessarily think so. For example, I said at some point we were operating 50 different databases or whatever. Was that wrong as such? Well, maybe some of that was wrong, but it came out of the idea of let builders build.
+
+[01:16:09] If you need to do something, go nuts. Let nobody block you, which once you’re 10 years into it is an insane strategy that’s going to kill you. But in the early days, you don’t want a lot of structure because you don’t know what you’re doing, you don’t know if you’re going to be successful.
+
+[01:16:32] You have no idea what’s going to happen. So it’s go nuts. I think the hard part is when do you expand? When do you contract? How do you manage that in a good way? And that’s super hard. I think some of the things is that I think Uber really should have, and I have not really reflected much on how we should have done it.
+
+[01:16:57] But that’s definitely something where we should have been better at doing those transitions from full freedom to more structure. One of our prime examples is at some point we started tracing back when Jaeger was built. For tracing, pretty nice. And everybody thought this is pretty nice.
+
+[01:17:20] And then there was a mandate to say, okay, we need to enable tracing on all our servers because we have microservices. We had thousands of microservices, nobody knows what’s going on. Let’s do tracing because that will give us a lot of benefit. And then there was an email going out and I don’t remember the exact dates.
+
+[01:17:37] I’m guessing the first email was in 15 saying, oh, okay, we’re doing tracing. All teams must implement tracing. And there probably was a deadline three months later. And then three months later it was the same because it had not happened surprisingly. And then it was just like maybe until maybe 17, 18, there was like, okay, now we’re doing it.
+
+[01:17:59] Now we’re doing it. But it never got done. At some point the emails just stopped coming, but it never got done for real. So that inability to affect global change just made so many projects so hard. And it’s really to a very large degree, a cultural problem. But I think it’s not just an engineering problem, but it’s an engineering culture problem.
+
+[01:18:30] And I think that is probably one of the biggest things that to some degree hurt the company because there was just a lot of waste, a lot of waste going on. That was not necessarily later on was necessary in the beginning, but later on not. So I don’t have a concrete like, oh, then we did this, and then it was kind of stupid and we should have done that.
+
+[01:18:53] And where it was super obvious. Well, okay, I’ll just mention one thing and that is, at some point, and maybe someone’s going to be super angry about this, I don’t know, but at some point we tried to implement a kind of software networking stack. And the team building it was like, yeah, so we’re going to do this thing where we’re going to build a software network.
+
+[01:19:23] When services need to communicate, it goes into an ingress, and then it gets routed through a network to the right service. And that whole thing we implemented in Node. I just distinctly remember it was like a platform TikTok, or about like, this is like in sync, but it was back in 16 or whatever.
+
+[01:19:49] And I was not that senior yet. So I thought, okay, but those people are pretty senior, they must know what they’re talking about. Turned out they did not know what they were talking about and that caused a lot of pain and many years of untangling. So I think that was a pretty bad decision. Sorry to anybody who doesn’t think it was, but I think it was about Uber’s culture.
+
+
+## 01:20:15 — Uber scandals
+
+
+Ryan:
+
+[01:20:15] Earlier you mentioned that, especially with the promo committees, there’s a bit of an unusual culture of everyone needing to sell their managers just present their reports and you just sell it in a big group.
+
+[01:20:32] And you alluded to that at that time there was also some other cultural backlash, and I vaguely remember that too, maybe it was 2017 or something like that, where there was a lot of stuff going on at Uber. What was it like for you experiencing that at the time?
+
+Joakim:
+
+[01:20:49] There’s a very big cultural difference between Denmark and Silicon Valley.
+
+[01:20:55] It’s very interesting, and in many ways quite entertaining. So it was a bit weird to experience ‘cause many of those problems we just never. This? Is this how people behave? I thought we were just coding and having fun. What are you doing over there?
+
+[01:21:18] Apparently doing something very different. So, well, first of all, quite disconnected because we were quite far from that whole thing. Or maybe it was just me. Maybe I was just very naive. I don’t know. But first of all, it was good to be at a distance because there was a lot of stuff going on.
+
+[01:21:43] We could just keep on executing and doing our thing. So in that sense it was nice. But it was also insane, that much stuff was happening and people leaving, getting fired, board members getting kicked out, Travis getting kicked out. A lot of stuff going on was like every day you just think, what’s going to happen now?
+
+[01:22:03] But again, daytime quiet. Here because nine, nine hours time difference, we can just do our thing and then whatever happens, happens. And there’s not really anything we can do about it. It’s not our fault. There’s some of it of course we also have to adapt to. But there was very much, like when I joined, everything was very much about you.
+
+[01:22:30] Performance reviews, you promote, you conversation, you when you get hired or, and you negotiate, you accelerate. It’s just about how good you are at negotiating. So it’s all about you. It’s not about the team. The team doesn’t matter at all. It doesn’t play into anything more or less, which is insane to me.
+
+[01:22:48] I don’t get it. So even though that was kind of how Uber works, we had never gone fully into that mindset. So for us there wasn’t that big of a difference. It was more like, okay, now. ‘cause I always thought, I just thought that was how it was in the US. So I was like, okay, so, oh, it’s not actually like, you actually want it to be different.
+
+[01:23:14] I thought you liked it like that, but you, I don’t want, I don’t know why you did it like that then. But anyway, it was very interesting times and that was just a lot of scandals also where we were like, why, why did you do that? Why did you decide to go to stripper? Or why did you decide to open up somebody’s private data and see where they went.
+
+[01:23:39] What motivated you to do that? I dunno, but what motivates a board member to, on a live stream to the entire company after a sexual harassment scandal, to say something like, yeah, it’s going to be nice to get a woman on the board because they talk more. Oh, no. No, what? That’s so bad.
+
+[01:24:01] What are you thinking about? What is this insanity? I have mixed feelings about it. I was just happy to be at a distance, but sometimes you could also just feel like, okay, bring out the popcorn and see what’s happening. Because it was just, it was very interesting times when I went to the US to visit before 17. You go to some of the offices, people were like, fist bump and then do you want a whiskey?
+
+[01:24:21] I don’t like, it’s like Tuesday at 2:00 PM I dunno. Do I want whiskey? I don’t think so.
+
+
+## 01:24:35 — Advice for younger self
+
+
+Ryan:
+
+[01:24:35] If you look back on your career so far and knowing everything you know now, if you were to give yourself advice when you just started in your career, what would you say?
+
+Joakim:
+
+[01:24:46] Just try stuff and don’t be afraid just because it looks harder, because those other people look much better than you. They might be better than you. Sure, but you can also get there. It’s not rocket science. It is just computers. And if you like computers, you’re pretty well off if you just keep going with that.
+
+[01:25:11] So I think that’s probably the main thing, in my view, just let your curiosity take you wherever, and don’t assume that what you’re doing right now is the best thing you can be doing, because there’s probably something that’s even better out there, or will be soon.
+
+[01:25:33] And then don’t just discard that just because you’re kind of having fun now or whatever. And of course it might be hard to tell what is better than what you have done, but you also just have to check it again sometime.
+
+Ryan:
+
+[01:25:49] Awesome. Well, yeah, thanks so much for your time.

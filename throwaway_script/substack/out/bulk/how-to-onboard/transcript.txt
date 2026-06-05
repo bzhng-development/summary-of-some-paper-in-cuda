@@ -1,0 +1,82 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups, and career growth. Thank you for your readership, we hit 47,000 readers this week 🙏 🎉
+
+This week, I share about how to onboard well as a software engineer. If you find the post helpful, please share it with your friends and coworkers. Enjoy!
+
+In 2022, the average tenure at Google was about 1.1 years. Even if you don’t switch companies, you might have to onboard to new domains since big wins often come from underinvested areas. You’ll have to ramp up many times in your software engineering career.
+
+As a rule of thumb, you should expect to be a solid contributor on a new team after 3 months. For Senior+ roles, that means you’d start to also contribute to the team’s direction by then. After helping many engineers onboard successfully, here’s what I’d keep in mind.
+
+
+## “A Career Cold Start Algorithm”
+
+
+Andrew Bosworth, Meta’s CTO, wrote about his onboarding process. It’s brief, but gold. Here’s the important part that explains his algorithm:
+
+> “The first step is to find someone on the team and ask for 30 minutes with them. In that meeting you have a simple agenda:For the first 25 minutes: ask them to tell you everything they think you should know. Take copious notes. Only stop them to ask about things you don’t understand. Always stop them to ask about things you don’t understand.For the next 3 minutes: ask about the biggest challenges the team has right now.In the final 2 minutes: ask who else you should talk to. Write down every name they give you.Repeat the above process for every name you’re given. Don’t stop until there are no new names.”
+
+“The first step is to find someone on the team and ask for 30 minutes with them. In that meeting you have a simple agenda:
+
+  - For the first 25 minutes: ask them to tell you everything they think you should know. Take copious notes. Only stop them to ask about things you don’t understand. Always stop them to ask about things you don’t understand.
+
+For the first 25 minutes: ask them to tell you everything they think you should know. Take copious notes. Only stop them to ask about things you don’t understand. Always stop them to ask about things you don’t understand.
+
+  - For the next 3 minutes: ask about the biggest challenges the team has right now.
+
+For the next 3 minutes: ask about the biggest challenges the team has right now.
+
+  - In the final 2 minutes: ask who else you should talk to. Write down every name they give you.
+
+In the final 2 minutes: ask who else you should talk to. Write down every name they give you.
+
+Repeat the above process for every name you’re given. Don’t stop until there are no new names.”
+
+This process will build your foundational knowledge and help you establish the relationships you’ll need. I’d recommend two tweaks to make it more effective for software engineers:
+
+  - Ask your manager or tech lead for the initial list of names. A directed search is more efficient.
+
+Ask your manager or tech lead for the initial list of names. A directed search is more efficient.
+
+  - Ask targeted questions to learn what you need - Instead of asking “What do you think I should know”, here are some example questions:Learning team direction: “What is the motivation behind your work?”, “How does this fit into the team’s plan?”, “What wins are we expecting from this?”Learning system design: “Where does your work fit into the overall system?”, “What pieces does our team own?”Learning who knows what: “Who knows the most about <tech area>?”, “If <tech area> breaks, who knows how to fix it?”
+
+Ask targeted questions to learn what you need - Instead of asking “What do you think I should know”, here are some example questions:
+
+  - Learning team direction: “What is the motivation behind your work?”, “How does this fit into the team’s plan?”, “What wins are we expecting from this?”
+
+Learning team direction: “What is the motivation behind your work?”, “How does this fit into the team’s plan?”, “What wins are we expecting from this?”
+
+  - Learning system design: “Where does your work fit into the overall system?”, “What pieces does our team own?”
+
+Learning system design: “Where does your work fit into the overall system?”, “What pieces does our team own?”
+
+  - Learning who knows what: “Who knows the most about <tech area>?”, “If <tech area> breaks, who knows how to fix it?”
+
+Learning who knows what: “Who knows the most about <tech area>?”, “If <tech area> breaks, who knows how to fix it?”
+
+
+## Contribute Code Fast
+
+
+Your immediate priority should be to start landing code. This will help you tie your high-level understanding to the codebase. Also, it’s the fastest way to start having an impact.
+
+A few years ago, a Staff Engineer joined my team and was a solid contributor after just a week or two. His approach was to land a ton of low-risk changes (~1-2 per day) that improved the codebase. You don’t need to write that much code but you get the idea. This helped him learn faster and get comfortable making changes.
+
+To get started, your manager should pair you with an “onboarding buddy” who’ll provide hands-on support. The more mature your team’s onboarding process is the less you’ll need their help. A great onboarding process has:
+
+  - Up-to-date wiki on setting up your dev environment
+
+Up-to-date wiki on setting up your dev environment
+
+  - Async support channels (e.g. Q&A groups, eng chat threads) to get small technical questions answered
+
+Async support channels (e.g. Q&A groups, eng chat threads) to get small technical questions answered
+
+  - Backlog of unambiguous, low-risk tasks
+
+Backlog of unambiguous, low-risk tasks
+
+You have a unique asset as someone who is onboarding. Your fresh perspective can help you see gaps in the current processes. If you see problems, don’t just unblock yourself. Take the opportunity to also fix it for future hires.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already.
+
+Thanks for reading,
+Ryan Peterman

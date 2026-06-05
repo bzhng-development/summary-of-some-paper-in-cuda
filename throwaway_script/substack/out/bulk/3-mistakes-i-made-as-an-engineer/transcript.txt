@@ -1,0 +1,34 @@
+I was shocked at how obvious my mistakes as an engineer became after my perspective changed. Taking on manager responsibilities for the first time revealed mistakes I had made as an engineer. Here are the top three things I could only see after becoming a manager.
+
+
+## People Problems Are As Important as “Real” Problems
+
+
+Over the years, I’ve seen several engineers on other teams become less productive and then leave the company because they weren’t happy. Each time, I didn’t pay attention and stayed focused on my projects.
+
+As a manager, I now have a higher-level view of how everyone is doing. It’s much more obvious how people problems affect the team even before anyone decides to leave. Having motivated, happy teammates is critical to getting things done. For that reason, people problems are just as important as problems with the code itself.
+
+
+## Hiring Well Is One of the Best Uses of Your Time
+
+
+I always ignored hiring when I was an engineer. It felt like a side hobby compared to shipping projects that had business impact. After hiring 3 engineers last year and seeing the impact they are having, I’m shocked at how wrong I was.
+
+Think about it this way - even if you work extra hours, you might only be able to contribute an additional 50% to your team if you’re lucky. But, if you hire just one strong engineer, your team gains an additional 100% of your productivity. Not to mention that hiring takes much less time than working longer hours.
+
+
+## Get To Know Your Coworkers
+
+
+When I was a junior engineer, I only focused on my code. I never went to social events because I was so focused on having an impact. Although I was a little extreme, many engineers tend to share a similar mindset.
+
+The problem is that all projects of consequence come from working together with others. If you don’t build connections with relevant people, you’ll realize it only too late when you reach out and they aren’t responsive.
+
+I was lucky to have an excellent manager that made it so that other teams helped me and my teammates. Now that a large part of my job is to do the same, I see how important it is.
+
+Junior engineers often focus a little too much on just the code. There are plenty of other areas where a small time investment will go a long way. Learn from my mistakes to get ahead of this.
+
+Over to you: How would you rate yourself when it comes to these? Are you blind like I was?
+
+Thanks for reading,
+Ryan Peterman

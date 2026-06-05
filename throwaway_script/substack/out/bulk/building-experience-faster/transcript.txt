@@ -1,0 +1,74 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 19,000 readers this week 🙏 🎉
+
+This week I’m tackling a question someone asked about my growth to Staff Engineer (L6) in 3 years. The answer has a less obvious tip that I hope is helpful; enjoy!
+
+> Q: How did you manage to compile enough work for a Staff packet in such a short amount of time?
+
+Q: How did you manage to compile enough work for a Staff packet in such a short amount of time?
+
+Two ways. The first is obvious, and the second isn’t. First, I worked a lot of extra hours which allowed me to pursue multiple workstreams at the same time. I often had an extra workstream or two in flight outside of my main work.
+
+Doing a larger volume of work at the next level’s expectations helped me build a track record fast. This gave my manager a lot of content for my promotion packets even though I wasn’t in the role for long. Here’s an example of how these extra workstreams helped drive my promotions:
+
+  - Senior (L5) Promotion - One of my extra workstreams turned into a cross-team initiative with massive impact. This was on top of my main project work which was already meeting L5 expectations.
+
+Senior (L5) Promotion - One of my extra workstreams turned into a cross-team initiative with massive impact. This was on top of my main project work which was already meeting L5 expectations.
+
+  - Staff (L6) Promotion - The main workstream that got me promoted was one I found by working extra hours on top of my normal commitments.
+
+Staff (L6) Promotion - The main workstream that got me promoted was one I found by working extra hours on top of my normal commitments.
+
+I averaged around 50-60 hours per week. Working harder can help you build a track record faster, but that’s obvious compared to the next bit.
+
+
+## Thinking Two Levels Ahead
+
+
+Every promotion has two high-level phases that depend on each other:
+
+  - Growth Phase (Green) - Grow into the next level’s behaviors
+
+Growth Phase (Green) - Grow into the next level’s behaviors
+
+  - Sustain Phase (Yellow) - Keep up those behaviors, which builds the necessary track record
+
+Sustain Phase (Yellow) - Keep up those behaviors, which builds the necessary track record
+
+Here’s a high-level visualization across two promotions to show what I mean:
+
+This is slower than it needs to be; a faster way is to skip the “sustain” phase. While you’re waiting for your N+1 promotion to land, you can start growing towards N+2 behaviors. This helps you build a track record for the N+2 level faster.
+
+For me, this meant that I got a head start on L6 behaviors while I was L4. Here’s the concrete breakdown per half starting from when I just got to L4:
+
+  - H1 @ Mid-Level (L4) - Did L4 work. Learned about L5 behaviors.
+
+H1 @ Mid-Level (L4) - Did L4 work. Learned about L5 behaviors.
+
+  - H2 @ Mid-Level (L4) - Did L5 work. Manager said my L5 behaviors look good. Started to think about L6 expectations. L5 promotion blocked since Meta didn’t do promotions for a half during COVID.
+
+H2 @ Mid-Level (L4) - Did L5 work. Manager said my L5 behaviors look good. Started to think about L6 expectations. L5 promotion blocked since Meta didn’t do promotions for a half during COVID.
+
+  - H3 @ Mid-Level (L4) - Did L6 work, L5 promotion landed 🎉
+
+H3 @ Mid-Level (L4) - Did L6 work, L5 promotion landed 🎉
+
+  - H4 @ Senior (L5) - Did L6 work
+
+H4 @ Senior (L5) - Did L6 work
+
+  - H5 @ Senior (L5) - Did L6 work, L6 promotion landed 🎉
+
+H5 @ Senior (L5) - Did L6 work, L6 promotion landed 🎉
+
+This gave me a two-half head start on my L6 promotion. Coupling this with my above-average working hours added a lot to my packet in a short amount of time.
+
+A nice byproduct of this approach was that I never stressed about my immediate promotion. I was already aiming at N+2, so any N+1 delays like the COVID-induced one, didn’t phase me. This longer-term thinking kept me focused on growing my skills and behaviors.
+
+A word of caution: Make sure you’re solid on the N+1 level’s behaviors before you do this. For instance, a Junior (L3) engineer is going to struggle with team-level influence if their engineering fundamentals aren’t strong.
+
+I’m lucky that Meta has a great policy of rewarding high performers. I have heard that other big tech companies (e.g. Google) block promotions based on time even if you’re meeting expectations at the next level. This is why people often suggest job hopping as a faster way to grow your career. Check out my relevant article about that here if you’re interested.
+
+Lastly, I’d like to thank everyone who leaves thoughtful comments about this newsletter. Your feedback helps improve the content for everyone. If you have any feedback about the newsletter please share it here. I will read every response.
+
+Thanks for reading,
+Ryan Peterman

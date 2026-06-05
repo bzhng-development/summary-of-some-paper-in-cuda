@@ -55,31 +55,33 @@ def _throttle() -> None:
 # Comprehensive field set — user wants "as much as possible" stored for
 # downstream reuse. Skipped: citations/references (could be hundreds each per
 # paper), embedding (768 floats), citationStyles (large formatted bibtex).
-FIELDS = ",".join([
-    "paperId",
-    "corpusId",
-    "externalIds",  # DOI, ARXIV, MAG, ACL, PMID, etc.
-    "url",
-    "title",
-    "abstract",
-    "venue",
-    "publicationVenue",  # structured venue object
-    "year",
-    "publicationDate",
-    "publicationTypes",
-    "journal",
-    "fieldsOfStudy",
-    "s2FieldsOfStudy",
-    "isOpenAccess",
-    "openAccessPdf",
-    "referenceCount",
-    "citationCount",
-    "influentialCitationCount",
-    "authors.authorId",
-    "authors.name",
-    "authors.affiliations",
-    "tldr",  # S2's auto-generated short summary
-])
+FIELDS = ",".join(
+    [
+        "paperId",
+        "corpusId",
+        "externalIds",  # DOI, ARXIV, MAG, ACL, PMID, etc.
+        "url",
+        "title",
+        "abstract",
+        "venue",
+        "publicationVenue",  # structured venue object
+        "year",
+        "publicationDate",
+        "publicationTypes",
+        "journal",
+        "fieldsOfStudy",
+        "s2FieldsOfStudy",
+        "isOpenAccess",
+        "openAccessPdf",
+        "referenceCount",
+        "citationCount",
+        "influentialCitationCount",
+        "authors.authorId",
+        "authors.name",
+        "authors.affiliations",
+        "tldr",  # S2's auto-generated short summary
+    ]
+)
 
 
 def post_batch(ids: list[str]) -> list[dict | None]:
@@ -102,7 +104,7 @@ def post_batch(ids: list[str]) -> list[dict | None]:
             return r.json()
         if r.status_code == 429:
             wait = 30 * (attempt + 1)
-            logger.warning(f"  429, sleeping {wait}s (attempt {attempt+1}/6)")
+            logger.warning(f"  429, sleeping {wait}s (attempt {attempt + 1}/6)")
             time.sleep(wait)
             _throttle()
             continue
@@ -172,11 +174,9 @@ def update_neon_from_s2(db: NeonDB, arxiv_id: str, body: dict) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--output", type=Path, default=Path("local_data/s2_enrichment.jsonl"))
-    ap.add_argument("--year-min", type=int, default=2020,
-                    help="Lowest arxiv year prefix to enrich (default 2020).")
+    ap.add_argument("--year-min", type=int, default=2020, help="Lowest arxiv year prefix to enrich (default 2020).")
     ap.add_argument("--year-max", type=int, default=2026)
-    ap.add_argument("--dry-run", action="store_true",
-                    help="Fetch + log to JSONL but DO NOT update Neon.")
+    ap.add_argument("--dry-run", action="store_true", help="Fetch + log to JSONL but DO NOT update Neon.")
     args = ap.parse_args()
 
     db = NeonDB()
@@ -201,13 +201,13 @@ def main() -> int:
 
     try:
         for i in range(0, len(todo), BATCH_SIZE):
-            chunk = todo[i:i + BATCH_SIZE]
+            chunk = todo[i : i + BATCH_SIZE]
             s2_ids = [f"ARXIV:{aid}" for aid in chunk]
             t0 = time.perf_counter()
             results = post_batch(s2_ids)
             dt = time.perf_counter() - t0
             if not isinstance(results, list):
-                logger.warning(f"  unexpected response shape, skipping chunk")
+                logger.warning("  unexpected response shape, skipping chunk")
                 continue
             assert len(results) == len(chunk), f"got {len(results)} results for {len(chunk)} ids"
             chunk_hits = 0

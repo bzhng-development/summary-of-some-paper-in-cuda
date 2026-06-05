@@ -1,0 +1,473 @@
+In this episode, I talked to “Asian Dad Energy” an anonymous big techie who was laid off after 25 years in the industry. We discussed his experience with layoffs at big tech companies, his early career in engineering consulting, and the realities of compensation in the tech world. He shared his thoughts on the current state of layoffs and what might be coming next for the industry.
+
+Check out the episode wherever you get your podcasts: YouTube, Spotify, Apple Podcasts.
+
+
+## Timestamps
+
+
+00:00:41 - His layoff story
+
+00:07:02 - Why he expects more layoffs
+
+00:09:42 - Tech consulting before big tech
+
+00:19:25 - Consultants shipping bad code?
+
+00:26:57 - Why do people dislike consultants?
+
+00:30:55 - Big tech compensation
+
+00:40:27 - When age impacted his flexibility
+
+00:42:04 - Why YouTube
+
+00:46:46 - Speaking advice for engineers
+
+00:49:09 - Advice for younger self
+
+
+## Transcript
+
+
+
+## 00:00:41 — His layoff story
+
+
+Ryan:
+
+[00:00:41] Closer to tripling, you mentioned that people should expect future layoffs. What makes you think that? Here’s the full episode. I wanted to start by asking you a little bit about the layoff story. I think it’s that first video that you did that kind of went very viral. And I wanted to hear a little bit about what was going on at the time and what were the conversations like in the layoff?
+
+ADE:
+
+[00:01:11] I was working for this big tech company, right? And like a lot of big tech companies, we already had multiple rounds of layoffs. And in this particular round, there were rumors ahead of time that it was coming, and everyone sort of knew that it was coming. What was up in the air was sort of like, which business units and business lines are affected and how many folks are going to get cut. I think it’s probably because of either sort of my seniority within the organization or the relationship networks that had cultivated.
+
+[00:01:45] I sort of got heads up about sort of like the nature of this layoff. I also had a heads up that I was on the list to be cut. And so essentially I knew these two things were happening. I had some other sort of life experiences and thoughts at that time that sort of made me question a little bit about why I was working in big tech in the first place. There were many sort of things. I kind of described them in detail in my vlog.
+
+[00:02:18] But at that point, I then found out through the grapevines that a couple of more junior engineers are also on this particular wave to be cut. And so what I essentially did was I was able to do a little switcheroo where I put myself to the top of the list and got cut. And that’s how I got laid off. Now, obviously. And this is. This is just me conjecturing at this point, since I’m no longer with the company, these rounds of layoffs are happening.
+
+[00:02:52] The next round is likely coming very shortly, if not already upon us. So it seems for me, the best I did was I just bought these guys a little bit of time, a mere matter of months. Hopefully they use the time wisely and that’s the best I could do.
+
+Ryan:
+
+[00:03:10] What was the reason for this layoff?
+
+ADE:
+
+[00:03:12] It’s only a conjecture on my side and I think it’s not just affecting sort of my ex employer, but maybe many big tech and tech companies. We’re sort of like right now in this race, right, to demonstrate the value of AI. And I’m not saying AI has no value, but there is a lot of pressure to essentially demonstrate value for all the investments that companies have been putting into AI. And one of those ways to do that is to decrease headcount.
+
+[00:03:47] Because if you’re able to decrease headcount, your product lines are still being sold. So at least temporarily, your revenue as a company is not affected, but your cost has just gone down a lot because you decrease your headcount. That along with good marketing, talking about efficiencies gained through AI can really drive up your company’s stock valuation. So at least to me, I feel like we’re sort of like in this meta, right, where companies are looking to decrease headcount, reduce their cost, keep the revenue consistent, and then get some PR points for saying how innovative they are in terms of the AI revolution.
+
+Ryan:
+
+[00:04:27] When you heard that you were on the list and you were kind of getting that warning, what was going through your head?
+
+ADE:
+
+[00:04:34] It was weird, man. It was anxiety, panic, excitement, fear, hope, everything. Because I felt like I was in this thing where I was doing the same thing for at that point, years. And this was a sudden change, right? I didn’t know if it was a good change or a bad change, but it was a major change that’s coming to my life. And so it was this cocktail of emotions that was feeling very, very unstable, a very unstable kind of mentality that I had there for a couple of days.
+
+Ryan:
+
+[00:05:12] Were you presented severance at that point or how does that whole process work?
+
+ADE:
+
+[00:05:17] So with my ex employer it was a very structured process process and they’re a very good employer in the sense that they will make the grant the sort of. They will reveal the broad outlines of how your exit will look like, right? They’ll put you onto the sort of garden leave where you’re still with the company for a period of time, but you can apply for jobs generally. They’ll give you a pretty, they’ll give you a fairly generous severance and they’ll also give you other things, right?
+
+[00:05:48] Like for example, if you have any Vacation days that would be. Or PTO days that would be paid out. Right. There is usually a stipend of some sort for education or for equipment and so on and so forth. And they sort of clearly articulate that ahead of time. And so if one does the math right, it’s actually a very generous package that you end up getting because you’re, you’re getting months of garden leave, you’re getting months of severance, you’re getting a stipend, you’re getting all your PTOs for like a whole year.
+
+[00:06:20] And so, so it was very, it was very clear, it was very transparent, and it was well timed.
+
+Ryan:
+
+[00:06:26] Was this something that’s negotiable?
+
+ADE:
+
+[00:06:28] I think anything is negotiable, technically. Right. But really I just wasn’t in the right mental state to think about negotiating for it. I got to. It kind of this whole thing sort of made me pause and, and just reflect on life and what I’ve been doing this whole time with my life. And so the last thing I really cared about is like, hey, let me, let me negotiate for an extra 20% on the severance package.
+
+[00:06:59] That really was on the bottom of my list of priorities.
+
+
+## 00:07:02 — Why he expects more layoffs
+
+
+Ryan:
+
+[00:07:02] You mentioned that people should expect future layoffs. What makes you think that?
+
+ADE:
+
+[00:07:09] So when I was saying that, I was thinking more of the tech industry, right? The big tech companies and other sort of ancillary tech companies. The reason why I have this feeling is because it seems like the entire sector has invested greatly in the last couple of years, definitely into AI. And there almost feels to me like there is a kind of over investment that’s brewing in there, where a lot of companies are essentially putting AI into every possible feature of every possible product and platform and service, and all of those investments are not yielding clear returns.
+
+[00:07:51] And so I just sort of have this feeling that whether the company would lay off to sort of decrease cost and performatively show their AI efficiency or layoff because they’re running short on money, or layoff because they really have to lay off because their business lines are collapsing. It just seems like there’s this meta trend towards shedding tech employees from, from these companies because of years of over investment and not enough returns for the investment given.
+
+[00:08:23] That’s just the feeling that I have. And it could be totally wrong, right? I could be completely wrong, but it’s my current feeling giving the whole vibe of this entire sector, right.
+
+Ryan:
+
+[00:08:34] So I could see that direction. And on the flip side, things could be very positive. Maybe AI could empower people, maybe the revenue per person Goes up a lot. And we realize we want more people or something like that. These people are really worth their. Their labor is worth more. We want more people working on more things. Possible as well. Right.
+
+ADE:
+
+[00:08:59] It is absolutely possible for that to happen. Right? The future, to me, the future is unwritten. So it’s entirely possible that, hey, we do see the productivity gains of all these AI investments and the value of these tech companies literally shoot to the moon. I would actually very much hope for that because all of my. A lot of my investments and stocks and so on are with these companies. So if they go to the moon, I will be happy as a clam at this point.
+
+[00:09:31] It, though, feels to me that what I just described, at least to me, seems higher probability than this sort of like happy future probability.
+
+
+## 00:09:42 — Tech consulting before big tech
+
+
+Ryan:
+
+[00:09:42] You’ve had 25 years in the industry. Your career grew throughout the ranks of the various companies that you were at. So I kind of wanted to go over, looking back on your career, what are the things that you learned? What are the things that you wish you would have changed? If you could just lay out your career from the beginning, just on a high level, and then maybe we can talk about different pieces of it and, and see what people can learn.
+
+ADE:
+
+[00:10:05] So I got into tech early on into computer programming in high school. In college, I majored in computer science. I started doing these little side projects and consulting gigs for various small companies in college. Coming out of college, I joined a. A digital consulting company, like a consulting agency. And I spent many years in the sort of consulting agency space and I sort of went through the range of roles that a software engineer can go through.
+
+[00:10:36] Right. So you start as a junior software engineer, you graduate to being a senior developer or senior software engineer. Then you move on to becoming kind of like a tech lead of a development squad. Then the progression goes towards the architect level, where you become an application architect, an enterprise architect, a senior enterprise architect all the way through the director levels. Right.
+
+[00:11:00] Of being a technical director. Then for me, I made the decision after much reflection of leaving the consulting space and entering and joining a big tech company. And upon joining the big tech company, sort of, I went into this whole kind of senior enterprise architect, chief architect role, where you’re essentially overseeing architecture across the entire ecosystem of applications and platforms.
+
+[00:11:29] And I did that for the last several years before my layoff.
+
+Ryan:
+
+[00:11:34] What’s the nature of the work when you do software engineering consulting? Is it you’re part of a firm that has software engineering expertise, and then there are other firms that don’t have that expertise that want features built. And then you guys deploy a team to help for a limited amount of time to build something.
+
+ADE:
+
+[00:11:52] And then so the consulting space works like this. Your consulting company has different sort of skills, right? Maybe it’s different types of software engineering, maybe it’s building a cms, maybe it’s creating e commerce sites, maybe it’s middleware and backend integration, maybe it’s digital transformation. And you have clients that are usually other companies, right? Sometimes there are small companies, but a lot of times there are big Fortune 500 companies.
+
+[00:12:18] And you’re essentially then inserted into these clients to rapidly build out the systems for them. And that involves usually working with the clients themselves, their IT and technology teams and departments, as well as other vendors, other consulting and service companies. A lot of times it’s a very dynamic, maybe chaotic system where you sort of have to find your place, survive in this ecosystem where you’re one actor in a range of actors, build the thing to the best of your abilities and then you ship out to the next project.
+
+[00:12:56] And it’s a very fast paced environment. It’s a very kind of like learn as you go environment from my experience, and it was a very good one that I enjoyed doing.
+
+Ryan:
+
+[00:13:06] One thing with that model that’s just immediate thing that comes to my mind is a large part of software engineering is maintaining software and making sure it stays up. It’s high quality. When things change around the software, we make sure that we patch bugs and various things like that. So if you were to just build something and then pass it to another company, how does that software remain useful and not explode when you hand it off to the customer?
+
+ADE:
+
+[00:13:36] It’s a great question. There’s sort of two answers to this question, right? There is the hey, get in, build and get out model, right? And I’ve seen my fair share of such projects. There’s also the retainer model where your consulting agency works with a client for a long period of time, sometimes years, and you sort of not only build it, but you maintain the software and you enhance and build additional features and extensions to the software.
+
+[00:14:05] I have seen and worked with this model as well. The general case is when you have a retainer, you have the time of really knowing the code base. And especially if you built the platform from the ground up, there’s this institutional knowledge of how do you maintain it and how do you enhance it. And those are the kind of better types of projects as a consultant. But the other kind of project is more like fly by night, right?
+
+[00:14:35] Where you got to as a company have a pipeline of work, right, to keep all your consultants employed. And so sometimes you would sell in a project purely for monetary means. And unfortunately, a lot of companies, a lot of agencies and consulting companies do this in the economy. And so what you’ll sometimes have is as an architect, for example, you go to a client, you’ll see this ecosystem that’s literally this dizzying patchwork of platforms and sites and systems that are a lot of times redundant and a lot of times incompatible because all of these vendors and agencies and IT services companies doing their thing and it sort of almost like becomes this dumpster fire that especially if you’re hired as a consultant to do a digital transformation, you sort of have to put out the fire and kind of stitch everything together just to have a working platform for your client.
+
+[00:15:32] So I’ve seen both, and both are kind of fun and anxiety inducing in their own ways.
+
+Ryan:
+
+[00:15:38] In my experience in building stuff, a lot of the times we build software, it’s just within consistent teams where you see that person every day as a consultant, you come in, you’re dropped, you’re parachuted into some other team. What is the default culture like or what’s that, that experience like?
+
+ADE:
+
+[00:16:00] So in my experience, I’ve encountered all of those scenarios. It depends completely on the clients. Some clients have rigid hierarchical cultures, some clients have much more open and cooperative cultures. Some clients have this sort of internal startup model where literally you’re part of an internal startup and so that entire range of different kind of environments could happen. As a consultant, when you’re dropped in, a part of your skill as a consultant, right, is not just knowing the tech and being able to architect and being able to bang out code.
+
+[00:16:37] It is to understand the topology of the client political environment, how does the client teams interact with each other, how do they interact with other consulting agencies or IT services agencies in this ecosystem? And as you sort of progress in your career as a consultant, eventually it becomes part of your job almost to be able to navigate and open up a space for your consulting agency within this client ecosystem.
+
+[00:17:12] And you keep the book of orders going, right, with additional work and stuff. For me, the early rungs of this was highly enjoyable, right? The learning of these new cultures and environments and new technical ecosystems and then adapting and improving these. It was highly, highly enjoyable. Near the sort of the latter portion of my consulting career, it kind of shifted. The work that I was doing shifted as I became more and more senior.
+
+[00:17:43] So instead of being more of a hands on, hey, let’s design this quilt of systems Based on these components that you guys have, it became more of like, hey, drop me off at the C suite and let me sell this vision of digital transformation to the CMO or the CSO or the CEO of this Fortune 500 corporation. I did that for a couple of years, the last couple of years as a consultant, and I sort of got a little burnt out by it.
+
+Ryan:
+
+[00:18:14] What burned you out?
+
+ADE:
+
+[00:18:16] The gap between the ideal that I was selling and the actuality of what was actually there. Right. Because the actuality, the sausage making is dirty. It is chaotic. You have systems that don’t talk to each other. You have code bases that hasn’t been maintained for five years. Right. You have different teams. You have like offshore vendors who sometimes can’t even communicate with onshore teams. But that is not the vision that is sold to the executives in the C Suite.
+
+[00:18:48] Right. You know what the vision is? The vision of a digital transformation is usually like this smooth diagram where you capture customer insights. You have this bubble that does a rationale and a decision is made and immediately sales and orders come in and revenue goes up. That’s the dream that’s sold. Now compare that with the actuality. If you’re the person that needs to make those two things come together and happen, which I was eventually as a group technical director, it just gets too much.
+
+
+## 00:19:25 — Consultants shipping bad code?
+
+
+Ryan:
+
+[00:19:25] Is there any feedback mechanism? Let’s say you sell this vision and their company says, we love it. Transform us digitally. This sounds amazing. And then you come in and you build a steaming, broken code base that just kind of works, but not really. Would you still get paid as a consulting company?
+
+ADE:
+
+[00:19:50] So this may be a time dependent question, right? Because I feel that there was a period of time around the 2010s where every company was talking about digital transformation. This is the era of companies going from spreadsheets, printouts to like mobile apps and sites and you know, essentially having a fully digital experience for their customer. At that point. The honest question is a lot of the times the decision makers, the executives, the C suite, they’re not fully aware of the sausage making that happens under the hood.
+
+[00:20:29] Like all of these, all of these ridiculous duct tape implementations and like swivel chair operations with people, workarounds for APIs that doesn’t work and breaks, all of those details are sort of obfuscated at that level. But what they see is like, oh my goodness, a customer can go through this web mobile app and they get a text message telling them that their order is delivered and line goes up.
+
+[00:20:58] If you’re able to do that As a consultant, you’re going to get paid. And so from, from my experience, it was overwhelmingly positive that, that it’s hard in the initial stages to get a digital transformation wrong because all you’re doing is taking something that happens in the analog world, that used to happen in the analog world, and making it digital. Maybe it’s not the best implementation, but essentially you’re going from zero to one.
+
+[00:21:32] I see.
+
+Ryan:
+
+[00:21:32] Yeah, I could see that exploding on them later if there’s some issue, something like that. One thing I could see here is these C suite people, they’re non technical in a majority of cases, I’m assuming. And so they probably don’t have the judgment to know what good work looks like in this domain. And so I kind of see a natural information asymmetry here. What stops the technical consultant from coming in and saying it’s great, but it’s actually very far from great.
+
+ADE:
+
+[00:22:13] You have to have sort of like your own personal boundaries as a technologist. Right. And as an engineer, you’re taught, or I hope all of us as engineers are taught, that they’re sort of like engineering integrity. And it’s really funny because when I was in university there literally was a course on this. Right. Like you, you have to have respect for the truth, for quality and for integrity of what you’re building.
+
+[00:22:39] And that, that is kind of critical. I, I hope to God that I have followed this throughout my career as a consultant. I tried my very best to do it right. If it is a steaming pile of turds, it’s your obligation to tell your client that, hey, hey, man, like the $20 million that you’ve invested is a steaming pile of turds. That’s what you’re supposed to do. Are there consultants who didn’t do that? I’m sure, I’m sure.
+
+[00:23:06] But we tried our best to do so.
+
+Ryan:
+
+[00:23:09] I’m just trying to think what is the, what’s the incentive structure that could prevent that? And I guess it would be probably the reputation of the consulting firm, which is if you deliver that steaming pile to customer one, you’re not going to get customer two or three or anything like that.
+
+ADE:
+
+[00:23:28] Correct, correct. That is something that could happen. Right. But just in general, and it may be something with a person’s career. Right. I went through this phase in my career where I was obsessed with sort of the quality and longevity of the software that I was building. I don’t know if in your development career if you went through the same thing, but this striving for excellence, for efficiency, sometimes it can get totally ocd.
+
+[00:23:57] Like, you’d be like, oh, this piece of code here is not performant enough. We’re going to optimize the heck out of it to do this thing perfectly. But there is that part of a person’s career where you really are obsessing about the quality of what you build and, and you sort of almost take like the quality of your end product as a personal reflection upon yourself. So if you, if you build a steaming pile of turds, you’re going to feel ashamed about.
+
+Ryan:
+
+[00:24:23] Yeah, definitely. Well, I mean, when I think to big tech or from my experience, and I think what is the incentive structure that makes it so that we put out quality work is that we have technical leaders who are controlling the performance incentives. So people who get promoted, they often build things that are ideally performant or the metrics that matter are improving and the way that they’re done is high quality.
+
+[00:24:53] So they are operationally excellent. The implementation quality is something where it’s not going to break in the future and we kind of prevent a large class of bugs from happening just in the way that it’s implemented. But the key takeaway there is the leaders themselves, the people who control the incentives of the engineers, they’re technical. And there’s this whole system that’s set up that says, hey, if you do good work, you get rewarded.
+
+[00:25:23] Good as deemed by technical people. So the thing that’s interesting to me here is the people who say this is good, in other words, the client, they’re not technical. So I would have thought you could deliver the thing that’s not operationally excellent or the thing that’s not particularly well done, as long as the inputs and outputs are acceptable, ship it off and disappear. Because you don’t necessarily have as much skin in the game as the client does.
+
+ADE:
+
+[00:25:52] Ryan, you could do that. But in my experience. Right. And that’s not only as a software engineer that’s sort of climbing or going up the ranks from my mentors and leaders at the time, but also my experience at the director and above level where I was in those sort of leadership roles. Right. That, that the, the pride and the care for the work and the quality of that work was very high. You really do have a significant number of people that kind of cares a lot about the quality of their software that they’re building and the systems that they’re building.
+
+[00:26:31] That’s sort of one thing, and it’s a human element to it. But I think it’s an important one because if you don’t have that quality, nothing stops us from delivering just crap to the clients. Right. And as you pointed out yourself, you can only do that so many times before the reputation of a firm, of a consulting agency is ruined. And nobody wants that.
+
+
+## 00:26:57 — Why do people dislike consultants?
+
+
+Ryan:
+
+[00:26:57] Yeah, definitely. I guess it’s. You could make the same analogies which the leadership at the consulting company could say, hey, you get promoted to a higher level as a engineering consultant if you build good things and they review the, the things that are built. And yeah, I could see that happening as well. One last thing that wanted to go over on the consulting side is, and I don’t know a whole lot about consulting, but I feel like I see in pop culture or in various interviews or jokes that, you know, consultants are, it’s a job that a lot of people, they don’t, they say we don’t want consultants here.
+
+[00:27:36] Something like that. What is the reason that, that people say consulting is not a good thing?
+
+ADE:
+
+[00:27:43] So sometimes I’ve observed, right. When being dropped onto a client side that there is sort of hesitation and resistance. And in my experience, a lot of that actually comes from management consulting rather than technical consulting in the sense that sometimes it feels like management consulting, sort of like any business that you’re running. Right. You have people processing tools. Right. Fundamentally, technical consulting deals with the tools and it may deal with the process to a smaller extent, but the people portion of it is usually management consulting.
+
+[00:28:29] And that sometimes leads to decisions that has an adverse impact on people working in these client companies. Right. So management consultants may, for example, take a look at all of the teams working on your business and decide that X percent of these teams are redundant. They don’t, they’re, they’re, they’re not needed. And a lot of times the clients would be influenced to do things like lay off X percentage of people.
+
+[00:28:53] And so if that happens enough times, there then is the impression that, hey, a consulting team is coming. Oh my goodness, our jobs are at risk and we’re going to get laid off. And at least to me, that feels like the majority of where that sort of vibes come in. From my personal experience, people are going to be people and most people are nice. And so if you drop, you get dropped to a client side and you work with them, you get to know them 90% of the times.
+
+[00:29:20] They’re great guys.
+
+Ryan:
+
+[00:29:22] You mentioned around seven years ago or so you transitioned from this consulting space to working in big tech. What was that transition like?
+
+ADE:
+
+[00:29:32] Okay, so at that point, pretty much all I did as a consultant was get shipped to a boardroom and sell digital Transformation to a C suite. All right, so I was in a. I was terribly bored of that role. It just felt like I’m further and further disconnected from the actual implementation that I cut my teeth on as a young man. So a good colleague of mine had become an executive at this big tech company.
+
+[00:30:03] And so he introduced me to this particular role. It was a hands on role as a chief architect, right? On paper you’re essentially working on design of applications across an ecosystem. And in practice I found that when I jumped in there that I had the ability to, for example, deep dive on a specific system and lead the build out of individual systems that were deemed important by the organization.
+
+[00:30:32] And that then allowed me to do way more than work on, you know, visio diagrams. I could literally, for example, take a component that was really, really difficult and code it out and build it. I could go into debug sessions with teams. I can tweak configuration, I can participate in launches into production of different platforms. And, and that was for me a very refreshing change.
+
+
+## 00:30:55 — Big tech compensation
+
+
+Ryan:
+
+[00:30:55] You also mentioned, I mean the compensation was different on a percentage basis. Was it a major difference or how big of a change are you talking about?
+
+ADE:
+
+[00:31:08] The compensation of Big Tech is bonkers. I just, I have to, I have to say that consultants are paid well, they’re comfortably paid. But you go from consult or at least from my experience, you go from consulting to Big Tech. It’s like the compensation more than double, closer to tripling. And it’s because of the structure and the nature of compensation at Big Tech, right? You have bonuses both sign on and reoccurring.
+
+[00:31:37] A lot of times you’re given this thing called an rsu, right, Restricted stock units. And these are essentially shares of the big tech company. And those shares are vested usually over a period of time, right? Over three or four years, you get a chunk of it each year. And then there are these stock option like programs like the employee stock participation programs where you’re essentially allowed to purchase greatly discounted tranches of shares of the company, right?
+
+[00:32:06] So for me, I got all of these things, so I got the bonuses, I got the rsu, I got the espp. And what essentially happened was imagine having a base salary that’s already significantly higher than a consulting salary. But then you have all these shares and for these shares, if you were to hold on to them, and for me, I did hold onto them, those shares then doubled and then tripled in value. And so at that point, the compensation between my new role in Big Tech and my old one in consulting, it’s not comparable between the two.
+
+Ryan:
+
+[00:32:47] You mentioned espp. I think people might be curious about that. Can you explain?
+
+ADE:
+
+[00:32:52] Sure. What it is, is it’s sort of like the company gives you the right to purchase their stocks with your post tax salary, right? But the purchase occurs in such a way that you’re guaranteed a discount. That’s, you know, for, for me, it was around 15% below the market price of the stock. Okay. So imagine if the stock of this company is $100, you’re guaranteed to be able to purchase it for $85. So if you were to do that and acquire these stock shares periodically, right?
+
+[00:33:33] And then you hold onto them, it’s almost like you’re baking in this, this advantage. And then those stocks, if, if you look at the majority of big tech companies over the last seven years, the majority of them kind of ballooned in value over the COVID years especially and has increased many hundreds of percent. And so what essentially happened with this is if you take these stocks and then you hold onto it, it will double or triple or quadruple in value.
+
+[00:34:03] And that’s what happened to me.
+
+Ryan:
+
+[00:34:05] Is there anything that will stop you from selling it immediately in the ESPP is like, could you just buy it at 85% of the cost and sell it immediately for 100% of the value?
+
+ADE:
+
+[00:34:18] Yes, yes you can. It’s not advisable. It’s not advisable to do that. And you know, times could be different, right? Like if you’re in a period where, where you believe the value of the stock is going to go to the moon, it’s really not advisable to sell it instantly. But of course, stock markets are inherently unpredictable. Anything can happen. Right. But for me, when I was accumulating those stocks, sort of like I had this.
+
+[00:34:51] Well, there was Covid, right? And if you remember what happened in Covid, there was this huge push into digital platforms across the entire population of the United States. So for me, in my simple little brain is telling me, hey, wait, so everybody is forced to use digital tools. They don’t have a choice. Oh, and we, we make a lot of these digital tools. Maybe I should hold on to these stocks. I think they might go up and they did.
+
+[00:35:20] But going forward, right. We don’t know if that’s the case. So good judgment has to be made, right, Whether to hold or to sell.
+
+Ryan:
+
+[00:35:28] What a lot of people do is they buy index funds so that they have a little more diversification instead of holding particular stock. But I mean, it sounds like regardless of if you want to hold your company’s stock or not. If your company is offering the ability to purchase it at a discount, it’s an immediate superset, at least to just buy it and sell it into cash. And if you were giving you money.
+
+ADE:
+
+[00:35:55] If someone’s just giving you money for nothing, you should accept that money.
+
+Ryan:
+
+[00:36:00] Well, what’s the, I don’t get the, what’s the incentive for them. Because if there’s no reason to hold, I could see it as a good way to keep people invested in the company. If they said, hey, you can buy at a discount, but you have to hold on to it, then yeah, you, maybe you buy it and you say, do I want to take that risk or do I believe. But if you could just buy it. And so I just buy it and sell and put into cash or whatever the thing was that I would have invested the money in otherwise.
+
+[00:36:28] So it’s, it’s interesting. It’s an interesting perk. I would totally, if my company had it, I would use espps like crazy.
+
+ADE:
+
+[00:36:36] It’s one of those things that you sort of, it kind of makes you stop and think about it a little bit. And I was sort of of two minds. There was a part of me that wanted to sell it and there was a part of me that wanted to hold it. I think what just sort of made the decision for me was for much of my time in big tech, it was during COVID right? And during those Covid years, you could sort of see the explosive growth.
+
+[00:37:01] And so for me, it was a sort of a light bulb of like, wait, this might last for a while. Maybe I’ll just, I’ll just hold, hold on for dear life since it seems to be going to the moon. That’s it.
+
+Ryan:
+
+[00:37:13] At that time, if I had given you $10,000 of cash, would you have turned around and bought your company stock or would you have put it somewhere else?
+
+ADE:
+
+[00:37:23] For me, it would have been index funds. Just because I’m sort of a risk adverse guy. And so if there was just cash in my hands, sure, I’ll put into index funds.
+
+Ryan:
+
+[00:37:35] Because I see the esgp, it sounds like it has the flexibility of being cash if you want. I guess maybe there’s some tax implication when you sell it.
+
+ADE:
+
+[00:37:46] I don’t know. I didn’t research too much into this. Right. I’m not like a financial guru or anything, but it’s sort of like, you know, if you get money for free, you should take that money. There’s of course, other things. Right. Like I think a lot of companies will give you like a 401k match as well. You should take that as well if you haven’t.
+
+Ryan:
+
+[00:38:09] So then I guess going back to your career, I mean, you worked for 25 years. Is there any notable period of growth for you during your career? And what do you think drove that growth?
+
+ADE:
+
+[00:38:21] Sure, I, I think, I think the most cherished time of my career was when I was working from like a senior software engineer all the way up to a. A senior enterprise architect. Right? So going, going from, from coding to like just designing and integrating and working with different applications. I felt that I learned the most about the craft during that period of time. And what sort of really helped me a lot was having a series of extremely good, knowledgeable, capable mentors that sort of helped me and taught me and kind of guided me to the right path, if you will.
+
+[00:39:07] Right after I became a director, the nature of the work became more. Well, it became more sort of like managerial in a way. Managerial in terms of it was more helping tech leads, helping other architects do their jobs. It was more of selling work to C suite executives all the time. And that just became less fun and there was less growth, in my opinion.
+
+Ryan:
+
+[00:39:35] You mentioned mentoring being big part of your career growth. Is there a number one lesson that you learned from a mentor? And if so, what was it?
+
+ADE:
+
+[00:39:44] So there were a lot of, a lot of good lessons taught to me by several, quite a few mentors, right? But if I were to say that there was one lesson that kind of stuck by me, it was from this one guy. He taught, he said something that was kind of profound to me, right? But I’ll repeat it for everyone. It’s to be flexible, you have to be able to adapt yourself to changing conditions, no matter what the condition is, right?
+
+[00:40:15] No matter what’s your technology, stack, whatever is your CICD pipeline, whatever the client side teams are like, you just have to stay flexible. If you can stay flexible, you’ll survive.
+
+
+## 00:40:27 — When age impacted his flexibility
+
+
+Ryan:
+
+[00:40:27] I remember one of your videos you talked about as you got older and you were working on tech, the ability to be flexible, you were noticing, was becoming harder. It was harder to stay on top of the trends, harder to learn. At what ages did you really notice things were changing for you?
+
+ADE:
+
+[00:40:48] After I turned 40, I still tried to keep up in the tech. I still tried to learn all the frameworks and I just noticed that it took me longer and longer and longer to learn. And I know other people have different sort of experiences, right? Some people are like in their 50s and they’re still learning quickly. But for me it just. This slowdown became so incredibly apparent. And it’s. In a way, it’s a little bit.
+
+[00:41:20] It’s a little bit sad in a way. The only way I can describe it is, like, imagine like an Olympic gymnast, like those guys that can do somersaults in the air, right? And they’re able to do that in their 20s, right? But when they hit their 30s, if they even try one thing, they’ll break a bone. At least to me, mentally. That was what it was like. Like, hey, you know, I can learn this framework in my 20s in, like, a few days and be effective with it in my 40s.
+
+[00:41:48] It’s taking me weeks to learn it. And what I can produce is this halting, clumsy syntax that I probably need to get, you know, an AI tool to help me polish that. That gets me a little bit, but it’s life. You know what? We all get older.
+
+
+## 00:42:04 — Why YouTube
+
+
+Ryan:
+
+[00:42:04] When you think about moving forward in your career, and this is right after you were laid off. Why put out YouTube videos?
+
+ADE:
+
+[00:42:13] Okay, so this is really funny. I’ll show you this. So I was in this headspace where I was feeling really confused and lost, and it was either writing my thoughts onto this book here or shooting a vlog. And quite frankly, I was just lazy. I was just lazy. I’m like, you know what? Why don’t I just do a vlog instead? Because it was suggested I see a therapist, right? And then she suggested, hey, you know, you have all of these thoughts right now and you have anxiety, you have all this thing.
+
+[00:42:48] Why not just log it? And so it was simply easier to turn on a camera than it was to spend all this time writing the words down onto a book. That’s why I did it. Had no clue it would go viral like the way it did, but that’s how things play out.
+
+Ryan:
+
+[00:43:03] What’d you think when, after you put it out and it was going viral, what were you thinking compared to your expectations?
+
+ADE:
+
+[00:43:12] Completely blew me away. I had never done a vlog in my life, right? And I didn’t quite understand just how the YouTube algorithm worked to show that V log to so many people. It was kind of surprising and shocking, right? Got a lot of positive comments from a lot of people in the video. So it seemed like maybe other people were thinking and feeling similar thoughts and feelings as to me. And so it was good.
+
+[00:43:44] It was actually kind of therapeutic to see that I wasn’t alone in all of this.
+
+Ryan:
+
+[00:43:50] I know you go under the pseudonym of Asian Dad Energy, but that video went so viral, and your Face is on it. I’m curious, did anyone, wherever you’re walking around see you and go, hey, you’re. I saw you on YouTube. Has that happened yet?
+
+ADE:
+
+[00:44:05] So quite a few coworkers, both from my ex big tech employer and also from my past companies did recognize me and reach out to me. It was, it was pretty cool. I haven’t, I haven’t yet had someone reach out to me disapprovingly. Right. I’m sure that will happen at some point. Maybe a C suite leader would see this and like, hey man, what the heck are you saying? I’m prepared for those cringy moments as they come, but so far it’s been all positive.
+
+Ryan:
+
+[00:44:34] That’s awesome. Where do you see this going from now? What’s the future look like of your career, of the YouTube channel and all of that?
+
+ADE:
+
+[00:44:43] I don’t know, man. The future is unwritten at this point. I tried after, right after I got laid off, I tried applying to a few big tech companies. Not much came of it. Doesn’t. Doesn’t seem like it’s a very hot jobs market at the moment. And also I’m just sort of thinking about what it is I want to do. Right. I really, I really don’t think at the moment I want to get back to that structure of big tech where you have all these schedules and goals and priorities.
+
+[00:45:14] That, that probably doesn’t mean that much to me as it used to. I’m more thinking, you know, number one, let me see if I can get used to this semi early retirement where I have plenty of time to spend with people I care about. And by the way, I don’t know if you plan on retiring early at some point. It’s been pretty good. Like it’s been over a month and progressively over time I find my, both my physical health and also my mental sort of state of mood just going up and up and up this whole time.
+
+[00:45:51] It’s actually been pretty good. So that’s one thing I want to explore more of this whole semi early retirement or involuntary early retirement that I find myself in. The other thing is just to keep my mind active. I have started a couple of different projects, right? One of them is this YouTube channel, Asian Dad Energy. People seem to like my rants for whatever reason. So I’ll just do some more rants as I feel like it.
+
+[00:46:18] Maybe it’s entertaining, maybe people can find value in it. The other thing is I’ve been coding on my own and working on a couple of small projects. I might put it out there in the world and see how that does as well. And then we’ll just see where life takes me. I mean, for all we know, there could be some incredibly motivating project that, you know, I would jump up and work at it for free, but I haven’t seen it yet.
+
+[00:46:43] So we’ll do, we’ll. We’ll deal with the situation as it comes.
+
+
+## 00:46:46 — Speaking advice for engineers
+
+
+Ryan:
+
+[00:46:46] You talked about you had to sell to the C suite of these clients when you were a consultant. And clearly you speak well. If you had to give advice to a software engineer to improve on speaking, what would you say is the most important things to get right?
+
+ADE:
+
+[00:47:10] Oh, my goodness. It’s hard to say. I would say just relax and don’t associate yourself with the subject that you’re discussing. Right. A lot of times I see people getting nervous because they’re so invested in what they’re doing. There was actually, it’s a interesting story, there was this one engineer that I worked with, absolutely brilliant, so incredibly brilliant that you have never met such a smart guy.
+
+[00:47:39] Okay. But he couldn’t articulate what he was doing meaningfully to people who weren’t necessarily very deep technically. And it was so agonizing when I worked with him because I’m like, man, you’re a genius, man. You just have to communicate this wisdom to the people there. But he couldn’t do it because he thought so seriously of what he was discussing that this was actually a, it was actually an in memory optimization of a kind of a memory cache in a CMS system called Drupal.
+
+[00:48:17] But it was so, he was so tied himself was tied to this subject that he can’t take a step back and just realize, hey, don’t take it so seriously. And you can discuss it in a way that’s so simple that everybody can get it and that way you’ll actually get your point across and get what you want to do.
+
+Ryan:
+
+[00:48:35] I think that’s a very common failure mode for engineers is they speak in the way that they think, but not necessarily in the way that the audience would want to receive it. So you’re talking to someone who has no idea on all of the super deep detail of the thing that you’ve just spent weeks on.
+
+ADE:
+
+[00:48:56] You shouldn’t get that deep the way that you’re thinking about it. It’s like it’s your, it’s your baby, it’s your everything. But you got to take a step back and explain it. Like the audience is five years old. That’s, in my opinion, the best way to do it.
+
+
+## 00:49:09 — Advice for younger self
+
+
+Ryan:
+
+[00:49:09] Okay. And then, yeah, last question I want to ask you is if you could go back to the beginning of your career, right when you just entered the industry and give yourself some advice, what would you say?
+
+ADE:
+
+[00:49:20] I think I would tell myself to work hard, don’t stop learning, and stay flexible.
+
+Ryan:
+
+[00:49:28] Awesome. All right, well, thank you so much for your time.
+
+ADE:
+
+[00:49:32] You’re very welcome. It was a pleasure chatting with you, Ryan.

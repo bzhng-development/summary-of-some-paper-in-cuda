@@ -1,0 +1,104 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 25,000 readers this week 🙏 🎉
+
+This week I wrote the post I wish I had read at the start of my career. If you find it helpful, please share it with your friends and coworkers. Enjoy!
+
+When I look back on my career, I realize I’ve learned most of what I needed on the job. Most of this learning came through observation. I worked closely with stronger engineers, saw what they did, and picked up on what worked well.
+
+However, learning this way is much slower than it should be. Rather than having someone walk you through it, you learn behaviors by seeing a ton of examples. Once you’ve seen enough, you start to reverse engineer their decision-making to develop the skills inside their “black box”.
+
+My goal with this article is to explain what is in the “black box” for three important skills software engineers need and give you some tactics on how you can improve faster.
+
+
+## 1) Code Review
+
+
+I didn’t review any code when I first started working. I thought I didn’t know enough to add anything helpful. I was later told that I was expected to review code so I started approving code changes I knew nothing about. I let some bugs into production and even had someone ask me why I approved their code.
+
+For the basics of how to review code, this resource from Google explains it better than I can. If you’re strapped for time, I’d recommend you focus on just these two bits:
+
+  - What to look for in a code review - Great list that covers the types of feedback to give and why.
+
+What to look for in a code review - Great list that covers the types of feedback to give and why.
+
+  - Navigating a change - A strategy for reviewing code changes.
+
+Navigating a change - A strategy for reviewing code changes.
+
+Starting to review code can be intimidating if you’re new to the codebase. To get started, you can do “dry-run” reviews where you review the code and ask questions, but don’t approve it unless you’re certain. This lets you learn and provide valuable feedback without any risk.
+
+When I first started reviewing code, I realized I didn’t have much feedback to give. After I finished the pipeline rewrite that got me promoted to Mid-level (L4) it became much easier to contribute to code reviews. If at first you don’t have much to add, don’t worry since that will change after you build a few features.
+
+
+## 2) Influence: How To Sell Your Projects
+
+
+I’ve never had someone sit me down and teach me how to influence. I figured it out by watching others and reading resources on my own time. The gist of how to do this can be summarized in this quote:
+
+> “The only way on earth to influence other people is to talk about what they want and show them how to get it” - Dale Carnegie
+
+“The only way on earth to influence other people is to talk about what they want and show them how to get it” - Dale Carnegie
+
+To learn this skill fast, think critically about what it is that people and teams want. This is often captured by the team’s goals and strategy. With this understanding, tailor your communication around their goals. Explain the benefit of your projects in terms of how they move the team’s goal metrics.
+
+For example, in my promotion to Senior (L5), I had to get an ads team to prioritize video performance wins. At first, I got them to invest a little by explaining the impact in terms of creation reliability. This interested them since their team was suffering from operational burdens from low reliability.
+
+After we landed our initial wins, we saw unexpectedly large wins in their team’s topline goaling metric. From that point forward, I talked mostly about that and ways to improve it even more. This significantly increased their level of investment which led to a collaboration for several halves.
+
+If you want to learn more, you can read “How To Win Friends And Influence People”. It covers the essentials of how to influence:
+
+
+## 3) Work Communication
+
+
+The key to good communication is to know your audience. Your message needs to be useful and meaningful for your audience to be effective. Imagine you are giving project updates to three different audiences, here’s how your message might differ:
+
+  - To your engineering collaborators - In communication with engineers working directly on your project it’s useful to be detailed and speak about the specifics of the code.
+
+To your engineering collaborators - In communication with engineers working directly on your project it’s useful to be detailed and speak about the specifics of the code.
+
+  - To a general engineering audience - If you’re speaking about your project in your team’s all-hands, you might talk more about the high-level engineering plan and next steps rather than diving into the details of the code.
+
+To a general engineering audience - If you’re speaking about your project in your team’s all-hands, you might talk more about the high-level engineering plan and next steps rather than diving into the details of the code.
+
+  - To your cross-functional partners - Your updates won’t be effective if you dive deep into the technical details if you’re speaking to your PM for instance. Tailor your message around how high-level updates affect the user experience.
+
+To your cross-functional partners - Your updates won’t be effective if you dive deep into the technical details if you’re speaking to your PM for instance. Tailor your message around how high-level updates affect the user experience.
+
+Knowing your audience is common advice though. At work, one difference is that effective communication gets the point across in as few words as possible. Here are a few tactics that have helped me hone my message:
+
+  - If you can remove a word and preserve your message, remove it.
+
+If you can remove a word and preserve your message, remove it.
+
+  - If you have a longer message, give your audience the main details in 1-2 lines at the beginning before diving in.
+
+If you have a longer message, give your audience the main details in 1-2 lines at the beginning before diving in.
+
+  - Use short, punchy sentences and don’t hesitate to structure your thoughts with bullets (as an example, see the “Team-level influence” section here)
+
+Use short, punchy sentences and don’t hesitate to structure your thoughts with bullets (as an example, see the “Team-level influence” section here)
+
+If you want to learn this skill faster, communicate a lot and get feedback from others who are good at communication. For further learning, here are some resources I’ve used:
+
+  - Read “On Writing Well” - the first part on “Principles” is full of great advice.
+
+Read “On Writing Well” - the first part on “Principles” is full of great advice.
+
+  - Attend your local Toastmasters - It’s a public speaking club that provides a supportive environment to practice in.
+
+Attend your local Toastmasters - It’s a public speaking club that provides a supportive environment to practice in.
+
+These skills are critical for growth to senior levels (see FAANG Senior expectations here):
+
+  - Code review - Helps you grow others and influence your team’s code quality.
+
+Code review - Helps you grow others and influence your team’s code quality.
+
+  - Influence & Communication - mandatory skills to have team-level impact.
+
+Influence & Communication - mandatory skills to have team-level impact.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already. Also, if you have feedback about how I can make the content better, please share it here 🙏
+
+Thanks for reading,
+Ryan Peterman

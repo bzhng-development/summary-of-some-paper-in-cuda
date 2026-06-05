@@ -1,0 +1,34 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 57,000 readers this week 🙏 🎉
+
+This week I’m answering a question about time in role restrictions that block promotions. Hope it is helpful; enjoy!
+
+> Question from a subscriber: How did you get around the expected time in position gatekeeping? Most places I’ve worked at have rules on years in role regardless of skill or work completed.
+
+Question from a subscriber: How did you get around the expected time in position gatekeeping? Most places I’ve worked at have rules on years in role regardless of skill or work completed.
+
+The company you work at matters a lot for time in role gatekeeping. I was lucky to be working at Instagram (Meta) which didn’t block promotions on time in role. You can get promoted as long as you are performing consistently at the next level. My growth from Junior (IC3) to Staff (IC6) in three years would not have been possible at many other companies.
+
+My case is rare but there are even crazier outliers. I’ve seen a few cases of Junior (IC3) to Principal (IC8) in 5 years at Meta. This is insane given that scope at the next level is exponentially rarer at the highest levels. My point isn’t that this is probable but that it is possible at the right companies.
+
+My friends have shared that other big tech companies are slower to promote (even if you’re performing at the next level):
+
+  - Google - I have a high-performing friend who got to Senior (L5) in 2 years. He has been blocked on Staff (L6) promotion for years even though his manager said he’s performing at the next level.
+
+Google - I have a high-performing friend who got to Senior (L5) in 2 years. He has been blocked on Staff (L6) promotion for years even though his manager said he’s performing at the next level.
+
+  - Amazon - Their Senior (SDE III) promotion is notorious for being difficult to achieve.
+
+Amazon - Their Senior (SDE III) promotion is notorious for being difficult to achieve.
+
+I haven’t done extensive research across all big tech companies though. If you’d like to see if there are any time in role restrictions, you can check Blind or talk to engineers who work there.
+
+If you want to get promoted fast, choose your company wisely. It would be demotivating if you can’t get promoted even if you’re already doing what is expected at the next level.
+
+I’ll test out more of these Q&A response articles in the future. I like that I know it’s helping someone and that the content is more responsive to the needs of you all.
+
+If you have a question you’d like me to answer, you can submit it anonymously here.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already.
+
+Thanks for reading,
+Ryan Peterman

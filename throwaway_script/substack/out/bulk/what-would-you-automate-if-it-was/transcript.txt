@@ -1,0 +1,80 @@
+You should automate a task if the benefit is higher than the cost of automating it. That’s always been true, but a fundamental part of this equation has completely changed in the last year.
+
+I used to think twice before writing scripts to automate repetitive work because it would take a while. Most tasks didn’t feel common enough to bother automating.
+
+
+## What’s Changed in the Last Year
+
+
+Code generation models and agentic tooling (like Codex or Claude Code - not an ad) have completely changed this for me this year. Now, automating work is almost free. I automate just about everything if it’s easy to access from the terminal.
+
+Some examples:
+
+  - Podcast transcript processing:Problem: Audio transcription for my podcast is not accurate and needs fixing. LLMs can fix these but can’t handle the entire 2-hour transcript all at once.Solution: Generated a script to chunk up the transcript and feed it to an LLM API. One command, done.
+
+Podcast transcript processing:
+
+  - Problem: Audio transcription for my podcast is not accurate and needs fixing. LLMs can fix these but can’t handle the entire 2-hour transcript all at once.
+
+Problem: Audio transcription for my podcast is not accurate and needs fixing. LLMs can fix these but can’t handle the entire 2-hour transcript all at once.
+
+  - Solution: Generated a script to chunk up the transcript and feed it to an LLM API. One command, done.
+
+Solution: Generated a script to chunk up the transcript and feed it to an LLM API. One command, done.
+
+  - Rescuing podcast footage:Problem: I use software to record remote podcasts. It uploads the video in chunks, but for one interview the uploads failed. We couldn’t fix it, but we found all the video chunks in his Chrome folder. So he sent me a zip with hundreds of numbered files containing the video chunks.Solution: Generated a script to list and sort the files, then used ffmpeg to stitch it all together.Note: Even though this isn’t a task I expect to do again, generating the script was still easier than figuring out the ffmpeg command by hand.
+
+Rescuing podcast footage:
+
+  - Problem: I use software to record remote podcasts. It uploads the video in chunks, but for one interview the uploads failed. We couldn’t fix it, but we found all the video chunks in his Chrome folder. So he sent me a zip with hundreds of numbered files containing the video chunks.
+
+Problem: I use software to record remote podcasts. It uploads the video in chunks, but for one interview the uploads failed. We couldn’t fix it, but we found all the video chunks in his Chrome folder. So he sent me a zip with hundreds of numbered files containing the video chunks.
+
+  - Solution: Generated a script to list and sort the files, then used ffmpeg to stitch it all together.Note: Even though this isn’t a task I expect to do again, generating the script was still easier than figuring out the ffmpeg command by hand.
+
+Solution: Generated a script to list and sort the files, then used ffmpeg to stitch it all together.
+
+  - Note: Even though this isn’t a task I expect to do again, generating the script was still easier than figuring out the ffmpeg command by hand.
+
+Note: Even though this isn’t a task I expect to do again, generating the script was still easier than figuring out the ffmpeg command by hand.
+
+  - Moving notes to MarkdownProblem: I wanted to use Obsidian, but my notes were scattered in many file formats across Google Docs, Apple Notes, and Google Keep.Solution: Dumped all exported zips in one place and wrote three scripts, one for each format, to convert to Markdown.Note: Again, this isn’t something I’ll do again yet generating a script was the fastest way. In the past, I wouldn’t have done the migration, but now it’s so easy I figured why not.
+
+Moving notes to Markdown
+
+  - Problem: I wanted to use Obsidian, but my notes were scattered in many file formats across Google Docs, Apple Notes, and Google Keep.
+
+Problem: I wanted to use Obsidian, but my notes were scattered in many file formats across Google Docs, Apple Notes, and Google Keep.
+
+  - Solution: Dumped all exported zips in one place and wrote three scripts, one for each format, to convert to Markdown.Note: Again, this isn’t something I’ll do again yet generating a script was the fastest way. In the past, I wouldn’t have done the migration, but now it’s so easy I figured why not.
+
+Solution: Dumped all exported zips in one place and wrote three scripts, one for each format, to convert to Markdown.
+
+  - Note: Again, this isn’t something I’ll do again yet generating a script was the fastest way. In the past, I wouldn’t have done the migration, but now it’s so easy I figured why not.
+
+Note: Again, this isn’t something I’ll do again yet generating a script was the fastest way. In the past, I wouldn’t have done the migration, but now it’s so easy I figured why not.
+
+This has changed how I use my computer. I automate a lot more because the cost is basically zero. I have AI write quick one-off scripts for me more often than I do these small local tasks myself.
+
+Not only do these agentic tools save me time, they let me do things I wouldn’t have done before because they weren’t worth the trouble.
+
+LLM code generation isn’t perfect, but for these small, targeted tasks it’s actually great. LLMs are likely to get it right the first time, and even if not, being wrong doesn’t matter much. There’s a lot of hype around AI, but this is one real use case that already saves me a ton of time. I think you’ll find it useful too.
+
+I plan to start writing more although without any fixed cadence. Let me know if there is anything you’re curious about and I’ll keep it in mind for the next time I write.
+
+Also, I curated the top three podcast episodes I’ve made so far in case you’re interested in seeing what I’ve been up to:
+
+  - [430k views] Ethan Evans (Amazon VP) - He’s a great speaker and gave a good primer for the behind the scenes of management in tech
+
+[430k views] Ethan Evans (Amazon VP) - He’s a great speaker and gave a good primer for the behind the scenes of management in tech
+
+  - [334k views] Philip Su (Open AI & Meta Distinguished Eng) - Someone I looked up to a lot while I was grinding up the tech ladder. He shared a bunch of interesting insights from the highest levels & reflections on his career
+
+[334k views] Philip Su (Open AI & Meta Distinguished Eng) - Someone I looked up to a lot while I was grinding up the tech ladder. He shared a bunch of interesting insights from the highest levels & reflections on his career
+
+  - [206k views] Steve Huynh (Amazon Principal Eng) - Steve has a ton of experience from his time at Amazon and gave some insights into how perf and interviews work from the inside
+
+[206k views] Steve Huynh (Amazon Principal Eng) - Steve has a ton of experience from his time at Amazon and gave some insights into how perf and interviews work from the inside
+
+Thanks for reading,
+Ryan Peterman

@@ -1,0 +1,363 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/high-performers-understand-incentives",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 193266284,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2026-04-05T16:38:48.323Z",
+  "updated_at": "2026-04-05T16:43:32.864Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "high-performers-understand-incentives",
+  "social_title": "High Performers Understand Incentives",
+  "subtitle": "Love them or hate them...",
+  "teaser_post_eligible": true,
+  "title": "High Performers Understand Incentives",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 0,
+  "reactions": {
+    "❤": 45
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "amazon-vp-reveals-everything-hes",
+  "next_post_slug": "ex-head-of-eng-at-instagram-career",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/58774840-c251-40d6-a8e6-26843d399367_1130x634.jpeg",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 193266284,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Love them or hate them...",
+  "body_html": "<p>The <a href=\"https://www.youtube.com/watch?v=6WaeGfLnRvc\">conversation I had with Ethan Evans (ex-Amazon VP)</a> struck a cord with the internet. A mixture of disgust and admiration for his transparency.</p><p>A <a href=\"https://www.instagram.com/p/DWq6Z_PgYFL/\">clip from our conversation</a> got millions of views. In it, Ethan says:</p><blockquote><p>“One of the hardest things for people to understand is I’ve identified a legitimate weakness in my boss. I go to my skip. Why doesn’t he do something?</p></blockquote><p>Although many people were disgusted, Ethan was a high performer at Amazon and shared the incentive structure with unusual transparency. He’s not commenting on what is right or wrong. He’s saying what is.</p><p>From my experience, as my career grew I worked with more high performers at Meta. Some people play the game selfishly while others play the game while also focusing on what is right. <strong>But common among all high performers is they understand “the game” and its incentives.</strong></p><p>When you understand the incentives, you can focus your limited time on what is rewarded. <a href=\"https://www.developing.dev/p/speedrunning-guide-l3-l4\">When I was a junior engineer</a>, I spent so much time working on random code cleanups and miscellaneous projects that were not impactful. Later, I still worked hard but <a href=\"https://www.developing.dev/p/speedrunning-guide-senior-l5-staff\">I focused on projects that mattered</a>.</p><p>In the example where Ethan is the skip-level manager and an engineer has a problem with one of his front-line managers. Ethan explains how the incentive structure naturally leads him to not prioritize the needs of the engineer.</p><p>You can hate him, but he’s just playing the game. You probably just hate that game.</p><h3>If you hate the game</h3><p>I wouldn’t try to change the game since the effort is usually not worth it. The best move is often to find a different team, role, or company.</p><p>It’s unfortunate, but it’s the reality. The dream is a job where the incentives match the work you care about. Early in my career, I got lucky. I loved coding and optimizing infrastructure, which Meta rewarded well. Those situations do exist in tech, but you may need to do some searching to find them.</p><p>I asked Ethan how to avoid office politics, and <a href=\"https://www.instagram.com/p/DWoVuaHkbKs/\">he summed up your options well</a>.</p><p>One more thing: if you hate the game but try to play it based on how you think the incentives should be, you will get burned. Best case, you’ll do okay but not as good as you could have. Worst case, you’ll get fired for being difficult or doing work that doesn’t matter.</p><p>As Ethan said, “do yourself a favor and get good at this [politics].”</p><p>Full conversation is here if you’re interested:</p><div id=\"youtube2-6WaeGfLnRvc\" class=\"youtube-wrap\" data-attrs=\"{&quot;videoId&quot;:&quot;6WaeGfLnRvc&quot;,&quot;startTime&quot;:null,&quot;endTime&quot;:null}\" data-component-name=\"Youtube2ToDOM\"><div class=\"youtube-inner\"><iframe src=\"https://www.youtube-nocookie.com/embed/6WaeGfLnRvc?rel=0&amp;autoplay=0&amp;showinfo=0&amp;enablejsapi=0\" frameborder=\"0\" loading=\"lazy\" gesture=\"media\" allow=\"autoplay; fullscreen\" allowautoplay=\"true\" allowfullscreen=\"true\" width=\"728\" height=\"409\"></iframe></div></div><div><hr></div><p>I plan to write more about the most interesting takeaways I learn from my podcast guests. I won’t write every week, but I will write whenever I have something interesting to share.</p><p>A few personal updates for those following what I’m working on:</p><ol><li><p>Keyboard – We <a href=\"https://www.kickstarter.com/projects/ryanlpeterman/compose-simple-ergonomics-beautifully-done\">launched on Kickstarter</a> and hit our funding goal in 8 hours after launch, thank you if you backed it 🙏</p></li><li><p>Podcast – It is still cash flow negative, but I tested a sponsorship with my friends Evan and Stefan from Hello Interview (<a href=\"https://youtu.be/nOapM8i5jr0?si=sRpQYh-a4QRoyefH&amp;t=1571\">it’s here if you’re curious</a>). It went well, so I might try more in ways that don’t take away from the content.</p></li></ol><p>Also, I’m thinking of making this newsletter’s branding more general. That way I can write about anything interesting, not limited to only software engineering career growth. If you have thoughts on this, let me know!</p><p>Thanks for reading,<br>Ryan Peterman</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">If you found this interesting, you can subscribe for my future articles here:</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p></p>",
+  "truncated_body_text": "The conversation I had with Ethan Evans (ex-Amazon VP) struck a cord with the internet. A mixture of disgust and admiration for his transparency.",
+  "wordcount": 587,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "bbec9c1f-66ea-461d-baa6-2a8acc4d8aa9",
+      "publication_id": 1340878,
+      "name": "Blog",
+      "slug": "blog",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        193,
+        137,
+        94
+      ],
+      "population": 392
+    },
+    "DarkVibrant": {
+      "rgb": [
+        42,
+        45,
+        9
+      ],
+      "population": 256
+    },
+    "LightVibrant": {
+      "rgb": [
+        220,
+        170,
+        122
+      ],
+      "population": 6
+    },
+    "Muted": {
+      "rgb": [
+        156,
+        138,
+        96
+      ],
+      "population": 398
+    },
+    "DarkMuted": {
+      "rgb": [
+        102,
+        87,
+        56
+      ],
+      "population": 384
+    },
+    "LightMuted": {
+      "rgb": [
+        212,
+        196,
+        156
+      ],
+      "population": 4
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 45,
+  "comment_count": 1,
+  "child_comment_count": 1,
+  "audio_items": [
+    {
+      "post_id": 193266284,
+      "voice_id": "en-US-AlloyTurboMultilingualNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/193266284/tts/6a1db4ce-4252-4796-9ef4-1b8b0358d979/en-US-AlloyTurboMultilingualNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 238905570,
+      "body": "Incentives drive everything. Great perspective on this!",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Incentives drive everything. Great perspective on this!"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 193266284,
+      "user_id": 74161103,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2026-04-06T05:02:35.449Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Sourav Bandyopadhyay",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/7cc3ce29-a3f6-4b74-8678-62f2e47c9c51_3024x3024.jpeg",
+      "handle": "souravbandyopadhyay",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "souravbandyopadhyay",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Core Craft",
+          "id": 2217783,
+          "base_url": "https://corecraft.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    }
+  ]
+}

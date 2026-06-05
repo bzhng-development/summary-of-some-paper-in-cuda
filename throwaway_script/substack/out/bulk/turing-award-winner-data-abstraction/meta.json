@@ -1,0 +1,340 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/turing-award-winner-data-abstraction",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 195269053,
+  "podcast_art_url": "https://substack-post-media.s3.amazonaws.com/public/images/2564f400-ca44-418b-b982-d7816263cac7_720x720.png",
+  "podcast_duration": 2083.8923,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": "214c5828-a89c-469c-92ec-cbdec93c0bc4",
+  "podcast_url": "https://api.substack.com/api/v1/audio/upload/214c5828-a89c-469c-92ec-cbdec93c0bc4/src",
+  "post_date": "2026-04-27T09:00:59.947Z",
+  "updated_at": "2026-04-27T09:00:59.947Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "turing-award-winner-data-abstraction",
+  "social_title": "Turing Award Winner: Data Abstraction, Dijkstra, Distributed Systems | Barbara Liskov",
+  "subtitle": "",
+  "teaser_post_eligible": true,
+  "title": "Turing Award Winner: Data Abstraction, Dijkstra, Distributed Systems | Barbara Liskov",
+  "type": "podcast",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 1,
+  "reactions": {
+    "❤": 3
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "turing-award-winner-postgres-disagreeing",
+  "next_post_slug": "msl-eng-director-promo-hacking-industry",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/20ac1fb6-b62e-4944-81b3-67453472e3cd_2560x1440.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "podcast_episode_image_url": "https://substack-post-media.s3.amazonaws.com/public/images/2564f400-ca44-418b-b982-d7816263cac7_720x720.png",
+  "podcast_episode_image_info": {
+    "url": "https://substack-post-media.s3.amazonaws.com/public/images/2564f400-ca44-418b-b982-d7816263cac7_720x720.png",
+    "isDefaultArt": false,
+    "isDefault": false
+  },
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 195269053,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": {
+    "id": "214c5828-a89c-469c-92ec-cbdec93c0bc4",
+    "name": "Barbara Full Pod V2 AUDIO ONLY.m4a",
+    "created_at": "2026-04-23T18:15:50.982Z",
+    "uploaded_at": "2026-04-23T18:15:53.897Z",
+    "publication_id": 1340878,
+    "state": "transcoded",
+    "post_id": 195269053,
+    "user_id": 38830210,
+    "duration": 2083.8923,
+    "height": null,
+    "width": null,
+    "thumbnail_id": 1,
+    "preview_start": null,
+    "preview_duration": null,
+    "media_type": "audio",
+    "primary_file_size": 33342971,
+    "is_mux": false,
+    "mux_asset_id": null,
+    "mux_playback_id": null,
+    "mux_preview_asset_id": null,
+    "mux_preview_playback_id": null,
+    "mux_rendition_quality": null,
+    "mux_preview_rendition_quality": null,
+    "explicit": false,
+    "copyright_infringement": null,
+    "src_media_upload_id": null,
+    "live_stream_id": null,
+    "transcription": {
+      "media_upload_id": "214c5828-a89c-469c-92ec-cbdec93c0bc4",
+      "created_at": "2026-04-23T18:16:37.520Z",
+      "requested_by": 38830210,
+      "status": "transcribed",
+      "modal_call_id": "fc-01KPXRXS1DS0CZARZPGN5NWJ3Q",
+      "approved_at": "2026-04-23T18:18:22.147Z",
+      "transcript_url": "s3://substack-video/video_upload/post/195269053/214c5828-a89c-469c-92ec-cbdec93c0bc4/1776968201/transcription.json",
+      "attention_vocab": null,
+      "speaker_map": null,
+      "captions_map": {
+        "en": {
+          "url": "s3://substack-video/video_upload/post/195269053/214c5828-a89c-469c-92ec-cbdec93c0bc4/1776968201/en.vtt",
+          "language": "en",
+          "original": true
+        }
+      },
+      "cdn_url": "https://substackcdn.com/video_upload/post/195269053/214c5828-a89c-469c-92ec-cbdec93c0bc4/1776968201/transcription.json?Expires=1780803549&Key-Pair-Id=APKAIVDA3NPSMPSPESQQ&Signature=I01HYfP5tmDq~WbOC-e4e9SXuapbevQqVgSDEQJXnIauiLxX8WzeAzOkXcFBlg5jsZPWOCBI6J-VEOd6GYNFRmUHl698s9axqz2HVZH8tM8XBoyNjtN5L7hPa3wgSTUmueh3lLb48YHfSr9GJykxncxGFB16O~m-BRP9vCtBEyRUJXZum7jIBITrgI6mugElKFazh-0qaL4RwhP5lzXGlpfhIfjeCn9SSJLxIjk6r89Q8G0kGVR--k6BMeScECIp2~myqLmRmK10j8hXUWRke-9rh0Gdf-8oh-lQHoB9QvVZtlaJtyePEmHfBI48Bj-P27v2w42V1nwkUwCOkKgmxA__",
+      "cdn_unaligned_url": "https://substackcdn.com/video_upload/post/195269053/214c5828-a89c-469c-92ec-cbdec93c0bc4/1776968201/unaligned_transcription.json?Expires=1780803549&Key-Pair-Id=APKAIVDA3NPSMPSPESQQ&Signature=hD~0R7knb5M4HrXTn5jiI0~5GCye4S3EP-l5Ju2SiCGp9sjqpzCJ~0kinyiZ9wWbNc4Hsy0RuM8Hbvo6fK6sXKocCXV00ZNVAERwvUDu8RRkwsuZQ0C-SJ1MCCOkR2Jzxg90bRuX7HRoAa5V9vQgHzgWdxwi0G86S64~O8JqVWAo8NAG4Rn8jf6gKttPZ7llVHFcVKLJXciRxOf-7NqGsiO9k-33p7CwgWRpU9neeEETr2l4Sb86fSGsVkRXJqbaC2YVJBDgBzFPOyHmIPlOdcyohRBXeBBZAIiWy2HnF7KXhk1HeI3z7IjZYHBvAdIJRDSvDVu6kvFTNGF4kTTZuw__",
+      "signed_captions": [
+        {
+          "language": "en",
+          "url": "https://substackcdn.com/video_upload/post/195269053/214c5828-a89c-469c-92ec-cbdec93c0bc4/1776968201/en.vtt?Expires=1780803549&Key-Pair-Id=APKAIVDA3NPSMPSPESQQ&Signature=Wpiqu80B3hXAA3O0Ck1mR-kpVLTBbpbZDbiVsVdfw0afbVsKhV9GTQARJUI6RWohjHAvvxO6nxtIUUBRqK4EAi38xPuKAZzDlVcV9xpAvYcBXqdRyfSbtZBWwFdsLs8pJV1MLtYFBCQU05pSa29IGh5kA0v5AcwDDb~BpmrCOQbGmOuZh92WKYIJKG-rSfgHPy6o~0bZCLpG4LDSGRcesIYOWDMSMzj8MZZET3Nb17SWCzEPY2IIjvZVg70qZU4sb0A33aK-qZ6Y~E8wZJqgvH9zqGmSVrTMj9QGH49TrTC0uc-S5GAiYSx8FTmCJtK83PTXbRwvlkPyJE5NWDmkWQ__",
+          "original": true
+        }
+      ]
+    }
+  },
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Listen now | Barbara Liskov is a Turing Award winner known for her work in programming languages and distributed systems.",
+  "body_html": "<p><a href=\"https://en.wikipedia.org/wiki/Barbara_Liskov\">Barbara Liskov</a> is a Turing Award winner known for her work in programming languages and distributed systems. We discussed the major problems she solved in her career, stories about Dijkstra, getting rejected from Princeton because she was a woman and misc topics around her work.</p><p>Check out the episode wherever you get your podcasts: <a href=\"https://youtu.be/T9CGjbPZeaM\">YouTube</a>, <a href=\"https://open.spotify.com/episode/7yMHErtxj9xywrA6drwmIV?si=qJyI17CtSeSvGeF8vGUtKw\">Spotify</a>, <a href=\"https://podcasts.apple.com/us/podcast/the-peterman-pod/id1777363835\">Apple Podcasts</a>.</p><div id=\"youtube2-T9CGjbPZeaM\" class=\"youtube-wrap\" data-attrs=\"{&quot;videoId&quot;:&quot;T9CGjbPZeaM&quot;,&quot;startTime&quot;:null,&quot;endTime&quot;:null}\" data-component-name=\"Youtube2ToDOM\"><div class=\"youtube-inner\"><iframe src=\"https://www.youtube-nocookie.com/embed/T9CGjbPZeaM?rel=0&amp;autoplay=0&amp;showinfo=0&amp;enablejsapi=0\" frameborder=\"0\" loading=\"lazy\" gesture=\"media\" allow=\"autoplay; fullscreen\" allowautoplay=\"true\" allowfullscreen=\"true\" width=\"728\" height=\"409\"></iframe></div></div><h1>Timestamps</h1><p><a href=\"https://www.developing.dev/i/195269053/100-getting-rejected-from-princeton\">1:00 - Getting rejected from Princeton</a></p><p><a href=\"https://www.developing.dev/i/195269053/253-the-software-crisis\">2:53 - The software crisis</a></p><p><a href=\"https://www.developing.dev/i/195269053/903-the-drawbacks-of-python\">9:03 - The drawbacks of Python</a></p><p><a href=\"https://www.developing.dev/i/195269053/1017-getting-into-distributed-computing\">10:17 - Getting into distributed computing</a></p><p><a href=\"https://www.developing.dev/i/195269053/1309-paxos-vs-viewstamped-replication\">13:09 - Paxos vs Viewstamped replication</a></p><p><a href=\"https://www.developing.dev/i/195269053/2144-the-significance-of-dijkstras-letter\">21:44 - The significance of Dijkstras letter</a></p><p><a href=\"https://www.developing.dev/i/195269053/2504-why-she-stayed-in-academia\">25:04 - Why she stayed in academia</a></p><p><a href=\"https://www.developing.dev/i/195269053/3039-why-her-award-was-questioned\">30:39 - Why her award was questioned</a></p><h1>Transcript</h1><h3>1:00 — Getting rejected from Princeton</h3><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=60\">1:00</a>] Okay, so this was when I got my bachelor’s degree and I applied to several graduate programs in math, which is what I majored in as an undergraduate. And I got this little card back. It was a postcard from Princeton saying, we do not admit women. Which was surprising. I knew they didn’t have women in their undergraduate program, but I hadn’t realized it extended to the graduate program. But it was how it was.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=93\">1:33</a>] So what happened was I did get into Berkeley, which is where I did my undergraduate work. But I decided I really wasn’t ready to do a PhD in math and that I should get a job instead and just sort of see, you know, see how things were. And the best job offer I got was as a programmer. So that’s how I got into computer science. By a happy accident.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=120\">2:00</a>] You were consistently, at least at Berkeley, you were consistently a top student. So it is odd that you wouldn’t even get an opportunity to play in some cases.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=131\">2:11</a>] But that’s how it was back then. It was just. I hadn’t realized it was more than an undergraduate thing. And Berkeley was co ed. So, you know, there. What I found was there weren’t very many women in my classes. There were lots of women students, but very few of them majoring in math. And there were only maybe a couple of women in my classes. But the idea that a door was shut and women couldn’t do things, that was not what went on at Berkeley.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=162\">2:42</a>] So it was a different environment. Of course, nowadays in the top schools, the women are about 50% in computer science.</p><h3>2:53 — The software crisis</h3><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=173\">2:53</a>] I want to talk about some of the core problems that you were solving in your career. And so I understand that there’s the software crisis in the 1970s, and I was wondering if you could give the context behind what the problem was at that time.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=189\">3:09</a>] Well, it was a huge problem at the time because people did not know how to build big programs that worked. And so you would often pick up the newspaper and see an article about some company that had spent millions of dollars and hundreds of man years developing some software system for their company. And then in the end they’d have to throw it away because it simply didn’t work. The problem was that to get a big program that works, you need modularity, and you need to break your program up into small pieces.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=232\">3:52</a>] Each piece provides an interface with a hopefully complete description of what service it provides for you. And then inside is an implementation that’s hidden and nobody pays any attention to it on the outside. And if you have a system organized like that, you can actually reason about its correctness one module at a time. But in those days, people didn’t know how. They couldn’t figure out how to design systems that were modular.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=265\">4:25</a>] And the only kind of modularity mechanism present in programming languages was a procedure. And procedures didn’t match the kinds of modules you needed. Because if you think about a file system or a database or, you know, Amazon or whatever, you know, they. They aren’t a procedure where you put something in and get something out. They’re a much more complicated thing. So there was no notion of a module that sort of matched the kind of things that people were looking for.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=298\">4:58</a>] So when you saw that problem, what were the early solutions like?</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=302\">5:02</a>] Well, so people were proposing modularity and they were talking about how important modularity was. They didn’t exactly know what a module was. And so it wasn’t like they could give you a rule, this is a module. It was just a chunk of code. In fact, there were papers written that talked about how big a module should be and stuff like that. Just a chunk of code that’s not going to work because you need to to design these systems.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=328\">5:28</a>] So you need a way of thinking of a design that sort of fits into this notion of modularity. They also didn’t really know what the rules should be for modularity. And it turned out that in some of the early work I did after grad school, when I was working at mitre, I had already invented a notion of modularity that was sort of more complete than what people had been talking about. Just because I had a small team of programmers, we were building a complicated system and I wanted to keep us out of trouble.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=362\">6:02</a>] And so I had that sort of sitting there when I started to work on this topic. And it enabled me to see this idea of data abstraction. All of a sudden I sort of saw that this thing, I had this kind of modularity mechanism which consisted of basically what I just described, a bunch of code providing you with an access through a number of what I called operations, so you could call it in various ways.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=391\">6:31</a>] And then inside was all hidden, and whatever data it was using was not accessible to the outside. And then at some point I saw I could see this as a data abstraction. It could be a set, it could be a sequence, it could, you know, and so forth. And that meant we had a new type of module. Now, when I look back at the papers from the time I see that idea, it’s almost there, except people hadn’t managed to pick it out.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=418\">6:58</a>] And so it was probably. I think this happens in science a lot. There’s sort of a time when an idea is ready and I happened to see it.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=427\">7:07</a>] You pieced these together and you put it into the CLU programming language that you’re working on. How did you see it influencing the industry?</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=437\">7:17</a>] The first thing that happened was I wrote a paper with a man who was a graduate student at MIT, Steve Zilles, about this idea of data abstraction. And it sketched a notion of what abstract data types would be and how a programming language could support them. And this was very impactful paper. And so there was a big impact on the research community. And then CLU came along, and that involved a lot of additional research in the programming language area.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=472\">7:52</a>] The next thing that happened, so people were watching this in the research community, but of course, people who are in companies that want to write programs, they need a programming language. And I decided I wasn’t going to try and turn CLU into a product because that would have required working in a company in those days. You didn’t just put software out on the Internet and people used it. There wasn’t an Internet yet, for one thing.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=502\">8:22</a>] And I was much more interested in doing research than in working in a company. So I put CLU on the side. It had a user base. But for companies to use a programming language in those days, they wanted a company behind that language. The next thing that happened was the government put out a call for a programming language they could use. This led to the Ada programming language. So that was already a big impact.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=532\">8:52</a>] If you think about it, there was a language explicitly being designed to have data abstraction in it. And then finally in the 90s, Java came along.</p><h3>9:03 — The drawbacks of Python</h3><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=543\">9:03</a>] I thought it’d be interesting because you worked on CLU, you designed that programming language to ask you about other programming languages. You said somewhere that there’s something wrong with Python. I was curious to hear your thoughts of why.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=555\">9:15</a>] Python has modules. But it doesn’t have encapsulation, so it allows code on the outside to muck around with what’s going on on the inside of a module. And that’s all I was talking about. Encapsulation is a crucial part of making modularity work. And when you’re building big programs so you have many programmers working on them, your team is really only as strong as your weakest programmer. So it’s nice if the compiler can enforce things and make certain kinds of bad behavior not possible.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=593\">9:53</a>] I mean, Python is, you know, has another intended use. It’s helping naive programmers learn quickly how to write programs and stuff like that. And people in the programming language world do think about issues like this, like, you know, how to make languages safer and so forth. But since I stopped working in that area, I’m no longer an expert in programming languages.</p><h3>10:17 — Getting into distributed computing</h3><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=617\">10:17</a>] What got you into distributed computing?</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=620\">10:20</a>] I read a paper by Bob Kahn, who was with Vint Cerf, considered to be, you know, the founders of the Internet. And Bob talked about his dream of distributed computing, where you would have a program composed of pieces on different computers connected by a network, and nobody knew how to build those programs. And so I just thought, great problem, and I was looking for a new problem. So I jumped into distributed computing and the first project was actually a programming language to write distributed programs in.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=657\">10:57</a>] And then I started looking at other problems in the distributed systems area.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=663\">11:03</a>] What was that first programming language?</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=665\">11:05</a>] It was called Argus. It was very strongly influenced by CLU. It was an object oriented language, had a special kind of object called a guardian, which was a module sitting at a single computer. And then guardians could compute, could communicate through remote procedure calls. One of the things you run into in distributed computing is if you have a computation that starts at one guardian and then makes use of other guardians at other nodes in the network, in the end you want that computation to either complete entirely or have no effect at all.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=704\">11:44</a>] And how do you do that? Well, I borrowed the notion of transactions coming out of the database field, and that was part of how Argus worked. It ran computations as atomic transactions.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=717\">11:57</a>] Oh, interesting. Like distributed transactions across those nodes.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=722\">12:02</a>] Yeah, And I think it led right into the work I did on Viewstamped Replication, which was. That was the beginning of cloud storage. I was thinking in terms of a file system, but it doesn’t really matter what it is. You know, how do you have data out on the Internet stored at multiple sites with correct behavior and always accessible as long as enough nodes are up and running and the network is working.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=752\">12:32</a>] I see. And what is a viewstamp in this context?</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=755\">12:35</a>] Oh, that had to do with some details of how the system worked. And it was a way of noticing when some nodes failed and other nodes had to take over. You know, could figure out which ones had the most recent state in them. So you could pick up and not lose anything that had happened in the past.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=774\">12:54</a>] What if the clocks are out of sync?</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=776\">12:56</a>] It had nothing to do with clocks because it was just numbers. In other words, we were in view 25, the next view was 26, so.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=785\">13:05</a>] Oh, okay. Just incrementing some numbers passed around.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=788\">13:08</a>] Yeah.</p><h3>13:09 — Paxos vs Viewstamped replication</h3><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=789\">13:09</a>] This reminds me a lot of Leslie Lamport’s work, actually.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=793\">13:13</a>] Yes.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=794\">13:14</a>] Did you ever work with him or.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=797\">13:17</a>] No. Leslie and I developed what is essentially the same idea independently and he had the system he called Paxos, and I had this thing called Viewstamped Replication.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=808\">13:28</a>] Oh, interesting. And they’re essentially the same thing.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=812\">13:32</a>] They are, yeah.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=814\">13:34</a>] Are there pros and cons of the two approaches?</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=817\">13:37</a>] Yeah, I mean, when you do this kind of system, there’s lots of little details you can play around with, so you could, you know, decide to do it. Gets technical, but, you know, there’s tiny differences. But no, they’re basically the same. In fact, what happened was the first time that I’m aware of that this was actually used in a real system was when the Google file system came along and one of my former students, who was, I think he was a consultant at Google, looked at what was going on in there and he said, oh, he says that’s Viewstamped Replication.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=851\">14:11</a>] So. So the people at Google seem to think it was Paxos, but in fact they are the same system.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=857\">14:17</a>] I also noticed, like when you were, when you came up with abstract data types, maybe it’s just because there wasn’t the Internet wasn’t, as you know, wasn’t there that there was also the object oriented stuff going on on the West Coast?</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=873\">14:33</a>] Yes. Alan Kay was developing SmallTalk at the same time that I was working on CLU. And then at Carnegie Mellon, Bill Wolfe and Mary Shaw were working on alphard, which was another data abstraction language. And you’re right, there was no Internet, although there was the arpanet, you know, so we did, but it was like there were two independent streams of research going on and we weren’t talking to each other and so I wasn’t paying much attention to small talk.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=904\">15:04</a>] And on the West Coast, I don’t think they were paying much attention to data abstraction, and this led to the Liskov substitution principle, which, I mean, the story is a sort of a cute one, because in 1986, I think it was, I was asked to give a keynote at uppsla. OOPSLA is the Object Oriented Programming Conference. And this was the second year it was happening. And so I decided, I think I’ll read all those papers about SmallTalk, and there were other languages being developed that were based on SmallTalk and see what’s going on with them.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=941\">15:41</a>] And I discovered. So SmallTalk has this idea of inheritance in it, where you can have a class and a subclass which borrows from the way the class is implemented and changes it a bit. And CLU doesn’t have that CLU, just has what we call clusters, and they’re all independent. So I saw that they were talking about this notion of classes and subclasses, and then I saw that they were also talking about something they called type hierarchy, where they wanted the type implemented by a class to be related in some way that they didn’t understand to the type that was implemented by a subclass.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=984\">16:24</a>] I really thought about modules in terms of their specifications. This partly had to do with a class I developed at MIT that I developed jointly with my colleague John Guttag. And in that class we taught the students how to do design about modularity, data types and so forth, but also how to write specifications, how to reason about correctness. And so it had a big focus on think about the meaning of things first.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1012\">16:52</a>] And the implementation is something that’s kind of hidden inside and you don’t worry about it very much. And so that was a different way of thinking about things than what was going on on the west coast, where they were really thinking in terms of classes and subclasses. And I even saw papers where they would describe the behavior of a class by explaining how its implementation was different from the implementation of the superclass.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1038\">17:18</a>] So they were kind of focused on implementations in a way that we weren’t. And so when I read these papers about type hierarchy and I saw they just couldn’t figure out what it was supposed to mean, I was thinking about it from the terms of meaning. And so I was able to say it has to do with the behavior. And this subclass better behave like the superclass if you use it in an environment where the superclass is expected.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1067\">17:47</a>] And that became what ended up being called the Liskov substitution principle.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1079\">17:59</a>] it get that name? Because you didn’t go off on stage and say, hey, everyone, here’s the Liskov. No, no.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1084\">18:04</a>] But no. As I said, one day in the 90s after the Internet had arrived, I got an email saying, can you say if this is the correct interpretation of the Liskov substitution principle? That’s when I discovered that there was such a name. And I don’t think I had really been aware of how important it was until that point, because I wasn’t thinking about this stuff. I was working on other stuff.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1112\">18:32</a>] In the academic community, it seems very reasonable to have multiple people have similar ideas. But it seems like some ideas stick more than others. For instance, like the Viewstamped Replication versus Paxos. They’re the same thing. I’m wondering, like in that case, for instance, why would Paxos be more known than Viewstamped Replication?</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1137\">18:57</a>] Yeah. So what Leslie says is, I went around giving all the talks and she implemented it. Really something to that.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1151\">19:11</a>] Then he got notoriety for speaking about it.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1156\">19:16</a>] Yeah, he did give lots of talks about it and wrote several papers and so forth. And I didn’t realize it was the same system, but finally it became clear that they were the same system.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1168\">19:28</a>] I also wonder how much the name matters, because Paxos is kind of catchy.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1173\">19:33</a>] It is a cute name.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1174\">19:34</a>] It’s a cute name.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1175\">19:35</a>] Yeah, Right.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1176\">19:36</a>] So I could see maybe it has better marketing around the idea, I guess.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1181\">19:41</a>] I also think that this approach to solving this problem, which both Leslie and I picked up independently in my case, came from the work I’d been doing with transactions. Because in transactions there’s a leader that says, now we’re going to commit and ask everybody, can we commit? And if they all say okay. But unlike in transactions, in transactions, if the leader fails, there’s what’s called. This can be a real problem here.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1212\">20:12</a>] We had to have a way of moving to a new leader if the old leader failed. And that’s the big step forward. That happened in both the Viewstamped Replication and Paxos. Now there was also Byzantine fault tolerance, which came along later. That was developed. So view stamp publication. I developed with my student Brian Oki. It was his PhD thesis. And then Paxos I developed with my student Miguel Castro was his PhD student thesis.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1243\">20:43</a>] And Miguel got interested in this problem because there was a DARPA request for proposals and there was one about this problem on the Internet. By then there were Byzantine attacks and malicious attacks and nodes that would purport to be working correctly, but actually they had been compromised and so forth. And so Viewstamped Replication and Paxos only handled crashes. And if there were messages that had been played with, you could tell when they arrived that they were bad.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1278\">21:18</a>] And that was about the extent of what we dealt with. But these malicious attacks with nodes that purported to be working when they weren’t, that was a big step forward. And Miguel saw this request for proposals, and he said to me, why don’t we see whether we can come up with a protocol that works in the presence of Byzantine attacks? And I think, by the way, Leslie is the one that invented the word Byzantine too.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1303\">21:43</a>] I think he did, yeah.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1304\">21:44</a>] Right.</p><h3>21:44 — The significance of Dijkstras letter</h3><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1304\">21:44</a>] I saw in the software crisis stuff, there’s the paper with Dijkstra that you had mentioned was one of the papers you wrote that said need modularity. And that paper was the go to statements considered harmful.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1319\">21:59</a>] Right.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1320\">22:00</a>] And I’m curious because Dijkstra, I mean, when I was studying computer science, we all know his name. Did you ever meet him or work with him?</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1328\">22:08</a>] Oh, yeah, many. I never worked with him, but I did meet him multiple times. And, you know, he had very interesting ideas. And that paper, go to statement considered harmful. It’s not actually a paper. It was a letter to the editor of the communications of the ACM. But it was very impactful. And what was really important about that paper was that Dijkstra was talking about how difficult it is to reason about the correctness of code.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1362\">22:42</a>] And this was at a time when, in the sciences, computer science was kind of dismissed as nothing much and anybody can write code. And, you know, Dijkstra was trying to make a point, which I think was actually important, that it’s not as trivial as you think it is. It’s not trivial at all. And he was also pointing out that Go Tos can be misused.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1388\">23:08</a>] And it was controversial at the time.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1391\">23:11</a>] It was, yeah.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1392\">23:12</a>] But today I’ve written code for over a decade.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1397\">23:17</a>] People don’t use Go Tos.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1398\">23:18</a>] I haven’t even seen a Go To. So why was it controversial at the time?</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1404\">23:24</a>] The programming languages were different then. First of all, there were people writing programs in assembler. In assembler, you have to use Go To. Programming languages didn’t have some of the constructs in them that we think of today. And so some people were using Go Tos because they had to. And also compilers didn’t do all the kinds of optimizations that they do today. So there was a concern if you didn’t have Go Tos, maybe your program wouldn’t be efficient enough.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1437\">23:57</a>] And then there were people who used gotos and wrote really good code and they were offended that Dijkstra was saying, your code is bad. So there was a whole bunch. And Dijkstra was not the most diplomatic person, so he didn’t write it in a nice. You can imagine writing that paper more nicely where you said, but there were many reasons why it was controversial. People were offended. But then there were also concerns about programming languages don’t have these features.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1473\">24:33</a>] I need, what am I supposed to do? And then there were concerns about what the compiler was doing. And so the world is very different now. But clearly Dijkstra won the day here because no, go to.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1488\">24:48</a>] And is Dykstra in person also like his writing?</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1495\">24:55</a>] He was not always as tactful as he might be. Yeah, but, you know, he was a very distinguished researcher.</p><h3>25:04 — Why she stayed in academia</h3><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1504\">25:04</a>] Computer science has had such a huge impact on the industry. Why did you choose to stay in academia instead of going into industry?</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1514\">25:14</a>] So I like doing research and I enjoy working with students. And teaching was never my favorite thing. But I always felt teaching and research were very closely connected. But also it was a different time. So this business about how professors are all forming companies and so forth, which goes on today, that wasn’t happening 20 years ago. Or maybe it was happening 20 years ago, but 30 years ago it wasn’t.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1548\">25:48</a>] And so when I was young, it wasn’t the thing that you did. It was sort of a either or sort of thing. So I wasn’t even thinking about doing stuff like that. I did work in a startup briefly at the end of the 90s. I didn’t like it. I much prefer doing research. And as a professor, you have this. It’s a gift and a curse. The gift is you can do whatever you want. The curse is you have to figure out what it is that you’re doing.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1579\">26:19</a>] But I like that freedom and the fact that I just could go off in any. I mean, my career is full of these interesting zigzags where I would switch to something else. I had the freedom to do that.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1592\">26:32</a>] What stops you from going off in a very useless direction?</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1596\">26:36</a>] You won’t get tenure.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1600\">26:40</a>] Who’s the judge?</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1601\">26:41</a>] The community. Yeah. It’s not, you know, the way that you’re viewed at your university has mostly to do with one very important facet of it is how are you viewed in your research community? So. Because that’s one of the important things they want from their faculty. If you’re in a research university.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1627\">27:07</a>] You mentioned earlier that research and teaching were heavily related. In your opinion. Why is that?</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1635\">27:15</a>] Because when you teach, you have to teach from first principles. And if you’re doing good research, you need to understand deeply what’s working, what’s not working, what assumptions you’re making. It’s really the same thought process.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1652\">27:32</a>] It sounds like in research, I mean, this is true in every walk of life. There’s the, I guess, the direction that you take and then the work that you do towards that direction. And it sounds like for research, the direction is maybe the most important thing because you could have a phenomenal researcher doing an idea that has no, you know, even if you did it at 100%, it’s not going to lead to anything.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1680\">28:00</a>] That’s right. So you, you know, you tell students, graduate students don’t do incremental work. Don’t, you know, you’ve got, you. You can’t just keep working on the same thing over and over, just making little teeny improvements. You need to find. You’re right, you have to find a good problem, but you also have to find a problem that’s amenable to a solution and one that matches your skill set. And you have to recognize when you’re going in a good direction versus not going in a good direction.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1712\">28:32</a>] Looking back on your career, you say that it was luck and that it seems like things just fit together.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1721\">28:41</a>] I feel there was luck involved. There was a lot of hard work involved. There was not allowing something negative to cause you great difficulty. So, for example, when I finished my PhD, I would have liked a faculty position, but I didn’t have any good offers. So I went back to mitre, the company I had worked for initially as a researcher. In other words, I just kept on marching along. And it turned out to be a very good choice because I was switching from AI to systems.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1766\">29:26</a>] And this gave me. I worked there for four years. Gave me four years to make that transition without having to worry about students and teaching and all the other stuff. So it worked out well. But it also meant that I didn’t feel really sorry for myself that I didn’t get a job. It meant I just kept on going. And then Title IX was about to be passed, and finally academia was opening up to women and I was ready.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1798\">29:58</a>] But I think when I talk to other people about their careers, they talk about doors opening and doors closing. So I didn’t get the academic job I wanted, but I had this other opportunity. I majored in math, and fortunately I was offered a programming job. I mean, doors opened and then you have to decide, am I going to step through? And this is a pattern that people see in their careers. It’s not just me.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1827\">30:27</a>] Many people have. Have those kinds of choices that you make along the way. Opportunities and things that aren’t so great, you know, and you’re sort of working your way through.</p><h3>30:39 — Why her award was questioned</h3><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1839\">30:39</a>] I’ve interviewed a few people who have won Turing Awards, and I’ve done research and watched a lot of these speeches that people give after they receive the award. And I noticed something different in your speech or some of the stuff that I read about your work, which is that in yours, it seems like when you got the Turing Award, there were people saying, why did she get the Turing Award? It was kind of negative commentary on that.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1870\">31:10</a>] And I didn’t see that in the other cases. Why do you think that they said that about your work?</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1876\">31:16</a>] So I’m not so sure. This doesn’t happen to other people, by the way. It was just that my husband was out on the Internet, by the way. There was an Internet by then.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1884\">31:24</a>] Okay, okay.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1885\">31:25</a>] As you know, the Internet is not necessarily nice.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1889\">31:29</a>] I know that.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1890\">31:30</a>] Right. And so I can imagine that other people might have had a similar experience had they bothered to look. But I also think that the world had changed so much and the work that I had done was so basic to what was going on that people really didn’t understand that there was a before. I mean, my graduate students really didn’t understand that there was a before because I discovered that at the time I got the award, it really hadn’t struck them that data abstraction didn’t always exist.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1933\">32:13</a>] So I think that. I mean, I viewed it as, in a way, a huge compliment, not really just to me, but to the group of researchers who all together got us to the point where we had these modular programming languages and we understood about abstract data types and we understood about how to reason about correctness. All that stuff was so fundamental that people thought there was no time when it hadn’t already existed.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1964\">32:44</a>] So they took it for granted.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1965\">32:45</a>] They took it for granted. I mean, the Byzantine fault tolerance, you look at that there’s a protocol, and you can understand that there was a protocol. Somebody invented that protocol, you know, so you get the credit for that. This was much more fundamental. This was the whole mindset you had about how to develop programs, and that’s what people were talking about. And things had changed so much that all these inventions of mine and others were just there in the.</p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=1997\">33:17</a>] Would work. And people didn’t realize that there was a time before.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=2001\">33:21</a>] That’s validating then. Yeah, it’s. It’s so impactful, and everyone uses it all the time. That they don’t even know what it was like before what you did.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=2010\">33:30</a>] So I thought, you know, it’s a huge. The person who said it didn’t mean it nicely. But I thought really, it’s a huge, A huge compliment and a statement about where we are now as opposed to where we were then. So.</p><p><strong>Ryan:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=2024\">33:44</a>] Okay, well, that’s all the questions I have for you. Thank you so much for, for your time. Really appreciate it.</p><p><strong>Barbara:</strong></p><p>[<a href=\"https://youtu.be/T9CGjbPZeaM?t=2029\">33:49</a>] You’re welcome.</p>",
+  "truncated_body_text": "Barbara Liskov is a Turing Award winner known for her work in programming languages and distributed systems. We discussed the major problems she solved in her career, stories about Dijkstra, getting rejected from Princeton because she was a woman and misc topics around her work.",
+  "wordcount": 5416,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "717ee5c0-28f1-4c39-80e0-c8b6dff010ed",
+      "publication_id": 1340878,
+      "name": "Podcast",
+      "slug": "podcast",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        84,
+        100,
+        212
+      ],
+      "population": 1733
+    },
+    "DarkVibrant": {
+      "rgb": [
+        53,
+        42,
+        25
+      ],
+      "population": 45
+    },
+    "LightVibrant": {
+      "rgb": [
+        249,
+        190,
+        155
+      ],
+      "population": 44
+    },
+    "Muted": {
+      "rgb": [
+        155,
+        105,
+        84
+      ],
+      "population": 166
+    },
+    "DarkMuted": {
+      "rgb": [
+        82,
+        70,
+        59
+      ],
+      "population": 380
+    },
+    "LightMuted": {
+      "rgb": [
+        182,
+        177,
+        217
+      ],
+      "population": 16
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 3,
+  "comment_count": 0,
+  "child_comment_count": 0,
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  }
+}

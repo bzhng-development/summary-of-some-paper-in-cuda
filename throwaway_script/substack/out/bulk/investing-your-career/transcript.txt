@@ -1,0 +1,34 @@
+Compensation varies depending on the stage of the company you choose to work for. You can think of your compensation package as an investment. Let’s compare the expected value, variance, and liquidity of this investment in a big tech company versus a startup.
+
+
+## Expected Value
+
+
+People often say that big tech companies pay more because they give higher salaries and larger equity packages. But what if the startup offers comparable total compensation? Often, people value startup equity as near worthless, which isn’t accurate. While it’s true that any one startup’s equity is unlikely to be worth much, its expected value is not near zero.
+
+AngelList plotted venture fund performance across the industry here, which shows that the year with the worst median case performance (2013) had an IRR of 17.5%. Although only a rough estimate, this proves that startup equity is expected to generate a positive return over a large enough sample size. I’d even argue that some startup equity has a comparable expected value to big tech stocks. Otherwise, why would people invest billions of dollars in venture capital when that money could have gone into big tech stocks instead?
+
+In addition, top venture funds often have a competitive advantage because there is often a “rich get richer” dynamic in private markets. Information is less accessible, so funds with stronger networks and access to that information will have a consistent advantage. Top startup deals are competitive and often go to the strongest venture funds because an investment from the top venture firm can signal success and attract future employees and investors. Therefore, while big tech offers have higher expected value in most cases, strong offers from startups with funding from top VCs can have comparable expected value.
+
+
+## Variance
+
+
+Variance is a much clearer differentiator between big tech and startup compensation. The smaller the company the larger the variance in the value of the equity. This can be either an asset or a liability depending on your personal situation. For most people, the high variance from startup equity is a liability since you may never see a substantial payout given you can only work at a limited number of companies in your career. However, the high variance of startup equity can also be an asset for others who want to take the chance to break into a new social class. With big tech compensation, you’ll be well off, but you will never be truly rich (e.g. +$30mil net worth). If you want a chance at riches, you need investments that have higher variance.
+
+
+## Liquidity
+
+
+Liquidity is where big tech compensation really shines. Equity from big tech is as good as cash once you receive it. Startup equity is often not accessible until a startup is at or near an exit.
+
+One interesting byproduct of this is that big tech equity can be a strict superset of startup equity. Imagine every time your big tech stock vests, you sell it and invest that cash into startups. Since the total value of a big tech equity package is often higher than what you’d get from a startup, you’d own more equity in startups this way than if you just worked at them. This can be a decent strategy if you want exposure to the high variance returns of venture capital but don’t want to put all your eggs in one basket.
+
+The main limiting factor here is deal flow. The hottest startups aren’t going to let a random big tech employee invest in them. AngelList has made it easier to invest in startups, but you need to pay 20% carry typically so that’d cut into the margins of this strategy. Also, it’s unclear if you’d even be able to access the absolute top deals through AngelList since it’s so competitive to get capital into top startups. Working at a hot startup directly gets you access to deals you wouldn’t otherwise have access to as an angel investor. In addition, your deal flow will improve if you work at a startup since your network is more likely to start sharing deals with you to co-invest in, especially if you are a founder that has ties with your investors.
+
+Big tech compensation makes more sense for most people. That doesn’t mean that there aren’t some hot startups that have better-than-expected compensation packages. If you get a strong offer from a top startup and you don’t need the liquidity for some near-term finances (e.g. paying off a loan or buying a home) then it’s reasonable to consider joining a startup.
+
+In reality, the decision to join a company is about much more than just compensation. Even if compensation is critical for you, focusing on where you can get the most skill and career growth is a much more effective strategy for maximizing compensation. This is because senior-level compensation packages dwarf entry-level compensation packages no matter what company you join.
+
+Thanks for reading,
+Ryan Peterman

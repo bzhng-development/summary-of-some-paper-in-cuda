@@ -1,0 +1,19 @@
+<sup>Source: <https://www.developing.dev/p/takeaways-from-harvard-cs-professor></sup>
+
+Here are the takeaways from this David J. Malan interview (Harvard CS professor who turned CS50 into a world-class, freely-available online course):
+
+**Engineering a memorable lecture**
+
+Ryan was most curious about how David lectures because most professors don’t teach in a way that gets students excited, and students consistently say his lecture style sets CS50 apart. David attributes his success to two main factors. First, he deliberately designs a **"memorable moment"** in each lecture—some fun, visual exercise that gives students a unique anchor to hang their memory on. His classic example is ripping a phone book in half to demonstrate binary search. Years later, people tell him they still remember those moments and the concept he was teaching. The physical, slightly dramatic act lodges the abstraction in a way slides alone never could. Second, he brings as much energy as possible, often motivated by insecurity. One of his worst fears is standing in front of a bored audience, and he feels he owes it to the students to represent the subject in a way that makes them want to learn—if he’s flat, they’ll decide the material is flat too.
+
+**AI’s downstream impact on enrollment and cheating**
+
+Fewer students are enrolling in computer science. Part of it is fear of AI displacing jobs, but David said a stronger motive is that companies simply don’t come to hire from Harvard like they used to—they just don’t seem to be hiring as many junior engineers as before. Students read that signal and shift elsewhere. The more striking part for Ryan was how AI is reshaping cheating. David said cheating has stayed consistent at 5–10% of the student body each semester, but what’s changed is how hard it is to prosecute. When students cheat using AI, the answers they get are difficult to attribute to a source, which makes it harder to hand a smoking gun to the administrative board. The old days of copy-paste plagiarism with a clear URL trail are giving way to generated text that looks original enough to be unprovable, even when the instructor knows it wasn’t the student’s own work.
+
+**Why learn C in 2026—and the hardest concept**
+
+C is such an old language at this point that some people critique why anyone would still need to learn it. David’s argument is that C is low-level enough that you can learn how the computer actually works without dropping all the way down to assembly code—it sits at a sweet spot where memory, pointers, and hardware are visible but you’re not writing instructions per register. Also, because C is such a small language, it forces students to reimplement basic data structures from scratch, which is a great learning exercise you miss if you jump straight into a language that gives you hash maps and vectors in the standard library. When Ryan asked what single concept gave students the most trouble across all those years of teaching the same introductory courses, David answered immediately: pointers. If you understand pointers well, he said, you should feel proud.
+
+---
+
+David’s teaching philosophy rests on two deliberately chosen levers—engineering a **memorable moment** and channeling personal insecurity into relentless energy—both aimed at making abstract concepts stick. His stance on C reveals the same pedagogical instinct: strip away conveniences so students confront the machine directly, with pointers standing as the ultimate rite of passage. Even the AI-driven cheating dilemma reflects his ground-floor view of a field in flux, where the old tools of enforcement no longer match the new texture of student work.

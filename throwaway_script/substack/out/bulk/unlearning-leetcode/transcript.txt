@@ -1,0 +1,36 @@
+The timer blared, breaking my focus. Thirty minutes of grinding on Leetcode, and still no solution. Desperate for an answer, I opened the solutions page.
+
+And there it was — a single line of code. So clever it’d take me longer to understand than to come up with my own solution.
+
+At first, I was impressed. But after years of writing code at Meta, I have a different perspective.
+
+I try to write simple code now. The kind of code that is easy to read.
+
+It’s more considerate. When you write fancy code to impress people, you’re just making them do more work to seem smart. And if they don’t understand your code, they’re more likely to break it. So you’re creating more work for yourself too.
+
+Since simple code breaks less, it lasts longer. The longer it lasts, the more times others will read it — often hundreds of times more than it’s written. So, it’s worth making your code as readable as possible.
+
+Also, remember that you’ll be one of those future readers too. Even if you’re the only one who reads your code, you should still write simple code. You’ll understand it easier later.
+
+These are good reasons to write simple code, but not the main reason I do it. I write simple code because complex code feels like poor craftsmanship. It doesn’t feel clever to me, it feels sloppy. It’s much more satisfying to write simple code.
+
+It’s not always possible, of course. Some logic is inherently complex. In those cases, I leave clear comments for future readers.
+
+Next time you prepare your code for review, read it from your teammates’ perspective. Make it so clear that even engineers without context can understand it.
+
+If you liked this post, consider sharing it with a friend. As always, you can find more of my stuff here:
+
+  - LinkedIn
+
+LinkedIn
+
+  - Twitter
+
+Twitter
+
+  - Threads
+
+Threads
+
+Thanks for reading,
+Ryan Peterman

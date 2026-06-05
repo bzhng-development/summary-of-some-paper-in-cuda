@@ -1,0 +1,68 @@
+As engineers grow more senior, they tend to have more impact by influencing others. You can achieve more through collaboration than you can alone.
+
+Many companies hide engineering levels and titles. To influence others, you’ll need to rely on more than just your place in the hierarchy. All influence without authority is based on one simple concept:
+
+> Dale Carnegie: “The only way on earth to influence other people is to talk about what they want and show them how to get it”
+
+Dale Carnegie: “The only way on earth to influence other people is to talk about what they want and show them how to get it”
+
+It sounds simple but there’s a lot to it in practice. Here’s a breakdown of how it applies when getting other teams to prioritize your projects.
+
+
+## Understanding What Others Want
+
+
+The most straightforward way to understand what others want is to learn what their team’s goals are. You can find this in their team’s plan doc. In it, you should see the motivation behind their roadmap or the metrics they are trying to move.
+
+This is one of the fastest ways to understand what they want. A side benefit is that you can influence whole teams rather than just individuals through these motives. Learning these should be sufficient for getting most of your projects prioritized.
+
+In some cases, it’s helpful to also understand the motives of individuals. Every person is different so it’s hard to generalize but here are some examples:
+
+  - Personal Interest & Learning - some people pick up projects because they are interested or want to learn new skills
+
+Personal Interest & Learning - some people pick up projects because they are interested or want to learn new skills
+
+  - Career Growth - some people are eager to take on opportunities that will advance their careers
+
+Career Growth - some people are eager to take on opportunities that will advance their careers
+
+  - Making Life Easier - some people want to save time or prevent annoying breakages (e.g. one of the motivations for this project was the high maintenance cost of the old pipeline)
+
+Making Life Easier - some people want to save time or prevent annoying breakages (e.g. one of the motivations for this project was the high maintenance cost of the old pipeline)
+
+
+## Showing Them How To Get It
+
+
+To get another team to prioritize your project, you need to explain how it will help them get what they want. Here are two tactics that have worked well for me:
+
+  - Convincing with data - Show them how your project will move metrics they care about. Queries showing how big the opportunity is can go a long way.
+
+Convincing with data - Show them how your project will move metrics they care about. Queries showing how big the opportunity is can go a long way.
+
+  - Establishing credibility - Your past results, domain expertise, or relationships with the other team should give them some reason to work with you. Credibility makes it a lot easier to influence others.
+
+Establishing credibility - Your past results, domain expertise, or relationships with the other team should give them some reason to work with you. Credibility makes it a lot easier to influence others.
+
+Convincing with data is my personal favorite since data speaks for itself. If someone comes to me with proof that their project will achieve my team’s goals, I’ll prioritize it even if I just met them.
+
+
+## Always Look for “Win-Wins”
+
+
+Some think this advice is manipulative. However, focusing on helping people get what they want is mutually beneficial. You’re just explaining the benefits of your suggestions in terms of what they care about.
+
+That is also why it isn’t always possible to influence others. If there’s nothing in your project that they want, then you won’t be able to sell it no matter how good you are.
+
+When influencing others, remember to be tactful. If you upset people while trying to convince them they won’t work with you (even if you’re right):
+
+> Samuel Butler: “A man convinced against his will, is of the same opinion still”
+
+Samuel Butler: “A man convinced against his will, is of the same opinion still”
+
+If you’d like to learn more about influence, you can start by reading “How to Win Friends and Influence People” by Dale Carnegie. However, an even better place to learn is through experience. Try speaking about your projects in terms of what others want and see how they respond.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already.
+
+Thanks for reading,
+Ryan Peterman

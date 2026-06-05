@@ -1,0 +1,420 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/optimizing-for-opportunity",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 120085028,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-05-19T10:00:59.328Z",
+  "updated_at": "2023-11-06T01:04:48.066Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "optimizing-for-opportunity",
+  "social_title": null,
+  "subtitle": "Lessons learned from 11 engineering directors and principal engineers (IC8+) at Meta",
+  "teaser_post_eligible": true,
+  "title": "Optimizing for Opportunity",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 4,
+  "reactions": {
+    "❤": 57
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "investing-your-career",
+  "next_post_slug": "generalist-or-specialist",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!vF5j!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe7f978d4-b37b-4194-ae10-d0bb94bf9a4f_3026x805.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Lessons learned from 11 engineering directors and principal engineers (IC8+) at Meta",
+  "body_html": "<p>Career growth past the staff level can often seem out of reach. We know that to succeed we need both ability and opportunity. But when it comes to advancing past a certain point, <strong>access to the right opportunities becomes the limiting factor</strong>. To better understand how to optimize for opportunity, I studied the career paths of 11 people who were at least engineering directors or principal engineers (IC8+) at Meta. Here’s what I found.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!vF5j!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe7f978d4-b37b-4194-ae10-d0bb94bf9a4f_3026x805.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!vF5j!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe7f978d4-b37b-4194-ae10-d0bb94bf9a4f_3026x805.png 424w, https://substackcdn.com/image/fetch/$s_!vF5j!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe7f978d4-b37b-4194-ae10-d0bb94bf9a4f_3026x805.png 848w, https://substackcdn.com/image/fetch/$s_!vF5j!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe7f978d4-b37b-4194-ae10-d0bb94bf9a4f_3026x805.png 1272w, https://substackcdn.com/image/fetch/$s_!vF5j!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe7f978d4-b37b-4194-ae10-d0bb94bf9a4f_3026x805.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!vF5j!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe7f978d4-b37b-4194-ae10-d0bb94bf9a4f_3026x805.png\" width=\"1456\" height=\"387\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/e7f978d4-b37b-4194-ae10-d0bb94bf9a4f_3026x805.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:387,&quot;width&quot;:1456,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:null,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!vF5j!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe7f978d4-b37b-4194-ae10-d0bb94bf9a4f_3026x805.png 424w, https://substackcdn.com/image/fetch/$s_!vF5j!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe7f978d4-b37b-4194-ae10-d0bb94bf9a4f_3026x805.png 848w, https://substackcdn.com/image/fetch/$s_!vF5j!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe7f978d4-b37b-4194-ae10-d0bb94bf9a4f_3026x805.png 1272w, https://substackcdn.com/image/fetch/$s_!vF5j!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe7f978d4-b37b-4194-ae10-d0bb94bf9a4f_3026x805.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><h3><strong>Engineering Directors</strong></h3><p>These directors had a similar story: they worked on a product that was a top company priority, grew a ton, and had outstanding business impact. Their careers grew as quickly as their teams did.</p><p>They optimized for opportunity by leading teams focused on mission-critical projects. Some intentionally sought out top priorities, while others became involved by chance. <strong>Either way, working on top company priorities gave them access to more resources.</strong> In one director’s case, she had direct time with top executives and dedicated executive coaching when she needed it.</p><p>They also invested in building the necessary skills to take advantage of growth opportunities. The skill set they needed changed as their teams scaled. <strong>They mastered prioritization and delegation based on need.</strong> One director’s thought on prioritization stood out:</p><blockquote><p><em>“It’s often more impactful to take something from good to great rather than from poor to passable.”</em></p></blockquote><h3><strong>Product Engineers</strong></h3><p>These product engineers' growth also came from working on products that were growing and having tremendous business impact. Along the way, they developed organizational trust from their strong track records.</p><p><strong>These engineers had more agency and control over opportunity than their managerial counterparts</strong>. They could pick projects that interested them and use prototyping to realize their ideas. One engineer’s thought describes this well:</p><blockquote><p><em>“As engineers, we have the unique ability to just build our ideas. Taking the abstract and making it concrete advances discussion; nothing beats experiencing a product yourself. I’ve always looked for simple ways to prototype sooner.”</em></p></blockquote><p>These engineers optimized for opportunity by establishing trust through past success, which granted them first access to future critical projects. Also, <strong>these engineers were often proactive in working with the most skilled people at the company.</strong> One of the engineers even made it a point to go from project to project with the most skilled designer at the company.</p><h3><strong>Infrastructure Engineers</strong></h3><p>These infrastructure engineers all solved high-leverage problems which improved large parts of the engineering organization. Their work had a <a href=\"https://www.developing.dev/p/tools-of-the-trade\">compounding effect since they made improvements to the tooling</a> or underlying infrastructure every engineer uses at Meta.</p><p><strong>These infrastructure engineers seemed to have the most agency in creating opportunities since their impact didn’t depend on product growth</strong>. Across the board, each engineer champions the quote <em>“code wins arguments”.</em> Prototyping and proving their ideas allowed them to create opportunities. None of them mean this as a way to solve problems single-handedly, but use it as a tool to get consensus. One of the engineers summarized this: </p><blockquote><p><em>“If you want to go fast, go alone. If you want to go far, go together”.</em></p></blockquote><p>They optimized for opportunity by putting themselves in a position to get lucky. They were proactive in chasing the top problems for the engineering organization. <strong>Oftentimes, these engineers worked on these problems outside of their team’s scope in their spare time. They also invested in continuing their engineering education </strong>by pairing with domain experts and reading technical books.</p><h3><strong>Summary and recommendations</strong></h3><p>All 11 of these people were lucky to be working at an incredibly successful, growing company. <strong>Growing companies are much more likely to have opportunities for career growth since “a rising tide lifts all boats”</strong>. If your current company doesn’t have that growth potential, you may want to consider switching. Aside from joining a growing company, these people did three things that increased their chances of finding the right opportunity.</p><p>First, they <strong>sought out business-critical projects that excited them</strong>. It’s not enough that their projects were a top priority, but also it’s important that they were passionate about their projects. It motivated them to do higher-quality work and put more time in which led to better outcomes. If you are not passionate about what you are working on or it is not critical to the success of your company, talk to your manager or consider switching teams.</p><p>Second, they <strong>were intentional about working with the most talented people they knew.</strong> This helped them achieve more through their collaborations. Not to mention this increases the chances of future opportunities since talented people are often working on impactful projects. To do this, factor in the talent of your peers when choosing what to work on and who to collaborate with.</p><p>Lastly, they all <strong>honed their skills and delivered high-quality work</strong>. Their skills increased the chances that they succeeded once the right opportunity presented itself. Collaborating closely with domain experts and reading “subject-killing” resources are two ways to develop your skills. Most domains have a “subject-killing” resource (e.g. <em>High Output Management</em> for eng management) which will tell you most of the critical information you need to know. Also, their track record helped them have access to more opportunities down the road. Always hold a high bar for the quality and polish of your work. It will pay off over time.</p><div><hr></div><p>Extraordinary career growth isn’t something that many will achieve even if they have the necessary ability. <strong>Growth at the highest levels requires access to increasingly scarce opportunities </strong>so it’s not something you should expect. However, you can increase your chances with these behavior changes. Hope this is helpful, enjoy the ride and good luck.</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 2500+ software engineers who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p><em>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></em></p><p></p>",
+  "truncated_body_text": "Career growth past the staff level can often seem out of reach. We know that to succeed we need both ability and opportunity. But when it comes to advancing past a certain point, access to the right opportunities becomes the limiting factor. To better understand how to optimize for opportunity, I studied the career paths of 11 people who were at least e…",
+  "wordcount": 942,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "5a4683e9-1121-4159-b2d7-6ca77779173f",
+      "publication_id": 1340878,
+      "name": "Career",
+      "slug": "career",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        134.39189189189193,
+        217.09459459459464,
+        37.90540540540536
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        69.8837837837838,
+        112.88918918918921,
+        19.710810810810795
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        220,
+        244,
+        192
+      ],
+      "population": 201
+    },
+    "Muted": {
+      "rgb": [
+        118,
+        122,
+        114
+      ],
+      "population": 173
+    },
+    "DarkMuted": {
+      "rgb": [
+        71,
+        76,
+        65
+      ],
+      "population": 116
+    },
+    "LightMuted": {
+      "rgb": [
+        199,
+        220,
+        176
+      ],
+      "population": 40
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 57,
+  "comment_count": 13,
+  "child_comment_count": 6,
+  "audio_items": [
+    {
+      "post_id": 120085028,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/120085028/tts/1b4ca893-e0a7-460f-839a-c9a75b05cd4c/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 16304468,
+      "body": "Do you have any more “subject-killing” resources? ",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Do you have any more “subject-killing” resources?"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 120085028,
+      "user_id": 110102798,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-05-19T15:49:47.101Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Ivan H",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/cb620ac5-1a6c-4dce-86e1-8198fef618a5_474x532.jpeg",
+      "handle": "ivanh",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "ivanh",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "The Software & Data Spectrum",
+          "id": 1382820,
+          "base_url": "https://ivanh.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 7,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "2 replies by Ryan Peterman and others"
+    },
+    {
+      "id": 42047962,
+      "body": "Insightful article for ICs like me. Very helpful to plan the career ahead and look out for opportunities within the team. Thanks Ryan",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Insightful article for ICs like me. Very helpful to plan the career ahead and look out for opportunities within the team. Thanks Ryan"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 120085028,
+      "user_id": 87659228,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-10-18T05:10:55.582Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "aspiringIC",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/9d6f9c84-478e-421a-ba1e-f6f1ec088315_144x144.png",
+      "handle": "aspiringic",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "aspiringic",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    }
+  ]
+}

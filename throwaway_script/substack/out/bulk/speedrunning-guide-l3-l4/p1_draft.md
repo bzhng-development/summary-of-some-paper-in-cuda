@@ -1,0 +1,17 @@
+Here are the takeaways from this Ryan Peterman guide on accelerating from Junior (L3) to Mid-Level (L4) engineer:
+
+**Critical Logistics: lagging promotions and manager alignment**
+
+The engine of a big-tech promotion is the **“lagging” promotion** concept: you must prove you’re already operating at the next level *before* you get the title, which reduces the risk of floundering after promotion. In practice, that means at least six months of consistent performance at L4 expectations. Your manager is the second load-bearing piece — they build your case and advocate for it, and because the L3→L4 bar is straightforward, their perspective carries weight. The play is to align with your manager on whether your performance reads as L4-level.
+
+**The strategy: declare intent and optimize for dev velocity**
+
+The core strategy is to hit L4 expectations as fast as possible, then sustain them. Two keys unlock speed. First, **be forward with your manager** about wanting to promote — they can tee up L4-scope projects, clarify the process, and stress-test your readiness. Second, **optimize for dev velocity**. Landing code quickly creates a tighter feedback loop that accelerates learning, which compounds into the ability to ship L4-scope work and take initiative on the codebase. The timeline is gated by how fast you close the gap: a one-half promotion is possible for high-performing return interns who skip onboarding and already carry an L4 track record; a two-half promotion is the ambitious-but-reasonable target, giving you one half to onboard and start meeting L4 expectations.
+
+**Ryan’s growth path: H1 “Exceeds” to H2 “Greatly Exceeds”**
+
+Ryan’s own arc illustrates the lagging promotion mechanic. In H1 (rated Exceeds Expectations as an L3), he took on any task — “nice-to-have features that others didn’t have time for” — finished them quickly, and earned a larger pipeline rewrite (L4 scope) from his tech lead. Outside main projects, he fell into removing dead code and speeding up existing code “because I enjoyed it.” He started hitting L4 expectations in the last few months of the half but lacked the six-month track record, so promotion didn’t land. In H2 (promoted L3→L4, rated Greatly Exceeds Expectations), he continued driving the L4-scope project independently with high engineering quality, originated the idea for a test harness to validate the rewrite — execution “comparable to L5 quality” — and led the company in adding static type annotations that MonkeyType couldn’t. By then he’d delivered L4 scope for over six months, so the promotion made sense.
+
+**What he would have changed: steer one-on-ones toward career, not project updates**
+
+Ryan’s regret was using one-on-one time on project updates instead of discussing what L4 growth looked like. That led to two problems: he spent time on work that wasn’t impactful, taking whatever landed on his plate; and he had inaccurate expectations, trusting a peer who told him his work was L4-level and that he’d promote in his first half — only to be surprised when it didn’t happen, a shock that alignment with his manager would have avoided. But the sheer volume of code he wrote still opened doors: his tech lead trusted him with an L4 project because he’d shown he could handle it, and some of the craft work he did “for my own personal pleasure” ended up becoming promo evidence. “The more work you do, the luckier you get.”

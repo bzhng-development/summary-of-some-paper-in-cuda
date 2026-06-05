@@ -1,0 +1,23 @@
+<sup>Source: <https://www.developing.dev/p/staffing-your-projects></sup>
+
+Here are the takeaways from this Ryan Peterman essay on the influence and staffing playbook for engineers growing into Staff-level scope:
+
+**The shift from solo execution to influence**
+
+At Staff-level (IC6), the scope of problems is too large for a single engineer to ship alone, so finding a compelling initiative is only the first step — you then have to make others want to join you. The mistake engineers making the leap often make is relying on what Peterman calls **“charity”**: asking for help without giving the other person a compelling reason to say yes. That is not influence. True influence starts with the other person. He frames the entire skill around a Dale Carnegie quote: “The only way on earth to influence other people is to talk about what they want and show them how to get it.” People will gladly join you once you can show them how working with you serves their own goals.
+
+**Engineering managers as investors**
+
+He breaks the people you need to persuade into two groups. The first is engineering managers (EMs), who can both pivot existing team resources toward your initiative and, for a compelling enough new direction, work with you to request new headcount. The frame to carry is that **managers are investors**: they are constantly allocating people to the areas that will yield the biggest return. So the most effective pitch to an EM generally ties directly to business impact — show how matching their people to your workstream produces an outsized return relative to the alternatives. Managers also want a high-performing team chasing the most impactful work with a healthy dynamic, and they want team scope to grow, especially the kind of scope that higher-level ICs create by setting new technical direction. A Staff engineer’s job includes working with their EM to expand the team’s footprint, not just executing within it.
+
+**What individual contributors actually want**
+
+The second group is individual contributors (ICs) who hold key expertise you need. Peterman notes that most of the influence in his own career came from going directly to ICs, not routing everything through managers. ICs are typically motivated by four things: **interesting work** (novelty or technically challenging problems are naturally magnetic), **career advancement** (a big enough initiative can be carved into a growth opportunity someone else can own, with you coaching them), **easier lives** (engineers eagerly solve problems that eliminate an annoying workflow or repeating pain), and **work that matters** (seeing how the task connects to a larger mission or delivers real value is motivating on its own). These are generalizations — the real skill is knowing individuals well enough to match the right slice of your plan to the person in front of you. Credibility and a prior relationship also load the dice heavily; people are far more willing to hear you out when they already trust your judgment.
+
+**Soft skills are not optional**
+
+If you want to do anything of consequence, bringing other engineers along for the ride is not a nice-to-have — it is the job. The closing argument is blunt: “You can’t ignore soft skills.” The text ends with signposts to Peterman’s organized back-catalogue of posts on soft skills for those who want to study them systematically, and a brief aside about a side project to help college students land FAANG internships.
+
+---
+
+Peterman’s entire playbook rests on a single inversion: you stop asking for **charity** and start showing others how your initiative delivers what they already want. For EMs, that means treating them as **investors** allocating headcount to the highest-return work; for ICs, it means diagnosing which of the four levers — **interesting work**, **career advancement**, **easier lives**, or **work that matters** — will speak to that particular person. The Carnegie quote that anchors the piece (“talk about what they want and show them how to get it”) isn’t window dressing; it’s the operating system underneath every staffing conversation he describes, and it’s what transforms a lonely Staff-level idea into a team that moves together.

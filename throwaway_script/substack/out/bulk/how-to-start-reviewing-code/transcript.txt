@@ -1,0 +1,24 @@
+I didn’t review any code when I first started working after graduation. I thought I didn’t know enough to add anything helpful. I was later told that I was expected to review code so I started approving code changes I knew nothing about. I let some bugs into production and even had someone ask me why I approved their code. Here’s how to avoid these mistakes.
+
+
+## Know Your Audience
+
+
+We write code for two audiences. There are the machines that run the code and the programmers that edit it. Code review is the main tool we use to make sure code is well-written for both. Understanding this helps us know what to look for when we review code.
+
+We want the code to be easy for programmers to understand and change. That means code should be intuitive and explain itself. Suggest ways to deduplicate and simplify where possible. If you can’t think of a way to simplify complicated code, you can suggest they add a comment in the code to help explain it. Give feedback where you can to reduce unnecessary coupling and break up large functions. Modular code is much easier to change. Lastly, make sure code follows a consistent style so it’s easier to read. If your team doesn't have an automated linter that guarantees style, then pay close attention to common patterns, spacing and naming conventions.
+
+For machines, we want to make sure that the code does what we expect and that tests prove it. When reviewing code, you should start by understanding the intention of the change. If it’s unclear, ask the author to clarify. Code isn’t the only part of a change that you can give feedback on. You should also review the “test plan” to understand what the author has done to prove the code is correct and stays that way. That’s the most important part to review in my opinion.
+
+
+## Dry Run Code Review
+
+
+Starting to review code can be intimidating if you’re new and don’t have any context. But, it’s okay to not understand everything written in the code. To get started, you can try a “dry-run” review where you review the code and ask questions, but don’t approve it unless you’re certain. This lets you learn and provide valuable feedback without causing any issues.
+
+As you review more and more code, consider these tips to keep improving. First, look for opportunities to give feedback on their overall approach. Take a step back and consider if there is a better way to get the same result. Second, develop a sense of what code is most important to review. For example, you should review code that runs on hot paths more carefully, while you can save time on reviewing code that is less risky (e.g. auto generated code). Third, label comments with how important they are so that it’s clear which ones are blocking issues and which are minor concerns. I like to add “nit:” to small comments.
+
+It’s easy to get lazy with code reviews and start accepting code changes with just a casual glance. Taking the time to confirm code is quality and well-tested sets an example for others. It is one of the top ways we can influence engineering culture and mentor others. So remember, always stand up for high quality code.
+
+Thanks for reading,
+Ryan Peterman

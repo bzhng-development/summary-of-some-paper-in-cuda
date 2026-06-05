@@ -1,0 +1,446 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/product-thinking",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 144891048,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-07-05T13:02:20.545Z",
+  "updated_at": "2024-07-05T13:04:54.233Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "product-thinking",
+  "social_title": null,
+  "subtitle": "Why All Engineers Should Understand the Product",
+  "teaser_post_eligible": true,
+  "title": "Product Thinking",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 9,
+  "reactions": {
+    "❤": 109
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "what-does-work-life-balance-even",
+  "next_post_slug": "ic-promo-champions",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/7ba743be-29ff-4013-91be-f2ebd9f6223a_1324x772.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 144891048,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Why All Engineers Should Understand the Product",
+  "body_html": "<p>👋<em> Hi, this is&nbsp;<a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a>&nbsp;with this week’s newsletter. I write about software engineering and career growth. Thank you for your readership, we hit 66,000 readers this week </em>🙏<em> </em>🎉</p><p><em>This week, I’m sharing details on how product thinking can help you have more impact. If you find the post helpful, please share it with your friends and coworkers. Enjoy!</em></p><div><hr></div><p>When I joined Meta 6 years ago, I enjoyed the unusual onboarding process. Most new hires joined “Bootcamp” which was a time when you aren’t assigned to a team yet. This let me learn and explore teams at a relaxed pace.</p><p>One of the big decisions you make in Bootcamp is if you want to join a product or infrastructure team. My most technical friends picked infrastructure teams since the work seemed more challenging.</p><p>The byproduct of that thinking was that those strong engineers shunned product work. After working on infrastructure teams for the last 7 years, I’ve realized this thinking is limiting.</p><h4><strong>Deliver Value</strong></h4><p>Infrastructure ultimately contributes to building better products. In some cases, we directly make the product better (e.g. faster database reads mean users wait less). In other cases, your coworkers are the users and the product is the infrastructure.</p><p><strong>Either way, understanding the value of your work to the user will help you know what work is most impactful.</strong></p><p>For example, imagine you’re working on speeding up database reads. Not all reads are equally as important in the product. If you know which user flows matter most, then you can focus just on optimizing those. Considering the product improves your directional thinking.</p><p>Even some of the strongest engineers like John Carmack, <a href=\"https://en.wikipedia.org/wiki/John_Carmack#:~:text=Carmack%20has%20pioneered,algorithm.%5B17%5D\">who has insane technical contributions</a>, understand this:</p><blockquote><p><em>John Carmack (<a href=\"https://twitter.com/ID_AA_Carmack/status/1637087219591659520\">from this Tweet</a>): “Software is just a tool to help accomplish something for people — many programmers never understood that. Keep your eyes on the delivered value, and don’t over-focus on the specifics of the tool”</em></p></blockquote><h4><strong>Be World Class</strong></h4><p>There are two paths to being a world-class engineer:</p><ol><li><p>Become exceptional (top 0.01%+) at writing code - impossible for many</p></li><li><p>Become great (top 10%+) at many complementary skills - doable with work</p></li></ol><p>There are diminishing returns to spending all your time only focusing on programming. Not to mention that if you want to be exceptional, there’s some amount of talent involved (think about getting into the NBA for instance).</p><p>It is much more in your control to become world-class by taking the second path. <strong>Product thinking is another complementary skill that you can add to your skillset (or <a href=\"https://www.sloww.co/talent-stack/\">“talent stack”</a>)</strong>. </p><div><hr></div><p>If you want to become more product-minded, there are a few things you can do to get started:</p><ol><li><p><strong><a href=\"https://en.wikipedia.org/wiki/Eating_your_own_dog_food\">Dogfood</a> your product</strong> - Use the products that you work on. You will have more intuition about what is important to the user if you are one yourself.</p></li><li><p><strong>Understand the full picture</strong> - Don’t stop at the boundaries of what your team owns. Think about the end-to-end system. Understand how the changes in your infrastructure code affect the product.</p></li></ol><p>I will always be an infrastructure engineer at heart, but I still see the benefits of product thinking and hope you do too now.</p><p>If you found this useful, <strong>please share it with a friend and consider subscribing if you haven’t already</strong>.</p><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 66000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering and career growth. Thank you for your readership, we hit 66,000 readers this week 🙏 🎉",
+  "wordcount": 567,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "7944911a-7d9b-49e5-a951-df44d652b086",
+      "publication_id": 1340878,
+      "name": "Soft Skills",
+      "slug": "soft-skills",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        29,
+        156,
+        241
+      ],
+      "population": 1206
+    },
+    "DarkVibrant": {
+      "rgb": [
+        7.734999999999998,
+        77.9025,
+        124.86500000000001
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        122,
+        191,
+        235
+      ],
+      "population": 370
+    },
+    "Muted": {
+      "rgb": [
+        126,
+        128,
+        131
+      ],
+      "population": 12
+    },
+    "DarkMuted": {
+      "rgb": [
+        8.925000000000008,
+        89.88749999999999,
+        144.075
+      ],
+      "population": 0
+    },
+    "LightMuted": {
+      "rgb": [
+        191,
+        196,
+        200
+      ],
+      "population": 37
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 109,
+  "comment_count": 6,
+  "child_comment_count": 4,
+  "audio_items": [
+    {
+      "post_id": 144891048,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/144891048/tts/bf033825-e036-48b3-a724-29812094e596/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 61025945,
+      "body": "Product thinking is a valuable skill that complements all roles. From my experience working in product, I’ve seen how crucial it is for making informed decisions. Dogfooding is great—if you're an engineer, watch sales calls, spend time with the product team, and observe new feature demos. You'll gain insights to guide future direction, identify inefficiencies, and plan for better scaling.\n\nAlso, apply this mindset to all products you use daily. Analyze how each one solves problems and consider the designers' decisions. This helps develop a strong product sense and reveals nuances in even seemingly simple elements.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Product thinking is a valuable skill that complements all roles. From my experience working in product, I’ve seen how crucial it is for making informed decisions. Dogfooding is great—if you're an engineer, watch sales calls, spend time with the product team, and observe new feature demos. You'll gain insights to guide future direction, identify inefficiencies, and plan for better scaling."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Also, apply this mindset to all products you use daily. Analyze how each one solves problems and consider the designers' decisions. This helps develop a strong product sense and reveals nuances in even seemingly simple elements."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 144891048,
+      "user_id": 105403998,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-07-05T14:31:09.949Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Rohan Dehal",
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F423e3e27-0438-44bf-883f-f7fa3ed507d1_592x593.jpeg",
+      "handle": "rohandehal",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 5
+      },
+      "reaction_count": 5,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "rohandehal",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Product Artistry",
+          "id": 2323469,
+          "base_url": "https://www.productartistry.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": false,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 10,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 61033482,
+      "body": "hey Ryan! any good books or blogs you recommend along the lines of developing product sense?",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "hey Ryan! any good books or blogs you recommend along the lines of developing product sense?"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 144891048,
+      "user_id": 19402046,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-07-05T15:40:18.019Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Benedict Neo",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/a87c1d50-5eec-47f0-8d46-1b6e960de5bd_1122x1125.jpeg",
+      "handle": "bneo",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 2
+      },
+      "reaction_count": 2,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "bneo",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "two malaysians",
+          "id": 2218989,
+          "base_url": "https://10pm.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 7,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

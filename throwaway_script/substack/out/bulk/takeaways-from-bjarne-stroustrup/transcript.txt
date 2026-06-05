@@ -1,0 +1,52 @@
+Bjarne Stroustrup is the creator of the C++ programming language and a former researcher at Bell Labs. I got to interview him about his career and programming language design.
+
+This conversation was a lot of fun. I brought my equipment to his office and we shot it right there. That’s why the background of his shot is almost entirely C++ books (many of which he wrote).
+
+In addition to language design questions, I asked him for his personal anecdotes since I felt only he could tell those stories. Below are my top three takeaways to save you time.
+
+You can find the full conversation on YouTube, Spotify, Apple Podcasts. The transcript is on Substack if you prefer to skim.
+
+
+## Brought to you by:
+
+
+Cursor3: a unified workspace for building software with agents. I used it to build tools for the podcast and shared the process in this episode’s ad read.
+
+WorkOS: makes your app Enterprise Ready with easy to use APIs to add SSO, SCIM, RBAC, and more in just a few lines of code
+
+
+## Takeaways from the conversation:
+
+
+1) How Bell Labs did research - When I asked Bjarne about how project selection went, he talked about two ways of doing research.
+
+In one way, you have a well-designed project that is carefully chosen by management. Then the project is staffed with many researchers. This was not the Bell Labs way.
+
+The other way was to hire the best people on the planet and don’t tell them what to do. Each year, the researchers would be asked to explain what they did in 9pt font or larger on a single page. If you can’t explain what you’re doing concisely, it probably isn’t that interesting.
+
+If the work was interesting enough, then you could continue to work on it. Even though this was unusual, the results speak for themselves as much of the technology we take for granted today was invented at Bell Labs.
+
+2) Negative overhead abstraction - Coming into the conversation, I assumed that more abstraction meant you’d lose performance but Bjarne corrected my naive assumption.
+
+A simple example is to look at C vs C++. Because C++ encodes more information in the language itself, the compiler has more it can use to optimize the final result. Therefore, the abstractions in C++ can be used to get better performance actually.
+
+3) There was a garbage collection API in C++ - I had always assumed that where there was C++, there was manual memory management. I was wrong.
+
+In 1995, Bjarne introduced a standard interface for garbage collection due to user requests. However, C++ developers tended to prefer manual resource management so the garbage collection API never got much use. Later, this garbage collection interface was removed from the standard. This is probably why you don’t hear too much about this.
+
+By the way, thanks for the input last week on where to place ads. It looks like most people prefer the ads grouped together instead of multiple shorter breaks. I would have picked the same personally. I factored in that feedback for this episode.
+
+Looking at other podcasts, is it seems like some creators like to lump their ads together at the beginning instead of in the middle of the episode. I can see arguments for both sides:
+
+  - Beginning → get the interruptions out of the way so the episode can be interruption free
+
+Beginning → get the interruptions out of the way so the episode can be interruption free
+
+  - Middle → reading ads before delivering value could make people bounce
+
+Middle → reading ads before delivering value could make people bounce
+
+Curious your thoughts on what you’d prefer:
+
+Thanks for reading,
+Ryan Peterman

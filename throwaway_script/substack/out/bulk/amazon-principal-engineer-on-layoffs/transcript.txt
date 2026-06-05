@@ -1,0 +1,134 @@
+Steve Huynh took an unconventional path into tech. He started with a Liberal Arts major yet made his way to Amazon through a friend's referral. He spent almost 20 years at Amazon and climbed from Support Eng to Principal Eng before starting his career growth YouTube channel, A Life Engineered.
+
+We recently spoke about his journey and career growth advice, having been on both sides of the hiring process. Here are a few interesting takeaways from our conversation:
+
+  - Why most interview prep advice is garbage – There's too much focus on coding and system design. In reality, coding and system design are just pass no pass. How you present yourself in behavioral interviews has an outsized impact on how you're leveled.
+
+Why most interview prep advice is garbage – There's too much focus on coding and system design. In reality, coding and system design are just pass no pass. How you present yourself in behavioral interviews has an outsized impact on how you're leveled.
+
+  - Distribution of demand for software engineers is skewed – Demand is limited for junior engineers but extraordinary for Senior+ engineers. Competition exists mostly at the pre-qualification & selection phase, before the interview. He shared some tips on how to be an outlier to compete.
+
+Distribution of demand for software engineers is skewed – Demand is limited for junior engineers but extraordinary for Senior+ engineers. Competition exists mostly at the pre-qualification & selection phase, before the interview. He shared some tips on how to be an outlier to compete.
+
+  - Learnings from Amazon's performance-based layoff culture – Now that the industry is operating with increased intensity, it was interesting to hear Steve's perspective coming from Amazon. He shared a bit about how Amazon operates and how to avoid layoffs.
+
+Learnings from Amazon's performance-based layoff culture – Now that the industry is operating with increased intensity, it was interesting to hear Steve's perspective coming from Amazon. He shared a bit about how Amazon operates and how to avoid layoffs.
+
+  - Why most engineers don't make it to Principal Eng at Amazon – The requirements for this promotion are almost two levels worth in one. So often engineers get blocked because they start taking on Principal behaviors only to be told they need to contribute more code. Steve shared why his promotion got blocked a few times.
+
+Why most engineers don't make it to Principal Eng at Amazon – The requirements for this promotion are almost two levels worth in one. So often engineers get blocked because they start taking on Principal behaviors only to be told they need to contribute more code. Steve shared why his promotion got blocked a few times.
+
+  - What it was like becoming a SWE before Leetcode – There's more competition now and more resources. Back then, there wasn't anything like Leetcode, so technical interviews were much less standardized. Steve shared about how interviews used to be.
+
+What it was like becoming a SWE before Leetcode – There's more competition now and more resources. Back then, there wasn't anything like Leetcode, so technical interviews were much less standardized. Steve shared about how interviews used to be.
+
+Here's a side-by-side comparison from levels.fyi that shows his journey in case you're new to FAANG levels:
+
+The full conversation is available wherever you get your podcasts (YouTube, Spotify, Apple Podcasts). I put more work into the production quality this time. I hope you like it!
+
+I've also gone ahead and wrote up a brief summary if you prefer to read below:
+
+
+## Breaking Into Big Tech & Thoughts on Interviewing
+
+
+  - Liberal arts major to support eng at Amazon - Steve already knew programming since he had taken AP Computer Science in high school. He aspired to become a writer, but his professor recommended he find a different job that would make him money. He got a referral from a friend which helped himjoin Amazon as a temporary support engineer after graduating from UW, eventually transitioning to full-time.
+
+Liberal arts major to support eng at Amazon - Steve already knew programming since he had taken AP Computer Science in high school. He aspired to become a writer, but his professor recommended he find a different job that would make him money. He got a referral from a friend which helped himjoin Amazon as a temporary support engineer after graduating from UW, eventually transitioning to full-time.
+
+  - Why most interview prep is garbage - Steve mentioned that almost all the focus these days is on system design and coding. After conducting over 1000 interviews, he shared that these tests just get you in the door. Behavioral interviews are where levels and fit are determined. He recommended taking some time to practice packaging your experience to fit the level you're interviewing for.
+
+Why most interview prep is garbage - Steve mentioned that almost all the focus these days is on system design and coding. After conducting over 1000 interviews, he shared that these tests just get you in the door. Behavioral interviews are where levels and fit are determined. He recommended taking some time to practice packaging your experience to fit the level you're interviewing for.
+
+  - Top programming language to learn - He mentioned programming languages come and go. In reality, the language you learn doesn't matter that much. The language that is high leverage is English. He advocated for engineers to spend time learning how to communicate well and sell themselves during interviews.
+
+Top programming language to learn - He mentioned programming languages come and go. In reality, the language you learn doesn't matter that much. The language that is high leverage is English. He advocated for engineers to spend time learning how to communicate well and sell themselves during interviews.
+
+
+## Performance-Based Layoffs from Amazon Experience
+
+
+  - Amazon's up-and-out policy - Steve mentioned there's an explicit up-and-out policy for SDE1 engineers where you have to get promoted within a certain period; otherwise, you're laid off. This requirement relaxes at SDE2 and goes away altogether for SDE3+.
+
+Amazon's up-and-out policy - Steve mentioned there's an explicit up-and-out policy for SDE1 engineers where you have to get promoted within a certain period; otherwise, you're laid off. This requirement relaxes at SDE2 and goes away altogether for SDE3+.
+
+  - Why layoffs are often a good thing - The people being laid off aren't a good culture fit. They aren't low performers; getting into these companies is really hard. So long as there are backfilled hires, which is true in Meta's case, there shouldn't be much to worry about.
+
+Why layoffs are often a good thing - The people being laid off aren't a good culture fit. They aren't low performers; getting into these companies is really hard. So long as there are backfilled hires, which is true in Meta's case, there shouldn't be much to worry about.
+
+  - How to avoid being laid off - The number one thing that people don't do is directly ask their manager about expectations. He mentioned that bad news delivered early isn't bad news; it's just news. Asking early and keeping in touch with your manager about expectations will make it so you don't need to worry about your performance.
+
+How to avoid being laid off - The number one thing that people don't do is directly ask their manager about expectations. He mentioned that bad news delivered early isn't bad news; it's just news. Asking early and keeping in touch with your manager about expectations will make it so you don't need to worry about your performance.
+
+
+## Growing From Support Eng to Principal Eng at Amazon
+
+
+  - His Principal Eng promo project - The project that got him promoted was in product infrastructure. The backend system that represented the Prime Video catalog was outdated and brittle. No one wanted to touch it, but hundreds of engineers were customers of it. He stepped in to do a major overhaul. This project was high leverage (many teams and engineers involved) with many high-level engineers invested in its success.
+
+His Principal Eng promo project - The project that got him promoted was in product infrastructure. The backend system that represented the Prime Video catalog was outdated and brittle. No one wanted to touch it, but hundreds of engineers were customers of it. He stepped in to do a major overhaul. This project was high leverage (many teams and engineers involved) with many high-level engineers invested in its success.
+
+  - Why most engineers don't make it to Principal Eng at Amazon – The requirements for this promotion are almost two levels worth in one. So often engineers get blocked because they start taking on Principal behaviors only to be told they need to contribute more code. Steve shared transparently why his promotion got blocked a few times.
+
+Why most engineers don't make it to Principal Eng at Amazon – The requirements for this promotion are almost two levels worth in one. So often engineers get blocked because they start taking on Principal behaviors only to be told they need to contribute more code. Steve shared transparently why his promotion got blocked a few times.
+
+  - Tips for engineers looking to the Principal Eng promo at Amazon – He shared that starting before you're ready is critical. Most people wait until some major project lands, which delays their promotion. It's always better to start early and get a sense of your gaps so that when that project finally lands, you're in a much better position for the promotion.
+
+Tips for engineers looking to the Principal Eng promo at Amazon – He shared that starting before you're ready is critical. Most people wait until some major project lands, which delays their promotion. It's always better to start early and get a sense of your gaps so that when that project finally lands, you're in a much better position for the promotion.
+
+
+## Career Reflections
+
+
+  - An optimal way to job hop - We talked a little about job hopping and he said what is probably optimal is that you job hop often early in your career to get promoted fast. Once you get to Senior+ levels, job hopping is no longer an effective strategy, so you'll need to find a place to stay a while for future growth.
+
+An optimal way to job hop - We talked a little about job hopping and he said what is probably optimal is that you job hop often early in your career to get promoted fast. Once you get to Senior+ levels, job hopping is no longer an effective strategy, so you'll need to find a place to stay a while for future growth.
+
+  - Amazon spot bonus - When we talked about his compensation over the years, he shared that managers at Amazon can give some performance-based spot bonuses. One of his managers gave him a big bonus worth $350k after some stock appreciation before the manager left the company.
+
+Amazon spot bonus - When we talked about his compensation over the years, he shared that managers at Amazon can give some performance-based spot bonuses. One of his managers gave him a big bonus worth $350k after some stock appreciation before the manager left the company.
+
+  - Biggest career regret - Steve didn't regret staying at Amazon as long as he did but regrets not switching teams earlier throughout his career journey. Staying put from uncertainty was just deferring his decision to switch later.
+
+Biggest career regret - Steve didn't regret staying at Amazon as long as he did but regrets not switching teams earlier throughout his career journey. Staying put from uncertainty was just deferring his decision to switch later.
+
+  - Advice to his younger self - The thing he wished he could tell himself when he was just graduating was to stop people pleasing. He wishes he had learned to focus on pleasing himself more and question his underlying motivations more. Was he climbing the career ladder to please himself, or was it because of some expectation others had of him?
+
+Advice to his younger self - The thing he wished he could tell himself when he was just graduating was to stop people pleasing. He wishes he had learned to focus on pleasing himself more and question his underlying motivations more. Was he climbing the career ladder to please himself, or was it because of some expectation others had of him?
+
+If you found anything above interesting, you can hear it in more detail in the podcast. You can listen to it wherever you prefer getting your podcasts:
+
+  - YouTube
+
+YouTube
+
+  - Spotify
+
+Spotify
+
+  - Apple Podcasts
+
+Apple Podcasts
+
+And for more from Steve check out his career growth content, A Life Engineered:
+
+  - Newsletter
+
+Newsletter
+
+  - YouTube
+
+YouTube
+
+  - LinkedIn
+
+LinkedIn
+
+  - Instagram
+
+Instagram
+
+If you have any questions for me or future guests, feel free to drop them here. I will use these questions to make future content so I can answer the questions you care about most.
+
+Thanks for reading,
+Ryan Peterman

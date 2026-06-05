@@ -1,0 +1,457 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/amazon-principal-engineer-on-layoffs",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 158148210,
+  "podcast_art_url": null,
+  "podcast_duration": 4728.346,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": "d87b3ce3-dad3-4b61-b5ce-429723353eb4",
+  "podcast_url": "https://api.substack.com/api/v1/audio/upload/d87b3ce3-dad3-4b61-b5ce-429723353eb4/src",
+  "post_date": "2025-03-01T21:46:48.714Z",
+  "updated_at": "2025-08-04T18:46:53.657Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "amazon-principal-engineer-on-layoffs",
+  "social_title": null,
+  "subtitle": "Why most interview prep advice is garbage, becoming a Principal Eng at Amazon, and Amazon's performance-based culture",
+  "teaser_post_eligible": true,
+  "title": "Amazon Principal Engineer On Layoffs, Interviewing & Career Growth | Steve Huynh",
+  "type": "podcast",
+  "video_upload_id": "f4e0da36-5745-417d-aa92-c3c1fb14d8c5",
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 6,
+  "reactions": {
+    "❤": 160
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": true,
+  "previous_post_slug": "the-path-to-managing-managers",
+  "next_post_slug": "21x-hackathon-winner-turned-college",
+  "cover_image": "https://substack-video.s3.amazonaws.com/video_upload/post/158148210/f4e0da36-5745-417d-aa92-c3c1fb14d8c5/transcoded-1740864357.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "podcast_episode_image_url": "https://substack-post-media.s3.amazonaws.com/public/images/3e54a18d-a5f8-4c25-a29c-21a58e1174b8_3000x3000.png",
+  "podcast_episode_image_info": {
+    "url": "https://substack-post-media.s3.amazonaws.com/public/images/3e54a18d-a5f8-4c25-a29c-21a58e1174b8_3000x3000.png",
+    "isDefaultArt": false,
+    "isDefault": false
+  },
+  "videoUpload": {
+    "id": "f4e0da36-5745-417d-aa92-c3c1fb14d8c5",
+    "name": "Ryan x Steve Final.mp4",
+    "created_at": "2025-03-01T03:43:25.984Z",
+    "uploaded_at": "2025-03-01T20:40:30.612Z",
+    "publication_id": 1340878,
+    "state": "transcoded",
+    "post_id": 158148210,
+    "user_id": 38830210,
+    "duration": 4728.29,
+    "height": 1152,
+    "width": 2048,
+    "thumbnail_id": 1740864357,
+    "preview_start": null,
+    "preview_duration": null,
+    "media_type": "video",
+    "primary_file_size": 16020287248,
+    "is_mux": true,
+    "mux_asset_id": "ABAy7QWBfAvTRONXKHBPrZNhw9gR9tPbh9nCyWLCzpk",
+    "mux_playback_id": "50001hBi3cY7AwlMlsQX8lofJKba5auPy4QuiNc5cQ72w",
+    "mux_preview_asset_id": null,
+    "mux_preview_playback_id": null,
+    "mux_rendition_quality": "high",
+    "mux_preview_rendition_quality": null,
+    "explicit": false,
+    "copyright_infringement": null,
+    "src_media_upload_id": null,
+    "live_stream_id": null,
+    "extractedAudio": {
+      "id": "d87b3ce3-dad3-4b61-b5ce-429723353eb4",
+      "name": null,
+      "created_at": "2025-03-01T20:40:30.646Z",
+      "uploaded_at": "2025-03-01T20:40:30.612Z",
+      "publication_id": 1340878,
+      "state": "transcoded",
+      "post_id": 158148210,
+      "user_id": 38830210,
+      "duration": 4728.346,
+      "height": null,
+      "width": null,
+      "thumbnail_id": 1,
+      "preview_start": null,
+      "preview_duration": null,
+      "media_type": "audio",
+      "primary_file_size": 75654092,
+      "is_mux": null,
+      "mux_asset_id": null,
+      "mux_playback_id": null,
+      "mux_preview_asset_id": null,
+      "mux_preview_playback_id": null,
+      "mux_rendition_quality": null,
+      "mux_preview_rendition_quality": null,
+      "explicit": false,
+      "copyright_infringement": null,
+      "src_media_upload_id": "f4e0da36-5745-417d-aa92-c3c1fb14d8c5",
+      "live_stream_id": null,
+      "transcription": {
+        "media_upload_id": "d87b3ce3-dad3-4b61-b5ce-429723353eb4",
+        "created_at": "2025-03-01T20:44:06.782Z",
+        "requested_by": 38830210,
+        "status": "transcribed",
+        "modal_call_id": "fc-01JN9Q7D6FWY5Z5FSVE8ZAFKTS",
+        "approved_at": "2025-03-01T20:49:34.210Z",
+        "transcript_url": "s3://substack-video/video_upload/post/158148210/d87b3ce3-dad3-4b61-b5ce-429723353eb4/1740861873/transcription.json",
+        "attention_vocab": null,
+        "speaker_map": null,
+        "captions_map": {
+          "en": {
+            "url": "s3://substack-video/video_upload/post/158148210/d87b3ce3-dad3-4b61-b5ce-429723353eb4/1740861873/en.vtt",
+            "language": "en",
+            "original": true
+          }
+        },
+        "cdn_url": "https://substackcdn.com/video_upload/post/158148210/d87b3ce3-dad3-4b61-b5ce-429723353eb4/1740861873/transcription.json?Expires=1780774172&Key-Pair-Id=APKAIVDA3NPSMPSPESQQ&Signature=ezpAa4yQBq1oAdzBO8i4dexNdlpDIIcZIYvU0lKLQ7pY~sq6T7To~vIs8bMzQWnGCk~wYvolrI~oVg70jguxA~ZwNFr1dO7cglN-JBtf-OmZXWjuvos3ndWgplYKSaA9MBifax97lQJpoiydMsfocGmEtbzUYYuTe1Z6MlGFL6D5NCid2nxYG7ny13a7Ak~mNJMesrghV71H8bOJe3OCicj79TspbxizyKKuae9kqsU9i0tVjjp~5tcY1xG0cOcKjThuZx7T0B4oF1WPZKNFOebxs7w2GeEVZyaiccTJF9rKY43k8HdjuVmhNstXwEvYwBfu-1fAj3Fi5wZHit08NA__",
+        "cdn_unaligned_url": "https://substackcdn.com/video_upload/post/158148210/d87b3ce3-dad3-4b61-b5ce-429723353eb4/1740861873/unaligned_transcription.json?Expires=1780774172&Key-Pair-Id=APKAIVDA3NPSMPSPESQQ&Signature=Umwdtp265SvZuZPLEgWvw6SiyEHDIyLK54~1agZal36zoZpq9jAO8Z6tB2WJp55xEO3PJx8jvW1BSc5y~Ay5rFewhxK1YUY~wpj6nNHYJOzg9DkiqjMxSx56k4DHHmuLsp5Fxsbzikh6-4Rx3HLDldRbEpVFm8CCKv4mfq4pS2ER4Y1~hv115BKWU-5I8LQWlmwrhjnlhjqwG1~hCj0rxVEPeICLflQ2X9uiYJsF60hRasbnJ83XjoRZMGC0MReuf43cHgq7wkTIS1UA-WW3u3ua-KzMnEc6mlrW5cHufdDYc9vRL8LZgHm-dUQJQ~oaiIDPCq0oQonPS8KNjvTZGg__",
+        "signed_captions": [
+          {
+            "language": "en",
+            "url": "https://substackcdn.com/video_upload/post/158148210/d87b3ce3-dad3-4b61-b5ce-429723353eb4/1740861873/en.vtt?Expires=1780774172&Key-Pair-Id=APKAIVDA3NPSMPSPESQQ&Signature=F6w6Yy7yVTbhOyiv1DtCB8xsLAK5pd7ZvGIWX1ip9BhVPVCMGGDqSMMsY1GAMxqrkj4abYQpKn4zQnzupSKSc6EYUjj70bMtV5RXjkuzZxaQ5tTwCOcFh2JOM7nF3q-jXmQgLMt4vP5pzZYyeeRStOEsFIkjibs7mMpoo2YNuGZ5iTJWKAVJ8wAZnGB2ZoQmoNOX6CI5h5geBDdeR0NdVtMBpUlshECcYcdxcQeOCm-x5fN26ZKClnGVz0YCLuwG3VLLVGvs0tDGXA5B9u7x-Id0HA-nHMotStQ6nIQvZ3w9tQo0Uh1YE77X~cpLbrELRXKiL3kkuS8f3gEyteYlPQ__",
+            "original": true
+          }
+        ]
+      }
+    },
+    "transcription": null
+  },
+  "podcastFields": {
+    "post_id": 158148210,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": {
+    "id": "d87b3ce3-dad3-4b61-b5ce-429723353eb4",
+    "name": null,
+    "created_at": "2025-03-01T20:40:30.646Z",
+    "uploaded_at": "2025-03-01T20:40:30.612Z",
+    "publication_id": 1340878,
+    "state": "transcoded",
+    "post_id": 158148210,
+    "user_id": 38830210,
+    "duration": 4728.346,
+    "height": null,
+    "width": null,
+    "thumbnail_id": 1,
+    "preview_start": null,
+    "preview_duration": null,
+    "media_type": "audio",
+    "primary_file_size": 75654092,
+    "is_mux": null,
+    "mux_asset_id": null,
+    "mux_playback_id": null,
+    "mux_preview_asset_id": null,
+    "mux_preview_playback_id": null,
+    "mux_rendition_quality": null,
+    "mux_preview_rendition_quality": null,
+    "explicit": false,
+    "copyright_infringement": null,
+    "src_media_upload_id": "f4e0da36-5745-417d-aa92-c3c1fb14d8c5",
+    "live_stream_id": null,
+    "transcription": {
+      "media_upload_id": "d87b3ce3-dad3-4b61-b5ce-429723353eb4",
+      "created_at": "2025-03-01T20:44:06.782Z",
+      "requested_by": 38830210,
+      "status": "transcribed",
+      "modal_call_id": "fc-01JN9Q7D6FWY5Z5FSVE8ZAFKTS",
+      "approved_at": "2025-03-01T20:49:34.210Z",
+      "transcript_url": "s3://substack-video/video_upload/post/158148210/d87b3ce3-dad3-4b61-b5ce-429723353eb4/1740861873/transcription.json",
+      "attention_vocab": null,
+      "speaker_map": null,
+      "captions_map": {
+        "en": {
+          "url": "s3://substack-video/video_upload/post/158148210/d87b3ce3-dad3-4b61-b5ce-429723353eb4/1740861873/en.vtt",
+          "language": "en",
+          "original": true
+        }
+      },
+      "cdn_url": "https://substackcdn.com/video_upload/post/158148210/d87b3ce3-dad3-4b61-b5ce-429723353eb4/1740861873/transcription.json?Expires=1780774172&Key-Pair-Id=APKAIVDA3NPSMPSPESQQ&Signature=ezpAa4yQBq1oAdzBO8i4dexNdlpDIIcZIYvU0lKLQ7pY~sq6T7To~vIs8bMzQWnGCk~wYvolrI~oVg70jguxA~ZwNFr1dO7cglN-JBtf-OmZXWjuvos3ndWgplYKSaA9MBifax97lQJpoiydMsfocGmEtbzUYYuTe1Z6MlGFL6D5NCid2nxYG7ny13a7Ak~mNJMesrghV71H8bOJe3OCicj79TspbxizyKKuae9kqsU9i0tVjjp~5tcY1xG0cOcKjThuZx7T0B4oF1WPZKNFOebxs7w2GeEVZyaiccTJF9rKY43k8HdjuVmhNstXwEvYwBfu-1fAj3Fi5wZHit08NA__",
+      "cdn_unaligned_url": "https://substackcdn.com/video_upload/post/158148210/d87b3ce3-dad3-4b61-b5ce-429723353eb4/1740861873/unaligned_transcription.json?Expires=1780774172&Key-Pair-Id=APKAIVDA3NPSMPSPESQQ&Signature=Umwdtp265SvZuZPLEgWvw6SiyEHDIyLK54~1agZal36zoZpq9jAO8Z6tB2WJp55xEO3PJx8jvW1BSc5y~Ay5rFewhxK1YUY~wpj6nNHYJOzg9DkiqjMxSx56k4DHHmuLsp5Fxsbzikh6-4Rx3HLDldRbEpVFm8CCKv4mfq4pS2ER4Y1~hv115BKWU-5I8LQWlmwrhjnlhjqwG1~hCj0rxVEPeICLflQ2X9uiYJsF60hRasbnJ83XjoRZMGC0MReuf43cHgq7wkTIS1UA-WW3u3ua-KzMnEc6mlrW5cHufdDYc9vRL8LZgHm-dUQJQ~oaiIDPCq0oQonPS8KNjvTZGg__",
+      "signed_captions": [
+        {
+          "language": "en",
+          "url": "https://substackcdn.com/video_upload/post/158148210/d87b3ce3-dad3-4b61-b5ce-429723353eb4/1740861873/en.vtt?Expires=1780774172&Key-Pair-Id=APKAIVDA3NPSMPSPESQQ&Signature=F6w6Yy7yVTbhOyiv1DtCB8xsLAK5pd7ZvGIWX1ip9BhVPVCMGGDqSMMsY1GAMxqrkj4abYQpKn4zQnzupSKSc6EYUjj70bMtV5RXjkuzZxaQ5tTwCOcFh2JOM7nF3q-jXmQgLMt4vP5pzZYyeeRStOEsFIkjibs7mMpoo2YNuGZ5iTJWKAVJ8wAZnGB2ZoQmoNOX6CI5h5geBDdeR0NdVtMBpUlshECcYcdxcQeOCm-x5fN26ZKClnGVz0YCLuwG3VLLVGvs0tDGXA5B9u7x-Id0HA-nHMotStQ6nIQvZ3w9tQo0Uh1YE77X~cpLbrELRXKiL3kkuS8f3gEyteYlPQ__",
+          "original": true
+        }
+      ]
+    }
+  },
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Why most interview prep advice is garbage, becoming a Principal Eng at Amazon, and Amazon's performance-based culture",
+  "body_html": "<p>Steve Huynh took an unconventional path into tech. He started with a Liberal Arts major yet made his way to Amazon through a friend's referral. He spent almost 20 years at Amazon and climbed from Support Eng to Principal Eng before starting his career growth YouTube channel,<a href=\"https://www.youtube.com/@ALifeEngineered\"> A Life Engineered</a>.</p><p>We recently spoke about his journey and career growth advice, having been on both sides of the hiring process. Here are a few interesting takeaways from our conversation:</p><ol><li><p><strong>Why most interview prep advice is garbage</strong> – There's too much focus on coding and system design. In reality, coding and system design are just pass no pass. How you present yourself in behavioral interviews has an outsized impact on how you're leveled.</p></li><li><p><strong>Distribution of demand for software engineers is skewed</strong> – Demand is limited for junior engineers but extraordinary for Senior+ engineers. Competition exists mostly at the pre-qualification &amp; selection phase, before the interview. He shared some tips on how to be an outlier to compete.</p></li><li><p><strong>Learnings from Amazon's performance-based layoff culture – </strong>Now that the industry is operating with increased intensity, it was interesting to hear Steve's perspective coming from Amazon. He shared a bit about how Amazon operates and how to avoid layoffs.</p></li><li><p><strong>Why most engineers don't make it to Principal Eng at Amazon – </strong>The requirements for this promotion are almost two levels worth in one. So often engineers get blocked because they start taking on Principal behaviors only to be told they need to contribute more code. Steve shared why his promotion got blocked a few times.</p></li><li><p><strong>What it was like becoming a SWE before Leetcode </strong>– There's more competition now and more resources. Back then, there wasn't anything like Leetcode, so technical interviews were much less standardized. Steve shared about how interviews used to be.</p></li></ol><p>Here's a side-by-side comparison from<a href=\"http://levels.fyi/\"> levels.fyi</a> that shows his journey in case you're new to FAANG levels:</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!5vfY!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F54eb7c41-2ee2-4d1f-9317-95b4646939b9_1600x958.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!5vfY!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F54eb7c41-2ee2-4d1f-9317-95b4646939b9_1600x958.png 424w, https://substackcdn.com/image/fetch/$s_!5vfY!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F54eb7c41-2ee2-4d1f-9317-95b4646939b9_1600x958.png 848w, https://substackcdn.com/image/fetch/$s_!5vfY!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F54eb7c41-2ee2-4d1f-9317-95b4646939b9_1600x958.png 1272w, https://substackcdn.com/image/fetch/$s_!5vfY!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F54eb7c41-2ee2-4d1f-9317-95b4646939b9_1600x958.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!5vfY!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F54eb7c41-2ee2-4d1f-9317-95b4646939b9_1600x958.png\" width=\"1456\" height=\"872\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/54eb7c41-2ee2-4d1f-9317-95b4646939b9_1600x958.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:872,&quot;width&quot;:1456,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:null,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!5vfY!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F54eb7c41-2ee2-4d1f-9317-95b4646939b9_1600x958.png 424w, https://substackcdn.com/image/fetch/$s_!5vfY!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F54eb7c41-2ee2-4d1f-9317-95b4646939b9_1600x958.png 848w, https://substackcdn.com/image/fetch/$s_!5vfY!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F54eb7c41-2ee2-4d1f-9317-95b4646939b9_1600x958.png 1272w, https://substackcdn.com/image/fetch/$s_!5vfY!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F54eb7c41-2ee2-4d1f-9317-95b4646939b9_1600x958.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><p>The full conversation is available wherever you get your podcasts (<a href=\"https://youtu.be/RN1Ls69hg5E\">YouTube</a>,<a href=\"https://open.spotify.com/show/0MX9PyeCzDhdlyRv6slwIX\"> Spotify</a>,<a href=\"https://podcasts.apple.com/au/podcast/the-developing-dev/id1777363835\"> Apple Podcasts</a>). I put more work into the production quality this time. I hope you like it! </p><p>I've also gone ahead and wrote up a brief summary if you prefer to read below:</p><h3><strong>Breaking Into Big Tech &amp; Thoughts on Interviewing</strong></h3><ul><li><p><strong>Liberal arts major to support eng at Amazon</strong> - Steve already knew programming since he had taken AP Computer Science in high school. He aspired to become a writer, but his professor recommended he find a different job that would make him money. He got a referral from a friend which helped himjoin Amazon as a temporary support engineer after graduating from UW, eventually transitioning to full-time.</p></li><li><p><strong>Why most interview prep is garbage - </strong>Steve mentioned that almost all the focus these days is on system design and coding. After conducting over 1000 interviews, he shared that these tests just get you in the door. Behavioral interviews are where levels and fit are determined. He recommended taking some time to practice packaging your experience to fit the level you're interviewing for.</p></li><li><p><strong>Top programming language to learn - </strong>He mentioned programming languages come and go. In reality, the language you learn doesn't matter that much. The language that is high leverage is English. He advocated for engineers to spend time learning how to communicate well and sell themselves during interviews.</p></li></ul><h3><strong>Performance-Based Layoffs from Amazon Experience</strong></h3><ul><li><p><strong>Amazon's up-and-out policy</strong> - Steve mentioned there's an explicit up-and-out policy for SDE1 engineers where you have to get promoted within a certain period; otherwise, you're laid off. This requirement relaxes at SDE2 and goes away altogether for SDE3+.</p></li><li><p><strong>Why layoffs are often a good thing</strong> - The people being laid off aren't a good culture fit. They aren't low performers; getting into these companies is really hard. So long as there are backfilled hires, which is true in Meta's case, there shouldn't be much to worry about.</p></li><li><p><strong>How to avoid being laid off</strong> - The number one thing that people don't do is directly ask their manager about expectations. He mentioned that bad news delivered early isn't bad news; it's just news. Asking early and keeping in touch with your manager about expectations will make it so you don't need to worry about your performance.</p></li></ul><h3><strong>Growing From Support Eng to Principal Eng at Amazon</strong></h3><ul><li><p><strong>His Principal Eng promo project</strong> - The project that got him promoted was in product infrastructure. The backend system that represented the Prime Video catalog was outdated and brittle. No one wanted to touch it, but hundreds of engineers were customers of it. He stepped in to do a major overhaul. This project was high leverage (many teams and engineers involved) with many high-level engineers invested in its success.</p></li><li><p><strong>Why most engineers don't make it to Principal Eng at Amazon – </strong>The requirements for this promotion are almost two levels worth in one. So often engineers get blocked because they start taking on Principal behaviors only to be told they need to contribute more code. Steve shared transparently why his promotion got blocked a few times.</p></li><li><p><strong>Tips for engineers looking to the Principal Eng promo at Amazon</strong> – He shared that starting before you're ready is critical. Most people wait until some major project lands, which delays their promotion. It's always better to start early and get a sense of your gaps so that when that project finally lands, you're in a much better position for the promotion.</p></li></ul><h3><strong>Career Reflections</strong></h3><ul><li><p><strong>An optimal way to job hop - </strong>We talked a little about job hopping and he said what is probably optimal is that you job hop often early in your career to get promoted fast. Once you get to Senior+ levels, job hopping is no longer an effective strategy, so you'll need to find a place to stay a while for future growth.</p></li><li><p><strong>Amazon spot bonus </strong>- When we talked about his compensation over the years, he shared that managers at Amazon can give some performance-based spot bonuses. One of his managers gave him a big bonus worth $350k after some stock appreciation before the manager left the company.</p></li><li><p><strong>Biggest career regret</strong> - Steve didn't regret staying at Amazon as long as he did but regrets not switching teams earlier throughout his career journey. Staying put from uncertainty was just deferring his decision to switch later.</p></li><li><p><strong>Advice to his younger self - </strong>The thing he wished he could tell himself when he was just graduating was to stop people pleasing. He wishes he had learned to focus on pleasing himself more and question his underlying motivations more. Was he climbing the career ladder to please himself, or was it because of some expectation others had of him?</p></li></ul><div><hr></div><p>If you found anything above interesting, you can hear it in more detail in the podcast. You can listen to it wherever you prefer getting your podcasts:</p><ul><li><p><a href=\"https://youtu.be/RN1Ls69hg5E\">YouTube</a></p></li><li><p><a href=\"https://open.spotify.com/show/0MX9PyeCzDhdlyRv6slwIX\">Spotify</a></p></li><li><p><a href=\"https://podcasts.apple.com/au/podcast/the-developing-dev/id1777363835\">Apple Podcasts</a></p></li></ul><p>And for more from Steve check out his career growth content, A Life Engineered:</p><ul><li><p><a href=\"https://alifeengineered.substack.com/\">Newsletter</a></p></li><li><p><a href=\"https://www.youtube.com/@ALifeEngineered\">YouTube</a></p></li><li><p><a href=\"https://www.linkedin.com/in/a-life-engineered/\">LinkedIn</a></p></li><li><p><a href=\"https://www.instagram.com/alifeengineered/\">Instagram</a></p></li></ul><p>If you have any questions for me or future guests, <a href=\"https://docs.google.com/forms/d/e/1FAIpQLSeRkFTvLU3SzLAt4Ee1mL3AKXrDT1V4gUj6X2iqkkDFOV9Igw/viewform\">feel free to drop them here</a>. I will use these questions to make future content so I can answer the questions you care about most.</p><p>Thanks for reading,<br>Ryan Peterman</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 103,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "Steve Huynh took an unconventional path into tech. He started with a Liberal Arts major yet made his way to Amazon through a friend's referral. He spent almost 20 years at Amazon and climbed from Support Eng to Principal Eng before starting his career growth YouTube channel,",
+  "wordcount": 1214,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "717ee5c0-28f1-4c39-80e0-c8b6dff010ed",
+      "publication_id": 1340878,
+      "name": "Podcast",
+      "slug": "podcast",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        225,
+        143,
+        42
+      ],
+      "population": 33
+    },
+    "DarkVibrant": {
+      "rgb": [
+        116.22962962962963,
+        71.48395061728397,
+        16.370370370370374
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        230,
+        181,
+        156
+      ],
+      "population": 459
+    },
+    "Muted": {
+      "rgb": [
+        155,
+        116,
+        93
+      ],
+      "population": 55
+    },
+    "DarkMuted": {
+      "rgb": [
+        64,
+        52,
+        44
+      ],
+      "population": 9
+    },
+    "LightMuted": {
+      "rgb": [
+        165,
+        171,
+        209
+      ],
+      "population": 153
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    },
+    {
+      "id": 171006919,
+      "name": "Steve Huynh",
+      "handle": "alifeengineered",
+      "previous_name": null,
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/a1e274e7-73dd-4dd3-995f-5174c713ffb0_800x800.png",
+      "bio": "I Help Tech Professionals Level Up Fast @alifeengineered | YouTuber | Productivity Junkie | ex-Principal Engineer at Amazon",
+      "profile_set_up_at": "2024-04-25T22:15:50.011Z",
+      "reader_installed_at": "2025-01-08T19:18:22.198Z",
+      "is_guest": true,
+      "bestseller_tier": 100,
+      "status": {
+        "bestsellerTier": 100,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "bestseller",
+          "tier": 100
+        },
+        "paidPublicationIds": [
+          458709,
+          341480,
+          865289
+        ],
+        "subscriber": null
+      },
+      "primaryPublicationId": 2598310,
+      "primaryPublicationName": "A Life Engineered",
+      "primaryPublicationUrl": "https://alifeengineered.substack.com",
+      "primaryPublicationSubscribeUrl": "https://alifeengineered.substack.com/subscribe?"
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 160,
+  "comment_count": 6,
+  "child_comment_count": 6,
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  }
+}

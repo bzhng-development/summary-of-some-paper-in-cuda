@@ -1,0 +1,437 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/staffing-your-projects",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 149475815,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-09-27T13:03:55.319Z",
+  "updated_at": "2024-09-27T13:07:34.173Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "staffing-your-projects",
+  "social_title": null,
+  "subtitle": "For Growth to Staff (IC6)",
+  "teaser_post_eligible": true,
+  "title": "Staffing Your Projects",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 6,
+  "reactions": {
+    "❤": 71
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "a-new-era-of-writing-code",
+  "next_post_slug": "the-case-against-documentation",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/59560dac-68e0-4a44-8b34-fae959f0e032_1668x1062.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 149475815,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "For Growth to Staff (IC6)",
+  "body_html": "<blockquote><p><strong>“If you want to go fast, go alone. If you want to go far, go together”.</strong></p></blockquote><p><a href=\"https://www.developing.dev/p/faang-career-ladder-senior-l5-vs\">Staff-level (IC6) scope</a> is too big for a single engineer to ship by themselves. Once you find a staff-level problem, you need to influence others to join you.&nbsp;</p><p>Engineers who are starting to grow to Staff often don’t understand how influence works. They try to get others to work on their initiatives through what I’d call “charity”. They ask for help with no compelling reason for the other person to do so.</p><p>True influence starts with the other person. People will gladly join you if you can show them how working with you will get them what they want.</p><blockquote><p><strong>“The only way on earth to influence other people is to talk about what they want and show them how to get it” - Dale Carnegie</strong></p></blockquote><p>There are two groups of people in engineering that you should understand:</p><p><strong>1) Engineering managers (EM)</strong> can pivot resources on their team to your initiative. Also, if you have a compelling new direction, you can work with them to request new headcount for your workstream.</p><p>What EMs want:&nbsp;</p><ul><li><p><strong>High-performing team</strong> - They want their team to chase the most impactful work and have a healthy team dynamic.</p></li><li><p><strong>Team scope growth</strong>&nbsp;- Managers rely on their higher-level ICs to set new direction, especially in more technical areas.</p></li></ul><p><strong>In most cases, the best way to pitch your idea is to talk about its business impact</strong>. When managers are allocating people, you can think of them as investors. They want to match their people to the areas that will yield the biggest return. </p><p>If your work is impactful enough, your manager can work with you to get new headcount for the team. Staff engineers are expected to work with their EM to grow the scope of their team.</p><p><strong>2) Individual contributors (IC)</strong> often have key expertise you need. Going to them directly can be more efficient than through managers. Most of the influence in my career came from going directly to ICs. </p><p>What ICs want:</p><ul><li><p><strong>Interesting work</strong> - You can attract others if your work is novel or has interesting technical challenges.</p></li><li><p><strong>Career advancement</strong> - If your initiative is big enough, there may be a chunk of it that can be a great growth opportunity for another engineer that you can coach. </p></li><li><p><strong>Easier lives</strong> - Engineers are eager to solve problems that’ll get rid of an annoying workflow or repeating issue they have.</p></li><li><p><strong>Work that matters</strong> - The role your work plays in the success of the larger mission or the value it’ll have if delivered can be motivating.</p></li></ul><p>These are generalizations. <strong>Every person is different, and that is a big part of what good people skills are about.</strong> You need to know people well to match the right part of your plan with who you're talking to.</p><p>Also, it helps if you have credibility and a prior relationship. People are much more willing to hear you out in that case.</p><div><hr></div><p>You can’t ignore soft skills. If you want to do anything of consequence, you’ll need to bring other engineers along for the ride. </p><p>If you’re interested in learning more about soft skills,  I’ve organized my past posts so you can study them in your spare time <a href=\"https://www.developing.dev/t/soft-skills\">here</a>.</p><p><strong>On another note:</strong> I’ve been working on a guide to help college students get FAANG internships. I want to get a sense of how relevant it is for you. Let me know in the poll below. If it isn’t I’ll find another way to share it with the younger crowd so I don’t spam you here.</p><div class=\"poll-embed\" data-attrs=\"{&quot;id&quot;:217664}\" data-component-name=\"PollToDOM\"></div><p>If you liked this post, consider sharing it with a friend. As always, you can find more of my stuff here:</p><ul><li><p><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">LinkedIn</a></p></li><li><p><a href=\"https://twitter.com/ryanlpeterman\">Twitter</a></p></li><li><p><a href=\"https://www.threads.net/@ryanlpeterman\">Threads</a></p></li><li><p><a href=\"https://www.youtube.com/@RyanLPeterman\">Youtube</a></p></li></ul><p>Thanks for reading,<br>Ryan Peterman</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 79,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "“If you want to go fast, go alone. If you want to go far, go together”.",
+  "wordcount": 652,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "f4df2d6e-046e-448c-b0bf-6dd4ae5a5a6a",
+      "publication_id": 1340878,
+      "name": "To Staff",
+      "slug": "to-staff",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        69.54545454545455,
+        185.45454545454547,
+        92.72727272727265
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        36.16363636363636,
+        96.43636363636365,
+        48.218181818181776
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        239,
+        249,
+        241
+      ],
+      "population": 168
+    },
+    "Muted": {
+      "rgb": [
+        124,
+        132,
+        124
+      ],
+      "population": 4
+    },
+    "DarkMuted": {
+      "rgb": [
+        80,
+        80,
+        80
+      ],
+      "population": 88
+    },
+    "LightMuted": {
+      "rgb": [
+        183,
+        186,
+        184
+      ],
+      "population": 75
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 71,
+  "comment_count": 7,
+  "child_comment_count": 4,
+  "audio_items": [
+    {
+      "post_id": 149475815,
+      "voice_id": "en-US-ChristopherMultilingualNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/149475815/tts/0a7c9a34-f702-485d-896f-0bf210fa896d/en-US-ChristopherMultilingualNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 70610102,
+      "body": "I'm interested in a guide to internships especially if it also covers later in life career transitions - I am mentoring a couple of people in that scenario who are having trouble breaking into a SWE career. Bonus points for you if you can speak to outside-USA opportunities also.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I'm interested in a guide to internships especially if it also covers later in life career transitions - I am mentoring a couple of people in that scenario who are having trouble breaking into a SWE career. Bonus points for you if you can speak to outside-USA opportunities also."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 149475815,
+      "user_id": 86988429,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-09-28T10:13:52.146Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Joe Woodhouse",
+      "photo_url": "https://bucketeer-e05bbc84-baa3-437e-9518-adb32be77984.s3.amazonaws.com/public/images/b212c439-887b-4ee9-b31b-823f0cc4172a_144x144.png",
+      "handle": "engineeradjacent",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "engineeradjacent",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Joe Woodhouse",
+          "id": 4506441,
+          "base_url": "https://engineeradjacent.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 2,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    },
+    {
+      "id": 70731312,
+      "body": "FAANG internship guide is awesome idea however i think it'll be better to not only focus on students but guide self-educated engineers also because in our industry there are a lot of them! Good luck Ryan! 🤞🏻🍀",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "FAANG internship guide is awesome idea however i think it'll be better to not only focus on students but guide self-educated engineers also because in our industry there are a lot of them! Good luck Ryan! 🤞🏻🍀"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 149475815,
+      "user_id": 195569290,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-09-29T14:43:32.509Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Roman Letodiani",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/e63e7e30-0e69-4bdb-9f28-98580876e4c1_800x800.jpeg",
+      "handle": "romanletodiani",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 0
+      },
+      "reaction_count": 0,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "romanletodiani",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "unsubscribed",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Thoughtful Edge",
+          "id": 5488906,
+          "base_url": "https://thethoughtfuledge.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 1,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    }
+  ]
+}

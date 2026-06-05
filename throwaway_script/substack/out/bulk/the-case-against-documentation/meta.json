@@ -1,0 +1,452 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/the-case-against-documentation",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 149794148,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-10-04T13:03:40.656Z",
+  "updated_at": "2024-10-08T16:16:40.466Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "the-case-against-documentation",
+  "social_title": null,
+  "subtitle": "Consider the ROI",
+  "teaser_post_eligible": true,
+  "title": "The Case Against Documenting Code",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 7,
+  "reactions": {
+    "❤": 69
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "staffing-your-projects",
+  "next_post_slug": "write-down-the-plan",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/ae2a7f6b-a0d8-452a-ade6-47c1c8c2990a_800x432.jpeg",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 149794148,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Consider the ROI",
+  "body_html": "<p>Documenting code isn’t always a good thing. </p><p>It’s easy to complain about not having enough documentation, but is it worth writing? It doesn’t come for free.</p><p>No one actually wants documentation. What they want is the ability to get things done. Sometimes documenting code helps us move faster. But that often isn’t the case.</p><p>Before you get your pitchforks out, let me be clear. <strong><a href=\"https://www.developing.dev/p/why-engineers-need-to-write\">Written communication is incredibly valuable for software engineers</a></strong>. I am a big fan of documenting information outside the codebase (e.g. updates, launches, decisions, designs). </p><p>However, writing as a whole is often so valuable that engineers blindly document the code itself when it isn’t the best use of time.</p><h3>Costs of Documenting Code</h3><p>Documentation about code must be up to date to be useful. But code changes so often that keeping it fresh is expensive. Also, since software engineering is collaborative, you need everyone to update the documentation. It’s already hard enough to get one person to remember, let alone an entire team.</p><p>When you write documentation about code, you create a separate branch of information far from where it is needed. This adds a new cost for people to find that information. If documentation isn’t easy to find, it gets lost and becomes useless.</p><p>This isn’t uncommon from my experience. Often, there is a general push to increase documentation coverage about the code. In many cases, the wikis people write aren’t read and eventually become outdated. If this happens, the documentation wasn’t even a neutral contribution. It was actually overall negative since we wasted time on something useless.</p><h3>Consider the ROI</h3><p>Engineers need to think about the ROI of everything they do. Documentation is no exception. Here are some cases where the benefits of documenting code can outweigh the costs:</p><ol><li><p><strong>Documentation that doesn’t change often</strong> - We get more value from this since it’ll get more readership over its lifetime and costs less to maintain. For example, high-level system diagrams about code are often worthwhile.</p></li><li><p><strong>Documentation that many people will need</strong> - The impact of documentation scales with the number of people who read it. Documenting a popular API or library is well worth the time if thousands of engineers need it.</p></li><li><p><strong>Documentation you already have</strong> - I’m a big fan of <a href=\"https://www.developing.dev/p/why-engineers-need-to-write\">writing for clearer thinking</a>. If you already write for yourself, publishing it for others can be worth it since it’s near zero cost with some benefit.</p></li></ol><p>Aside from these, my favorite documentation is inline with the code. It’s much easier to keep up to date and find when it’s next to the code it describes.</p><div><hr></div><p><strong>To be clear, I am not saying we shouldn’t write.</strong> Writing is one of the most efficient ways to share information. I’m saying that writing about detailed code often isn’t worth the time and that we should be mindful of when we do.</p><p>Who wants to manage static code documentation that just mirrors the codebase anyway? I’d rather get things done. </p><p>I’m hopeful that one day, you could chat with the codebase and get up-to-date, simple explanations. Given the improvements we’re seeing in LLMs, I don’t think this is far off.</p><p>If you liked this post, consider sharing it with a friend. As always, you can find more of my stuff here:</p><ul><li><p><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">LinkedIn</a></p></li><li><p><a href=\"https://twitter.com/ryanlpeterman\">Twitter</a></p></li><li><p><a href=\"https://www.threads.net/@ryanlpeterman\">Threads</a></p></li><li><p><a href=\"https://www.youtube.com/@RyanLPeterman\">Youtube</a></p></li></ul><p>Thanks for reading,<br>Ryan Peterman</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 80,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work.</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p></p>",
+  "truncated_body_text": "Documenting code isn’t always a good thing.",
+  "wordcount": 572,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        175.5737704918033,
+        100.32786885245902,
+        79.42622950819673
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        84,
+        48,
+        38
+      ],
+      "population": 212
+    },
+    "LightVibrant": {
+      "rgb": [
+        213.69836065573773,
+        174.57049180327868,
+        163.70163934426228
+      ],
+      "population": 0
+    },
+    "Muted": {
+      "rgb": [
+        146,
+        106,
+        92
+      ],
+      "population": 405
+    },
+    "DarkMuted": {
+      "rgb": [
+        92,
+        55,
+        44
+      ],
+      "population": 114
+    },
+    "LightMuted": {
+      "rgb": [
+        212,
+        205,
+        202
+      ],
+      "population": 343
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 69,
+  "comment_count": 21,
+  "child_comment_count": 8,
+  "audio_items": [
+    {
+      "post_id": 149794148,
+      "voice_id": "en-US-ChristopherMultilingualNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/149794148/tts/604bc088-aadf-49aa-9dba-dfaeee12fd84/en-US-ChristopherMultilingualNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 71362269,
+      "body": "I wholeheartedly disagree with this article and I’m an agile purist. From a developer perspective I’ve never had a single engineer say I don’t want documentation. Yes it takes time but when you work in a world where there are varying standards and ways of work documentation is the necessary historical document. How things are coded, why they are coded that way and any code comments are documentation that is necessary. If you are talking about project artifacts that’s not always necessary and I agree. But you can’t rely on people ever. Things most be scribed to know where you can go next. This is just basic to me when it comes to great product operations",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I wholeheartedly disagree with this article and I’m an agile purist. From a developer perspective I’ve never had a single engineer say I don’t want documentation. Yes it takes time but when you work in a world where there are varying standards and ways of work documentation is the necessary historical document. How things are coded, why they are coded that way and any code comments are documentation that is necessary. If you are talking about project artifacts that’s not always necessary and I agree. But you can’t rely on people ever. Things most be scribed to know where you can go next. This is just basic to me when it comes to great product operations"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 149794148,
+      "user_id": 7793689,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-10-04T13:15:02.111Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Mark Hardy",
+      "photo_url": null,
+      "handle": "mnhardy",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 16
+      },
+      "reaction_count": 16,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "mnhardy",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Mark Hardy",
+          "id": 3569249,
+          "base_url": "https://mnhardy.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 17,
+      "children_count": 3,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "7 replies by Ryan Peterman and others"
+    },
+    {
+      "id": 71363906,
+      "body": "Hi Ryan,  I would be curious to know your thoughts on the data gathered in the 2024 DORA report which was able to strongly correlate many aspects of team and organizational performance to having strong documentation practices?\n\nYour title is a bit misleading.  I don't think you're making a case against documentation, instead it's mostly a case for doing the right kinds of documentation (and your ROI section captures some good thinking on how to assess if it's the right kind).\n\nAlthough, you kind of lost me with \"All the information is already in the codebase.\".  This is absolutely not correct.  Most if not all of the documents with a ROI address things that you can't gain/understand easily from looking at the code.  In my 30 years in this field, I have never seen an organization document pseudo-code and try to maintain that. \n\nWhile it is true that documentation must be maintained and that does take effort to do, given that the value is clear I consider it a 'cost of doing business' in a professional software engineering environment.  Just like unit testing, etc.  They key is to invest in the right types of documentation and put it in the right place (e.g. readme documents in the source repo, system design artifacts in the company's wiki, etc.)\n",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hi Ryan, I would be curious to know your thoughts on the data gathered in the 2024 DORA report which was able to strongly correlate many aspects of team and organizational performance to having strong documentation practices?"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Your title is a bit misleading. I don't think you're making a case against documentation, instead it's mostly a case for doing the right kinds of documentation (and your ROI section captures some good thinking on how to assess if it's the right kind)."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Although, you kind of lost me with \"All the information is already in the codebase.\". This is absolutely not correct. Most if not all of the documents with a ROI address things that you can't gain/understand easily from looking at the code. In my 30 years in this field, I have never seen an organization document pseudo-code and try to maintain that."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "While it is true that documentation must be maintained and that does take effort to do, given that the value is clear I consider it a 'cost of doing business' in a professional software engineering environment. Just like unit testing, etc. They key is to invest in the right types of documentation and put it in the right place (e.g. readme documents in the source repo, system design artifacts in the company's wiki, etc.)"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 149794148,
+      "user_id": 264423930,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-10-04T13:29:05.625Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Paxton Lamons",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/d8e204fc-22c9-4683-b306-77f485013c4f_144x144.png",
+      "handle": "texanpax",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 7
+      },
+      "reaction_count": 7,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "texanpax",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 8,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "2 replies by Ryan Peterman and others"
+    }
+  ]
+}

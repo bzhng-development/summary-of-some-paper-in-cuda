@@ -1,0 +1,117 @@
+The Peterman Pod hit 25,000 subs! 🎉🎉🎉
+
+Thanks so much to everyone who has supported my work. Never thought we'd be here, let alone this fast.
+
+For this week, I thought I'd do something different and talk about the behind the scenes of the podcast and the future.
+
+Check out the episode wherever you get your podcasts: YouTube, Spotify, Apple Podcasts.
+
+
+## Timestamps
+
+
+(00:58) Story behind the podcast
+(05:30) Behind the scenes of the top episodes
+(10:06) Dream guest list
+(12:03) Learnings from podcasting
+(13:10) Balancing content with a full time job
+
+
+## Transcript
+
+
+
+## 00:00:58 — Story behind the podcast
+
+
+Brandon 00:01:02:
+
+So Ryan, what's the story behind the Peterman pod and why'd you create it?
+
+Ryan 00:01:07:
+
+Okay, so the story behind the podcast is honestly pretty straightforward. I know for a fact that speaking well is a super high leverage skill for your career, for your relationships, pretty much anything in life. People are gonna perceive you better, and you're gonna get more of the things you want. So I felt like, how can I become a better speaker? I gotta practice more. In the past, the way that I practiced was I went to this thing called Toastmasters, where you get a speech and the speech gets graded.
+
+That's a great way to practice public speaking, but it's not that frequent. Also, at least for me, I didn't reflect as hard on it because I had a lot on my plate. What I've seen in content is that my ultimate goal is to put out something that you really want to listen to, ideally quality stuff. I pour over every word in the editing because I know that people are going to listen to it. That is a very powerful commitment mechanism and a very powerful feedback loop.
+
+If you gave speeches, you could record it and go through it. But I found that I would record the speeches I gave at Toastmasters, but I never went through them because I had all these other things to do. If I know that I have to post it, then I'm really gonna pour over the thing. I thought, I want to create some kind of video content. Podcasting feels like the best way for me to get into it because I like to talk about more professional stuff.
+
+I decided to commit to a really lax goal because I thought I'm already drowning in responsibility and a bunch of other things. I set a goal at the beginning of the year to make one episode per month. In that process, I learned that I am getting a lot of opportunity to practice public speaking or just speaking in general. That was great, and I feel like there's still so much room for improvement.
+
+The other thing I learned is that it's actually so much fun doing the podcast because I realized that podcasting, if we do it right, is just having a conversation that I want to have. I just wanted to talk to you about this thing, and as a byproduct, I'm getting all this practice. A lot of the other people I've had on are people that were kind of dream guests that I wanted to talk to.
+
+When I thought about a podcast, I considered what I was going to talk about. One of the inspirations for this podcast comes from something that came very early in my career at Facebook, where there are these career stories that very senior ICs write that detail how their careers grew. At the time, I really loved those stories. I remember sitting down and reading one, maybe a 50-minute read, and I would knock it out all at once. I loved these career stories because they featured super impressive people that I looked up to, and they had a ton of interesting stuff that I was learning from.
+
+The thinking behind this podcast is to bring on these super senior people and have them tell their career stories. This is something I'm already so interested in hearing about, which makes for a very natural and interesting conversation, at least for me and hopefully for the audience as well. That's the story behind getting into the podcast. I wanted to become a better speaker, and I think this is a very good mechanism for that. At the same time, I want to share these super senior IC stories or engineer stories with the industry because I feel like they're so inspiring and there's so much to learn from them.
+
+
+## 00:05:30 — Behind the scenes of the top episodes
+
+
+Brandon 00:05:30:
+
+So you've had a couple of your podcasts really pop off? What are some of the behind the scenes and surprising tidbits from those episodes?
+
+Ryan 00:05:39:
+
+The first episode that really did well was the Philip Sue one. He's a super senior engineer whose writing was very famous within Meta, but otherwise, he's not super well known.
+
+He speaks very well and has all these interesting stories from people who grow to a distinguished engineer. He shared all of that. One thing I remember distinctly is when I was recording that episode, the energy during the conversation was really different. I felt so enamored while he was speaking. I was fully zoned in and almost addicted to the conversation while it was happening. It sounded so interesting, and I was super happy about it after I recorded it.
+
+I put a lot of work into editing it because he was someone I always looked up to. After I posted it, just in a day or two, the graphs were all going vertical. What was special about that was that it showed me that it's not just me that likes these stories. I love these stories, but I think other people also really enjoy them. This can be kind of product market fit for the podcast.
+
+I felt a similar energy with the recent episode with Ethan Evans, but what really impressed me was that Ethan speaks so well. Honestly, I think he's one of the best speakers I've seen in tech. During the conversation, I felt that energy again. I couldn't stop listening to him; it was so good. The difference between that one and the Philip episode is that the trailer edit is kind of ridiculous.
+
+Acquired and Lex and a lot of those guys are so well recognized at this point that the hook, the thing that gets you to listen, is that you know it's gonna be good because it's Acquired or Lex or whatever. They don't need to bring you in. But for someone like me, that's pretty new, if I just go straight into the conversation, a lot of people are gonna click off.
+
+I've been putting together these trailers that say, "Hey, this is the reason why you should listen. Here are the absolute snappiest, attention-grabbing bits that you should listen for." When Tino, my video editor, put together that trailer and I watched it the first time, I thought it was ridiculous. It was so good. The edit is almost too much; it's super aggressive. The video starts out saying, "This is the most brutally honest," and it has crazy attention-grabbing energy.
+
+By the way, quick aside here, people have given me a lot of great feedback in the YouTube comments. I really appreciate it and listen to all of them. I'm trying to strike a balance between grabbing attention and not going too overboard. One idea I have, which I think will also make the content a better listen, is in places where there are more recurring listeners, like Spotify or Apple Podcasts, I'm thinking of doing no trailers or maybe a very easy-to-listen-to quick one that just has one or two lines. If you don't like the trailers, I'd recommend you listen there. It'll be nicer for recurring listeners.
+
+On YouTube, I still think there's a lot of value in putting a trailer that wins over someone new to the show, so I'll still be putting effort into those. I'll just try to keep them a little more tasteful and not go overboard. Keep me honest; you can drop comments on YouTube. I'll take a look at them, and we can figure out a good balance as we go. Now back to the show. I was so excited when I saw that trailer. I thought we gotta shift this. It had that energy during the conversation, and I feel like the trailer was probably my favorite trailer so far. So far, it's doing quite well, so I'm pretty happy.
+
+
+## 00:10:06 — Dream guest list
+
+
+Brandon 00:10:06:
+
+So after all of those previous guests, who are some of the future guests that you would love to have on your show?
+
+Ryan 00:10:12:
+
+So when you think about this podcast, my dream guest list is very different from a lot of other tech podcasts because I want to find these hidden super senior engineers who no one knows at all. They're just really incredible on their team in their org, and they went up like crazy at Google, Facebook, wherever. They're super well known there. They have done so many impressive things to get where they are. They have incredible stories and they're engineers that we can all look up to.
+
+But you've probably never heard of them. So how do you find this list of people? It's actually really tough because LinkedIn search is pretty bad. These people are not super active typically on social media or wherever. You can't just Google for this list of people. I've gotten lucky because I work in big tech, so I can source some of these candidates. A lot of the early candidates were just using my network and the people that I really look up to and think are incredible engineers. Past that, the way that I've been building this list is by asking the audience, who is that senior IC in your org that you're super impressed by that you want me to interview? That has worked super well.
+
+I've reached out to a ton of people. Now there's a bunch of people from other companies like Apple, Google, Microsoft that I'm planning on interviewing, and that was only possible because someone in the comments on YouTube said this guy is a super strong engineer, please interview him. That's kind of how I've been building the list so far.
+
+
+## 00:12:01 — Learnings from podcasting
+
+
+Brandon 00:12:01:
+
+So you've been podcasting for a while. What's one of the hardest things you've learned about podcasting that you didn't know until you started doing it?
+
+Ryan 00:12:11:
+
+The thing that I didn't realize until I started podcasting that is very different from normal conversation and I'm still getting better at this is that when we're trying to produce this audio file that sounds good to people, we have a good conversation. It's very natural when you're speaking to someone to verbally acknowledge what they're saying. You're saying things like uh-huh, right? Yeah, mm-hmm. If you do that while the guest is speaking, you can just imagine someone in your AirPods, you're trying to listen to someone and all you can hear is the uh-huh, right? Yeah, mm-hmm.
+
+I've been working on that where it's very different from normal conversation in that when you're speaking or when the guest is speaking, I'm just nodding vigorously and trying to hold myself back from saying anything. I think that's probably the biggest thing that's different.
+
+
+## 00:13:09 — Balancing content with a full time job
+
+
+Brandon 00:13:09:
+
+So you work a full-time job and you create content on the side. How do you balance the two?
+
+Ryan 00:13:16:
+
+I think it's very difficult, especially with big tech being a little more intense these days where to meet expectations, you already have to work a lot. Doing this extracurricular stuff is going to push out something in my life.
+
+For me, every Thursday for about two years, I was staying up till 4:00 AM writing a newsletter because I had to wait till the last minute because I was just struggling to stay afloat on that. I remember once I was grabbing lunch with Gergely, who writes the largest engineering newsletter. When we were catching up over lunch, he said he was surprised that I was working at the same time as doing the newsletter. I totally understand why because he said something like, be careful about burning the candle at both ends. After having experienced this for the last two or three years, he's totally right.
+
+It's definitely a lot of work and I think if I had a family or other time commitments, I would literally be drowning.

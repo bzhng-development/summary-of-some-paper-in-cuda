@@ -1,0 +1,31 @@
+<sup>Source: <https://www.developing.dev/p/why-i-switched-teams></sup>
+
+Here are the takeaways from this Ryan Peterman interview (the newsletter’s author, reflecting on his recent move from 6 years on Instagram Media Infrastructure to AI/ML Training Infra):
+
+**6 years on Instagram Media Infrastructure**
+
+Ryan joined Meta’s “Instagram Media Infrastructure” team six years ago because it was a perfect match—he liked Instagram and wanted an infrastructure role. He acknowledges he was more junior than the hiring manager originally wanted, so he “begged the hiring manager to let me join.” The manager relented because of how excited he was about the opportunity. From that point on, he says, “I worked hard and made sure he never regretted that decision.” He stayed on the same team for six years straight because it kept providing “tons of opportunities for interesting work with talented people.” The continuity itself is unusual in big tech; the longevity was driven purely by the steady supply of compelling work. Even though he loved the team, he eventually hit a point where he felt “too comfortable,” and that discomfort with comfort became a push toward change.
+
+**“A Rising Tide Lifts All Boats”**
+
+His primary rationale for the move is a career-growth framework distilled from studying the trajectories of 11 IC8+ engineers at Meta: every one of them had their career tied to a wave of explosive growth. They “were in the right place at the right time”—they worked on something that “grew a ton and their careers grew along with it.” Ryan looked at the AI space and saw that same pattern. He points to staggering fundraising numbers—OpenAI ($10B in 2023), xAI ($6B in 2024), Anthropic ($2.75B in 2024), Mistral ($415M in 2023)—all happening while overall venture-capital investment had shrunk since 2021. The hardware story reinforces the signal: “NVIDIA, who supplies the hardware these companies need, has grown by 3000%+ (vs 100% for the S&P500) over the last 5 years.” His take: “Fast-growing areas have the most opportunities for career growth. I wanted to work in this fast-growing space to increase my opportunity.” This is the defining career strategy he extracted from his own research: find a rising tide, and let it carry you.
+
+**Curiosity and the compute bottleneck**
+
+Beyond the macro wave, he was genuinely drawn to the sharp technical problems. “One of the biggest problems in the AI space is the lack of compute. It’s a major bottleneck for making better products.” He had worked on compute efficiency before and genuinely enjoyed it; in the new domain, he saw “different challenges because of the nature of the workloads and hardware, which makes me curious to learn more.” The character of the work suited him: optimization in AI compute supplies “a well-defined technical challenge with ambiguous solutions”—an ideal setup, he says, “if you want to focus on engineering, which I do.” This wasn’t a move toward AI product glamor; it was a pull toward the tight boundary of a quantifiable resource constraint with open-ended solution paths.
+
+**Engineer talent density**
+
+A specific signal in the org he joined was “unusually senior” staffing—almost half are Staff+ engineers. He hedges that “levels aren’t a perfect measure of engineering talent, but they are usually a decent signal,” and that density made him more confident in the choice. Working alongside talented engineers, in his view, accelerates learning and opens up more opportunities for impact. It is a straightforward compounding argument: better peers → faster growth → larger surface area for meaningful work.
+
+**The internal-transfer advantage**
+
+This was his first-ever team switch, and he discovered structural benefits to internal transfers that he hadn’t fully internalized before. “No interview prep” beyond a call with the hiring manager and two tech leads—approved within a week. Existing context carried over: “knowledge about internal tools and processes are reusable,” which helped onboarding. Role mobility was another piece: “it’s much easier to transfer into a desirable role if you have a strong performance history,” whereas “interviewing outside of Meta for a similar role would have been difficult due to external competition.” Finally, he could keep his existing RSUs—Meta’s stock had risen over 500% since its 2022 low, so walking away from that unvested equity would have been painful. The internal transfer preserved the financial upside while enabling the pivot.
+
+**Comfort as a signal, and change as a practice**
+
+The move was not born from dissatisfaction—he was happy on the old team—but from a recognition that he was “starting to get too comfortable.” He treats comfort as a mild warning flag and cites the maxim that “growth often comes from outside of your comfort zone.” The transition has meant more work, but he frames that workload as part of an enjoyable process. It is a deliberate bet: accept short-term friction in exchange for putting himself on a rising tide, surrounded by dense talent, working on problems he’s curious about, in a domain that rewards good engineering.
+
+---
+
+Ryan’s decision-tree is unusually explicit and portable: his **“rising tide” research** on IC8+ trajectories gave him a replicable heuristic for where to point his career next, and he cross-checked it with the **talent-density signal** and the **curiosity litmus test** on compute bottlenecks. His internal-transfer discovery—keeping RSUs while reusing context and skipping interview prep—becomes a tactical layer on top of the strategy, a low-friction way to act on the macro bet. Comfort, in his framing, is not a reward for tenure but a leading indicator that it’s time to find a new tide.

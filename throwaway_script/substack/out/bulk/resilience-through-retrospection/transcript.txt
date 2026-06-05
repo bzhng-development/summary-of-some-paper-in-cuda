@@ -1,0 +1,72 @@
+👋 Hi, this is Ryan with another edition of my weekly newsletter. Each week, I write about software engineering, big tech/startups and career growth. Send me your questions (just reply to this email or comment below) and in return, I’ll humbly share my thoughts (example past question).
+
+Every breakage is an opportunity to make our systems more resilient. After leading hundreds of incident reviews, I realize that each review can be reduced to three simple questions. In this post I’ll go over why these questions are exhaustive and what common tactics come from answering these questions.
+
+
+## Incident Timelines
+
+
+When our systems break, we think through how we can reduce the impact on our users next time. We can reduce these discussions down to three questions because every breakage has the same high-level timeline:
+
+Users have a degraded experience from when the problem starts until it is mitigated. Therefore, to minimize impact there are only three options:
+
+  - Detect faster
+
+Detect faster
+
+  - Mitigate faster
+
+Mitigate faster
+
+  - Prevention
+
+Prevention
+
+These options motivate the three questions we ask in every incident retrospective.
+
+
+## How can we detect this problem faster?
+
+
+We can’t fix problems we don’t know about. In areas with less sophisticated alerting, breakages can go unnoticed for days until a user report raises awareness.
+
+Almost all discussions on faster detection revolve around how to enable automated alerts that notify us within 30 minutes of the problem starting. This means adding logging we can alert on, if it doesn’t already exist, then writing an alert for it.
+
+In rare cases, it’s difficult to find a signal that is stable enough to alert on. Something to be careful of since noisy alerts can be worse than having no alert at all.
+
+
+## How can we mitigate this problem faster?
+
+
+Once we know there is an issue, the priority is to involve the right people and diagnose it. Common tactics to help with faster diagnosis include making debug logs richer and easier to analyze.
+
+Next, your team will work on deploying the fix. To mitigate faster, we need to think through the deployment cycle for the platform that broke and see if there’s a way to get the fix in faster. The best case scenario is if there was a feature flag in production that could redirect traffic within minutes. When that isn’t the case, we focus retrospective discussion on how to add something like that for the future.
+
+
+## How can we prevent this problem from happening again?
+
+
+This question is my favorite because it is the most impactful. I always aim to leave retrospective discussions such that, if we complete the agreed upon follow-ups, the incident can’t happen again.
+
+There are many tactics that work here but I’ll just name a few categories:
+
+  - Catching bugs earlier - introducing tests, static analysis, canaries, typing
+
+Catching bugs earlier - introducing tests, static analysis, canaries, typing
+
+  - Building self-healing systems - adding retries or backfill mechanisms
+
+Building self-healing systems - adding retries or backfill mechanisms
+
+  - Making bugs impossible - removing dependencies, refactoring the code, adding fallbacks
+
+Making bugs impossible - removing dependencies, refactoring the code, adding fallbacks
+
+These three questions are the fundamentals of incident retrospection. Remember them and they’ll serve you on any team.
+
+Even if you don’t break anything yourself, I’d still recommend you get involved in your team’s retrospective process. It’s impactful and a great way to learn system design because each discussion has a debriefing of the system architecture and why it broke. Thinking through how to improve the system is a great exercise to build your technical skills.
+
+I’ve run hundreds of retrospectives for my engineering org. If you have anything to add I’d love to discuss. It’s something I’ve been passionate about ever since I broke prod for the first time.
+
+Thanks for reading,
+Ryan Peterman

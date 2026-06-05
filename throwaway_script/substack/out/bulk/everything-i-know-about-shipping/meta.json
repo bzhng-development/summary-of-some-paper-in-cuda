@@ -1,0 +1,452 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/everything-i-know-about-shipping",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 154500961,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2025-01-10T14:02:40.683Z",
+  "updated_at": "2025-01-13T02:10:03.069Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "everything-i-know-about-shipping",
+  "social_title": null,
+  "subtitle": "Faster Review, Flow State, Optimizing Your Workflow",
+  "teaser_post_eligible": true,
+  "title": "Everything I Know About Shipping Code Faster",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 9,
+  "reactions": {
+    "❤": 121
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "what-worked-and-didnt-in-a-decade",
+  "next_post_slug": "staff-engineer-meta-by-age-25-evan",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/2e5628fc-b0aa-4759-9eb2-d2d46c623832_828x465.jpeg",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": {
+    "post_id": 154500961,
+    "podcast_episode_number": null,
+    "podcast_season_number": null,
+    "podcast_episode_type": null,
+    "should_syndicate_to_other_feed": null,
+    "syndicate_to_section_id": null,
+    "hide_from_feed": false,
+    "free_podcast_url": null,
+    "free_podcast_duration": null,
+    "preview_contains_ad": false,
+    "was_imported_self_serve_sync": false
+  },
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "Faster Review, Flow State, Optimizing Your Workflow",
+  "body_html": "<p>Two weeks ago, I shared Evan’s writing on <a href=\"https://www.developing.dev/p/new-grad-to-staff-at-meta-in-3-years\">what helped him grow from Junior to Staff at Meta in 3 years</a>. His entire post hinges on that you need to blaze through your core responsibilities to free up time for growth.</p><p>The most common question I got after that post was how do you do that?</p><p>I interviewed Evan last week so you can hear the answer in his own words soon (aiming to share that next week). Before that, I wanted to share some thoughts since it’s one of the most important parts of growing your impact. Here’s everything I know about shipping more in less time.</p><h3>Resolving Ambiguity</h3><p>Before you start writing code, you need to figure out what changes to make and where to make them. If you want to do this fast, you need to:</p><ol><li><p><strong>Become fluent at code search.</strong> Most codebases are too large to keep in your head. When trying to find where to make changes, you could spend hours reading unfamiliar code which can be a huge time sink. If you’re good at code search, you should be able to find where to make a change in minutes. Learning code search and the relevant keyboard shortcuts is well worth the time investment.</p></li><li><p><strong>Know who knows what.</strong> Again, since codebases are too large for any one engineer to know entirely, you’ll need to rely on others to get up to speed in unfamiliar places. You need to learn who knows what (ask around or check the git blame) and you have to use your soft skills to get the information you need.</p></li><li><p><strong>Learn how to query data. </strong>I cringe when I see engineers asking data scientists to run simple queries for them. Delegation can be good but it can also add more waiting and overhead. If you can get answers for yourself you’ll be a lot faster in figuring out what direction to go in.</p></li></ol><h3>Writing Code Faster</h3><p>One of the most important parts of churning out code fast is to <a href=\"https://www.developing.dev/p/why-write-small-diffs\">write smaller, focused diffs</a>. As your code changes get larger, the time to write, test, review, and merge them in goes up exponentially. Not to mention that the chance of catching bugs is much lower:</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!Rddy!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ca4fe3c-6a86-48d4-91fc-1792653733aa_1098x474.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!Rddy!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ca4fe3c-6a86-48d4-91fc-1792653733aa_1098x474.png 424w, https://substackcdn.com/image/fetch/$s_!Rddy!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ca4fe3c-6a86-48d4-91fc-1792653733aa_1098x474.png 848w, https://substackcdn.com/image/fetch/$s_!Rddy!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ca4fe3c-6a86-48d4-91fc-1792653733aa_1098x474.png 1272w, https://substackcdn.com/image/fetch/$s_!Rddy!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ca4fe3c-6a86-48d4-91fc-1792653733aa_1098x474.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!Rddy!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ca4fe3c-6a86-48d4-91fc-1792653733aa_1098x474.png\" width=\"1098\" height=\"474\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/2ca4fe3c-6a86-48d4-91fc-1792653733aa_1098x474.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:474,&quot;width&quot;:1098,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:108001,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!Rddy!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ca4fe3c-6a86-48d4-91fc-1792653733aa_1098x474.png 424w, https://substackcdn.com/image/fetch/$s_!Rddy!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ca4fe3c-6a86-48d4-91fc-1792653733aa_1098x474.png 848w, https://substackcdn.com/image/fetch/$s_!Rddy!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ca4fe3c-6a86-48d4-91fc-1792653733aa_1098x474.png 1272w, https://substackcdn.com/image/fetch/$s_!Rddy!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2ca4fe3c-6a86-48d4-91fc-1792653733aa_1098x474.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">Goal is to land *working* code fast</figcaption></figure></div><p>Once you get into a habit of writing small, encapsulated diffs you’ll find that proving your code works can actually take longer than writing it. There are three tactics that helped me test my code faster:</p><ol><li><p><strong>Batching test plans</strong> - To make testing faster, I created large stacks of commits that were all loosely related on the same code path. I then ran tests covering the entire stack all at once. For a stack of 10 commits, I only paid the cost of testing once while making sure nothing broke.</p></li><li><p><strong>Gating all changes</strong> - I used <a href=\"https://www.optimizely.com/optimization-glossary/feature-flags/#:~:text=Feature%20flags%20(also%20known%20as,the%20full%20lifecycle%20of%20features.\">feature flags</a> on every code change I made so that users couldn’t access code paths while I worked on them. That way I could land code as fast as I wanted without worrying about breaking anything. Then when I was ready to release the code, I would verify everything all at once by turning on the flag for a small population while monitoring it.</p></li><li><p><strong>Copying existing test plans</strong> - Writing code in unfamiliar places was often simple. But I didn’t know how to test it since I wasn’t familiar with the code path. What helped me move much faster was to look at the <a href=\"https://git-scm.com/docs/git-blame\">git blame</a> for existing test plans. If people document how they tested their code, you can just reuse their methodology to prove your code works.</p></li></ol><h3>Faster Code Reviews</h3><p>Once I was fast at writing code, I was landing an average of five code changes per day to prod. After 1000+ commits, I learned that the bottleneck in landing code faster was no longer in writing and testing it. My bottleneck became waiting on code reviews. There are two ways to get code reviewed faster:</p><ol><li><p><strong>Reduce friction for the reviewer</strong>. You want to make your code as easy as possible to review. I try to spoon-feed the reviewer by pointing out what to scrutinize and providing relevant context via comments. Also, another trick I’ve used is hinting with diff titles how fast my small changes would be to review (e.g. adding \"[easy]\" worked for me).</p></li><li><p><strong>Get your code approved the first time it’s reviewed. </strong>We spend a lot of time waiting for others to start reviewing the code. That waiting time doubles if you need even one iteration. Before you submit your code for review, preempt any potential feedback and thoroughly test your code. Also, discuss any ambiguous parts of your implementation with people in advance so there isn’t a bunch of thrash after you write it.</p></li></ol><p>Writing software is social. You need to know how to smoothly cooperate with people and request review from them. If you’re a good collaborator, you’ll build trust so that people review your code faster. Aside from that, it’s also often helpful to educate people on what you’re working on. The most effective way I found to do that was by writing clear descriptions for each of my code changes. That way anyone who saw it could understand what I was doing and why I was doing it enough to review it.</p><h3>Maintain Flow State</h3><p>Writing code requires deep focus since you need to juggle a lot of context. How deep in the call stack are you? What other code references your code? Getting all that loaded into your brain's working memory takes time. Every interruption makes you pay that cost again.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!1Nw_!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7926f6aa-e780-4652-b6dc-bacbe060597a_828x465.jpeg\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!1Nw_!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7926f6aa-e780-4652-b6dc-bacbe060597a_828x465.jpeg 424w, https://substackcdn.com/image/fetch/$s_!1Nw_!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7926f6aa-e780-4652-b6dc-bacbe060597a_828x465.jpeg 848w, https://substackcdn.com/image/fetch/$s_!1Nw_!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7926f6aa-e780-4652-b6dc-bacbe060597a_828x465.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!1Nw_!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7926f6aa-e780-4652-b6dc-bacbe060597a_828x465.jpeg 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!1Nw_!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7926f6aa-e780-4652-b6dc-bacbe060597a_828x465.jpeg\" width=\"592\" height=\"332.463768115942\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/7926f6aa-e780-4652-b6dc-bacbe060597a_828x465.jpeg&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:465,&quot;width&quot;:828,&quot;resizeWidth&quot;:592,&quot;bytes&quot;:null,&quot;alt&quot;:&quot;No alt text provided for this image&quot;,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"No alt text provided for this image\" title=\"No alt text provided for this image\" srcset=\"https://substackcdn.com/image/fetch/$s_!1Nw_!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7926f6aa-e780-4652-b6dc-bacbe060597a_828x465.jpeg 424w, https://substackcdn.com/image/fetch/$s_!1Nw_!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7926f6aa-e780-4652-b6dc-bacbe060597a_828x465.jpeg 848w, https://substackcdn.com/image/fetch/$s_!1Nw_!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7926f6aa-e780-4652-b6dc-bacbe060597a_828x465.jpeg 1272w, https://substackcdn.com/image/fetch/$s_!1Nw_!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7926f6aa-e780-4652-b6dc-bacbe060597a_828x465.jpeg 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><p>Therefore, reducing unnecessary distractions is one of the most impactful things you could do to be more productive. Thankfully, there’s a lot of tactics to preserving your flow state:</p><ol><li><p><strong>Use noise-canceling headphones</strong>. When I first joined Meta they had a headphone stipend of $350. This felt like a pure luxury, however I soon realized it was a big productivity booster since it helped me focus. I’d recommend either AirPods or Bose QC35 headphones if you don’t have some.</p></li><li><p><strong>Create focus blocks. </strong>This means moving meetings around or canceling them in <a href=\"https://www.developing.dev/p/efficient-communication\">favor of async communication</a>. The best possible schedule would be one with few meetings that are all clustered together. This will maximize your focus time for deep work.</p></li><li><p><strong>Work when fewer people interrupt you. </strong>I always found that I was most productive at night. A large part of that is because no one is asking me for anything at that time so there are no interruptions. If you’re a morning person, you could try the opposite where you get your focus work done in the morning.</p></li><li><p><strong>Reduce noisy notifications. </strong>Turn off notifications from unimportant channels. Keep your phone somewhere where you can check it occasionally but that doesn’t interrupt you. Checking your pings in batches is much more efficient and preserves your focus time.</p></li></ol><h3>Optimizing Your Workflow</h3><p>There are also often technical solutions to getting work done faster. I’d recommend you audit your workflow and see what you’re waiting on (e.g. builds, tests, queries). Slow parts of your workflow are often opportunities to <a href=\"https://www.developing.dev/p/tools-of-the-trade\">make tools that help you move faster</a>. The added benefit of building technical solutions is you can share these tools with others for leveraged impact.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!RHLi!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!RHLi!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png 424w, https://substackcdn.com/image/fetch/$s_!RHLi!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png 848w, https://substackcdn.com/image/fetch/$s_!RHLi!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png 1272w, https://substackcdn.com/image/fetch/$s_!RHLi!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!RHLi!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png\" width=\"571\" height=\"464\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/cc6d2675-c3ea-4572-821d-bdde99363909_571x464.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:464,&quot;width&quot;:571,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:null,&quot;alt&quot;:&quot;Is It Worth the Time?&quot;,&quot;title&quot;:null,&quot;type&quot;:null,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"Is It Worth the Time?\" title=\"Is It Worth the Time?\" srcset=\"https://substackcdn.com/image/fetch/$s_!RHLi!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png 424w, https://substackcdn.com/image/fetch/$s_!RHLi!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png 848w, https://substackcdn.com/image/fetch/$s_!RHLi!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png 1272w, https://substackcdn.com/image/fetch/$s_!RHLi!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fcc6d2675-c3ea-4572-821d-bdde99363909_571x464.png 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">Credit: XKCD 1205</figcaption></figure></div><p>No matter how much you optimize your workflow, there will always be some waiting. For those small fragments of time you should see if there are some tiny things you can get to. For me this meant cleaning up the code, replying to pings, or querying data. Whatever it is though, you shouldn’t just sit there while you’re waiting for builds. That time adds up and you can get much more done by interleaving small tasks while you wait.</p><div><hr></div><p>If you do this right, you’ll free up that extra 30% time to enable the career growth that Evan talked about. I had a similar experience to him, but one other thing I did was work more hours. I enjoyed my work enough that I was probably averaging a natural extra 30% of work time. Coupling that with being more efficient helped me pursue many parallel growth opportunities.</p><p>I hope this was helpful, and look out for the conversation with Evan. We thought it’d be interesting to compare and contrast our paths to Staff at Meta in 3 years. He had a lot of interesting stories to share that he hasn’t talked about anywhere else yet.</p><p>If you’re interested you can sub to <a href=\"https://www.youtube.com/@ryanlpeterman\">my YouTube</a> to make sure you get it as soon as it’s available. It’ll also be available wherever you get your podcasts:</p><ul><li><p><a href=\"https://open.spotify.com/show/0MX9PyeCzDhdlyRv6slwIX\">Spotify</a></p></li><li><p><a href=\"https://podcasts.apple.com/gb/podcast/the-developing-dev/id1777363835\">Apple Podcasts</a></p></li></ul><p>Thanks for reading,<br>Ryan Peterman</p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 97,000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "Two weeks ago, I shared Evan’s writing on what helped him grow from Junior to Staff at Meta in 3 years. His entire post hinges on that you need to blaze through your core responsibilities to free up time for growth.",
+  "wordcount": 1459,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "0c10aeec-046d-4371-b9d4-188bf8e84008",
+      "publication_id": 1340878,
+      "name": "Software Engineering",
+      "slug": "software-engineering",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        239,
+        140,
+        84
+      ],
+      "population": 16
+    },
+    "DarkVibrant": {
+      "rgb": [
+        121.25454545454546,
+        51.054545454545455,
+        11.345454545454546
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        242,
+        186,
+        166
+      ],
+      "population": 344
+    },
+    "Muted": {
+      "rgb": [
+        191,
+        125,
+        106
+      ],
+      "population": 294
+    },
+    "DarkMuted": {
+      "rgb": [
+        64,
+        50,
+        51
+      ],
+      "population": 95
+    },
+    "LightMuted": {
+      "rgb": [
+        212,
+        188,
+        180
+      ],
+      "population": 1005
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 121,
+  "comment_count": 7,
+  "child_comment_count": 4,
+  "audio_items": [
+    {
+      "post_id": 154500961,
+      "voice_id": "en-US-OnyxTurboMultilingualNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/154500961/tts/b1896efb-ff66-4a0a-ae7a-131f3aaeba53/en-US-OnyxTurboMultilingualNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 85467377,
+      "body": "Will gonna implements this 🙌. As i am in starting phase of my career, code review and quality matters a lot to me. I always try to write easy to understand and working code. And also focus on code review that helps me to improve and increase my growth. ",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Will gonna implements this 🙌. As i am in starting phase of my career, code review and quality matters a lot to me. I always try to write easy to understand and working code. And also focus on code review that helps me to improve and increase my growth."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 154500961,
+      "user_id": 222972410,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2025-01-10T17:48:16.361Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Komal",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5724f42f-c6be-4753-a9f6-4cc332b2c0b7_144x144.png",
+      "handle": "komal178581",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "komal178581",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 85946720,
+      "body": "How do you balance the test batching with testing individual PRs enough to feel confident they will be approved?\nMy immediate thought was having good guidelines around unit tests vs integration tests. I can also see it helping to push for smaller PRs since it’s easier to have high confidence in smaller changes. It seems like you need your SDLC set up to support batch testing though since I wouldn’t want to batch 3 PRs that have 1000+ lines changed.\nThe batch testing could also cause problems since it might not be clear which of the changes is causing the issue. How do you deal with that?",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "How do you balance the test batching with testing individual PRs enough to feel confident they will be approved?"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "My immediate thought was having good guidelines around unit tests vs integration tests. I can also see it helping to push for smaller PRs since it’s easier to have high confidence in smaller changes. It seems like you need your SDLC set up to support batch testing though since I wouldn’t want to batch 3 PRs that have 1000+ lines changed."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "The batch testing could also cause problems since it might not be clear which of the changes is causing the issue. How do you deal with that?"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 154500961,
+      "user_id": 36048153,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2025-01-13T15:15:15.667Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Marty Mammel",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/42518713-c5c9-45a4-b8ec-063608238747_144x144.png",
+      "handle": "mmammel12",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 0
+      },
+      "reaction_count": 0,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "mmammel12",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "unsubscribed",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Marty Mammel",
+          "id": 6653613,
+          "base_url": "https://mmammel12.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 1,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

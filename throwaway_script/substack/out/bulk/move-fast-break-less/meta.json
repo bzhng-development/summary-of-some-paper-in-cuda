@@ -1,0 +1,422 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/move-fast-break-less",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 105915334,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-03-03T14:01:56.463Z",
+  "updated_at": "2023-05-14T05:46:27.521Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "move-fast-break-less",
+  "social_title": "Move Fast Without Breaking Anything",
+  "subtitle": "A cautionary tale",
+  "teaser_post_eligible": true,
+  "title": "Move Fast Without Breaking Anything",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 0,
+  "reactions": {
+    "❤": 24
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "how-to-start-reviewing-code",
+  "next_post_slug": "3-mistakes-i-made-as-an-engineer",
+  "cover_image": "https://substack-post-media.s3.amazonaws.com/public/images/2c57c94c-c33f-43ac-9816-53202004dbcf_2500x1533.jpeg",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "I received the first critical feedback of my career after my first promotion. Even though I was having more impact on my projects, my manager told me that I needed to change something or else we would have a serious problem.",
+  "body_html": "<p>I received the first critical feedback of my career after my first promotion. Even though I was having more impact on my projects, my manager told me that I needed to change something or else we would have a serious problem. </p><p>Career growth for junior engineers comes from completing larger features. But, writing more code makes it easier to break things. Here’s two ways to move fast without breaking anything.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!jFsQ!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0c917ffe-0c25-4147-89ba-b162df699461_1243x1533.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!jFsQ!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0c917ffe-0c25-4147-89ba-b162df699461_1243x1533.png 424w, https://substackcdn.com/image/fetch/$s_!jFsQ!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0c917ffe-0c25-4147-89ba-b162df699461_1243x1533.png 848w, https://substackcdn.com/image/fetch/$s_!jFsQ!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0c917ffe-0c25-4147-89ba-b162df699461_1243x1533.png 1272w, https://substackcdn.com/image/fetch/$s_!jFsQ!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0c917ffe-0c25-4147-89ba-b162df699461_1243x1533.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!jFsQ!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0c917ffe-0c25-4147-89ba-b162df699461_1243x1533.png\" width=\"304\" height=\"374.9251810136766\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/0c917ffe-0c25-4147-89ba-b162df699461_1243x1533.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:1533,&quot;width&quot;:1243,&quot;resizeWidth&quot;:304,&quot;bytes&quot;:1636701,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!jFsQ!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0c917ffe-0c25-4147-89ba-b162df699461_1243x1533.png 424w, https://substackcdn.com/image/fetch/$s_!jFsQ!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0c917ffe-0c25-4147-89ba-b162df699461_1243x1533.png 848w, https://substackcdn.com/image/fetch/$s_!jFsQ!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0c917ffe-0c25-4147-89ba-b162df699461_1243x1533.png 1272w, https://substackcdn.com/image/fetch/$s_!jFsQ!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0c917ffe-0c25-4147-89ba-b162df699461_1243x1533.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a></figure></div><p>I got my first promotion through sheer volume of work. I shipped larger features by averaging ~5 code changes a day. I could’ve gotten promoted with less output if I had discussed expectations for the next level with my manager (which I will address in a future post). But that wasn’t the main thing slowing my growth.</p><div class=\"twitter-embed\" data-attrs=\"{&quot;url&quot;:&quot;https://twitter.com/ryanlpeterman/status/1623745298920255489&quot;,&quot;full_text&quot;:&quot;1/4 When I was a new grad, I brought nothing to my 1:1s with my manager.\\n\\nI got promoted on the sheer volume of work I was doing eventually, but it felt more like luck than anything.&quot;,&quot;username&quot;:&quot;ryanlpeterman&quot;,&quot;name&quot;:&quot;Ryan Peterman&quot;,&quot;profile_image_url&quot;:&quot;&quot;,&quot;date&quot;:&quot;Thu Feb 09 18:07:01 +0000 2023&quot;,&quot;photos&quot;:[],&quot;quoted_tweet&quot;:{},&quot;reply_count&quot;:0,&quot;retweet_count&quot;:0,&quot;like_count&quot;:6,&quot;impression_count&quot;:0,&quot;expanded_url&quot;:{},&quot;video_url&quot;:null,&quot;belowTheFold&quot;:false}\" data-component-name=\"Twitter2ToDOM\"></div><p>The main issue was that I sometimes broke things because I was making so many changes. I addressed my manager’s warning by coming up with ways to move fast without breaking anything. There are two main tactics which worked well for me:</p><ol><li><p><strong>Batching test plans</strong> - I spent a lot of time testing every code change I made. To make testing faster, I created large stacks of commits that were all loosely related on the same code path. I then ran tests covering the entire stack all at once. For a stack of 10 commits, I only paid the cost of testing once while making sure nothing broke.</p></li><li><p><strong>Gating all changes</strong> - I used <a href=\"https://www.optimizely.com/optimization-glossary/feature-flags/#:~:text=Feature%20flags%20(also%20known%20as,the%20full%20lifecycle%20of%20features.\">feature flags</a> on every code change I made so that users couldn’t access code paths while I worked on them. That way I could land code as fast as I wanted without worrying about breaking anything. Then when I was ready to release the code, I would verify everything all at once by turning on the flag for a small population while monitoring it.</p></li></ol><p><strong>Look for ways to optimize your workflow to become more productive</strong>. In this case, I saved a ton of time on testing by batching and gating features. Code review is another major bottleneck that can slow you down as I discussed in this Twitter thread:</p><div class=\"twitter-embed\" data-attrs=\"{&quot;url&quot;:&quot;https://twitter.com/ryanlpeterman/status/1626239233429237760&quot;,&quot;full_text&quot;:&quot;If you decompose your code into small, encapsulated changes, the bottleneck for landing it faster comes from getting it reviewed.\\n\\nThere are two effective levers to get code reviewed faster.&quot;,&quot;username&quot;:&quot;ryanlpeterman&quot;,&quot;name&quot;:&quot;Ryan Peterman&quot;,&quot;profile_image_url&quot;:&quot;&quot;,&quot;date&quot;:&quot;Thu Feb 16 15:17:01 +0000 2023&quot;,&quot;photos&quot;:[],&quot;quoted_tweet&quot;:{},&quot;reply_count&quot;:0,&quot;retweet_count&quot;:0,&quot;like_count&quot;:3,&quot;impression_count&quot;:0,&quot;expanded_url&quot;:{},&quot;video_url&quot;:null,&quot;belowTheFold&quot;:true}\" data-component-name=\"Twitter2ToDOM\"></div><p><strong>Now it’s your turn: aside from testing and code review, are there any other major bottlenecks in your workflow that slow you down?</strong></p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 2500+ software engineers who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p>Thanks for reading,<br><em><a href=\"https://twitter.com/ryanlpeterman\">Ryan Peterman</a></em></p>",
+  "truncated_body_text": "I received the first critical feedback of my career after my first promotion. Even though I was having more impact on my projects, my manager told me that I needed to change something or else we would have a serious problem.",
+  "wordcount": 390,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "0c10aeec-046d-4371-b9d4-188bf8e84008",
+      "publication_id": 1340878,
+      "name": "Software Engineering",
+      "slug": "software-engineering",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        212,
+        60,
+        17
+      ],
+      "population": 9
+    },
+    "DarkVibrant": {
+      "rgb": [
+        186,
+        20,
+        15
+      ],
+      "population": 634
+    },
+    "LightVibrant": {
+      "rgb": [
+        236,
+        156,
+        126
+      ],
+      "population": 4
+    },
+    "Muted": {
+      "rgb": [
+        141.6419213973799,
+        40.08733624454149,
+        11.358078602620102
+      ],
+      "population": 0
+    },
+    "DarkMuted": {
+      "rgb": [
+        141.58208955223878,
+        15.223880597014931,
+        11.417910447761198
+      ],
+      "population": 0
+    },
+    "LightMuted": {
+      "rgb": [
+        228,
+        212,
+        212
+      ],
+      "population": 1
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 24,
+  "comment_count": 4,
+  "child_comment_count": 3,
+  "audio_items": [
+    {
+      "post_id": 105915334,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/105915334/tts/deba92d2-ae6d-44ca-bb86-e7e3e37fc026/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 13431970,
+      "body": "Sheesh, 5 PRs per day is something else.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Sheesh, 5 PRs per day is something else."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 105915334,
+      "user_id": 106875716,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-03-08T23:00:41.502Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Arman Alizadeh",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/d3b3a5bc-3cc5-4f2e-a84f-cc8d5e890b7f_1365x1365.jpeg",
+      "handle": "armanalizadeh",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 3
+      },
+      "reaction_count": 3,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "armanalizadeh",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Arman’s Substack",
+          "id": 1545621,
+          "base_url": "https://armanalizadeh.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 8,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 47133532,
+      "body": "Did you work 7.5 hours a day while pushing 5 PRs daily?",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Did you work 7.5 hours a day while pushing 5 PRs daily?"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 105915334,
+      "user_id": 17846213,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-01-12T06:04:49.632Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Sabih",
+      "photo_url": null,
+      "handle": "sabihs",
+      "reactor_names": [],
+      "reaction": null,
+      "reactions": {
+        "❤": 0
+      },
+      "reaction_count": 0,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "sabihs",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "free_signup",
+        "eligibleForGift": false
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": 1,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "subscriber",
+          "tier": 1,
+          "accent_colors": null
+        },
+        "subscriber": null
+      },
+      "score": 1,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply by Ryan Peterman"
+    }
+  ]
+}

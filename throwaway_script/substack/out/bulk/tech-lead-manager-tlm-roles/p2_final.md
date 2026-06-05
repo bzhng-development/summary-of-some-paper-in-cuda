@@ -1,0 +1,21 @@
+Here are the takeaways from this Ryan Peterman interview (shares hard-won notes from his own TLM experiment at Meta, where he went from Staff IC to TLM and ultimately transitioned to a full-time engineering manager):
+
+**What a TLM actually is**
+
+The Tech Lead Manager role, as Ryan defines it from the Meta model, is an engineering manager with a small number of direct reports — "usually <6 reports." The critical distinction is that TLMs are evaluated primarily as individual contributors. He describes the responsibility split as roughly **70% IC and 30% EM**. Promotions come from IC contributions, not EM contributions, because the team is simply too small for EM-level scope to drive a promotion. This evaluation structure shapes everything about the role's trade-offs.
+
+**The appeal: management with a safety net**
+
+Ryan tried the TLM role after his Staff promotion because "it was a good fit for my skills and I wanted to learn something new." The core appeal is that it lets you **try management while staying technical**. If you enjoy being an IC but want to learn management, it can serve as a natural stepping stone to a regular EM position — which is exactly what happened in his case. He started as a TLM, discovered he enjoyed management, eventually grew his team, and became what he calls an **"org leader,"** a full-time EM. Another advantage he identifies is **career growth independent of team size**. A regular EM's career growth comes from the size of their team, which is "often not in your control." Since TLMs are evaluated as ICs, you can advance your career regardless of whether your team grows.
+
+**The downsides: workload, speed, and flexibility**
+
+The costs are real. First, **higher workload**: you need to sustain Staff-plus IC expectations while taking on management responsibilities, and "in most cases, you'll work more hours because of this." Second, **slower career growth**. The growth path for TLMs is less clear than either pure track. A full IC can focus 100% of their time on IC behaviors that drive promotion. A full EM can grow their team and is "more likely to be picked to fill vacant senior manager roles." As a TLM, you're splitting your energy across both axes, and neither track sees your full, undiluted effort. Third, **less career flexibility**. The TLM role is simply less common, so "there are fewer roles you can switch to." Most teams can make room for a Staff-plus IC, but the same is not true for a TLM — the organizational slots are rarer, and internal mobility suffers as a result.
+
+**When to choose TLM — and when not to**
+
+The advice Ryan landed on, after consulting several senior TLMs at Meta before making his own switch, is that if you want to dabble in management, there are better ways than converting to a TLM. The best option is becoming an **intern manager**, where you get to be the intern's direct manager with full performance-review responsibility — "you handle their perf and they report to you" — but without the ongoing structural overhead. The second-best is serving as a **tech lead**, which gives you team-level goal ownership, leadership opportunities, and responsibility for growing others — though "you don't handle perf though so it's not 100% the same." His bottom-line stance: "TLM is worse for your career than being a pure EM or IC in the long term." He would only recommend the TLM path as a **short-term step** if you already know you want to become an EM and it's the only available step in that direction. Used as a deliberate, time-boxed bridge, it can work; as a permanent home, it carries structural penalties.
+
+---
+
+His **70/30 split** evaluation reality and the **"org leader"** escape hatch form a coherent career calculus: the TLM role is a hybrid that structurally penalizes you on both axes unless you treat it as a temporary on-ramp. The **intern manager** and **tech lead** alternatives he surfaces are themselves examples of the same principle — finding lower-cost ways to sample management before committing to the full EM track. His framing echoes a broader pattern across Peterman Post episodes: roles designed as compromises often demand more, not less, intentionality about the exit.

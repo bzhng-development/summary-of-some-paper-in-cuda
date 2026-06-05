@@ -1,0 +1,445 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/how-to-tell-if-you-have-a-good-eng",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 115990433,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2023-04-21T13:01:20.038Z",
+  "updated_at": "2023-05-14T03:49:48.085Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "how-to-tell-if-you-have-a-good-eng",
+  "social_title": null,
+  "subtitle": "",
+  "teaser_post_eligible": true,
+  "title": "How To Tell If You Have a Good Eng Manager",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 2,
+  "reactions": {
+    "❤": 26
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "why-i-stayed-at-meta-when-all-my",
+  "next_post_slug": "why-communication-is-more-important",
+  "cover_image": "https://substackcdn.com/image/fetch/$s_!ClaG!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40425346-0422-43db-a68c-1587d020697c.avif",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "There are plenty of resources out there that cover the traits of a good engineering manager (EM) like Project Oxygen from Google. Now that I've had 7 managers, here are a few more points I'd add from what I saw work well.",
+  "body_html": "<p>There are plenty of resources out there that cover the traits of a good engineering manager (EM) like <a href=\"https://rework.withgoogle.com/blog/the-evolution-of-project-oxygen/\">Project Oxygen from Google</a>. Now that I've had 7 managers, here are a few more points I'd add from what I saw work well.</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!ClaG!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40425346-0422-43db-a68c-1587d020697c.avif\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!ClaG!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40425346-0422-43db-a68c-1587d020697c.avif 424w, https://substackcdn.com/image/fetch/$s_!ClaG!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40425346-0422-43db-a68c-1587d020697c.avif 848w, https://substackcdn.com/image/fetch/$s_!ClaG!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40425346-0422-43db-a68c-1587d020697c.avif 1272w, https://substackcdn.com/image/fetch/$s_!ClaG!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40425346-0422-43db-a68c-1587d020697c.avif 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!ClaG!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40425346-0422-43db-a68c-1587d020697c.avif\" width=\"848\" height=\"477\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/40425346-0422-43db-a68c-1587d020697c.avif&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:477,&quot;width&quot;:848,&quot;resizeWidth&quot;:null,&quot;bytes&quot;:43220,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/avif&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!ClaG!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40425346-0422-43db-a68c-1587d020697c.avif 424w, https://substackcdn.com/image/fetch/$s_!ClaG!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40425346-0422-43db-a68c-1587d020697c.avif 848w, https://substackcdn.com/image/fetch/$s_!ClaG!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40425346-0422-43db-a68c-1587d020697c.avif 1272w, https://substackcdn.com/image/fetch/$s_!ClaG!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40425346-0422-43db-a68c-1587d020697c.avif 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">Candid picture of a good manager</figcaption></figure></div><h3><strong>Putting the “E” in EM</strong></h3><p>Across all my managers, technical fluency made a big difference. This makes all conversations about ongoing work, roadmapping, and performance reviews smoother.</p><p>Performance reviews are a great example. <strong>The better your manager understands your work, the better they’ll be at defending it</strong>. This is especially important when your work isn’t measured by well-known metrics. In these cases, your manager must give context on milestones you achieved and the quality of your work.</p><p>I also noticed that managers with technical fluency have a much easier time building rapport with engineers. For example, our team was quick to trust my current manager since he was our old tech lead. On the other end of the spectrum, I had a manager who often said things that were not technically sound. This eroded trust little by little, which was a contributing factor to engineers leaving the team.</p><p>Lastly, technical fluency helps EMs coach their junior reports on engineering fundamentals. When I just started at Instagram, my manager coached me out of a lot of the<a href=\"https://www.developing.dev/p/move-fast-break-less\"> engineering mistakes I made</a>.</p><p><strong>Technical fluency is what makes your manager an EM. Without that, they are more like a PM with some people manager responsibilities.</strong></p><h3><strong>Positioning For Growth</strong></h3><p>I appreciated managers that helped me strategize my career. EMs have a strong influence over who works on what. <strong>If they are aware of your career goals, they can place you in areas that have scope for you to grow into.</strong></p><p>For example, my growth to senior hinged on my ability to lead a small workstream. Because my manager knew I was motivated, he positioned me as the backend lead of a workstream even though I hadn't led before. This gave me the opportunity I needed to grow quickly.</p><p>Besides positioning, your manager can also provide strategic resources to help you grow. For me, my biggest gap in growing to the Staff level was that I had trouble finding large enough scope. <strong>My manager recognized that gap, and assigned me a mentor that excelled in that area.</strong> Since then, finding staff level scope hasn’t been an issue.</p><h3><strong>Radical Transparency</strong></h3><p>I’ve always appreciated managers that were transparent. This helped in performance conversations since they clarified the process and were direct about where I had gaps. <strong>Having these uncomfortable conversations was worth it since it helped us avoid surprises</strong>.</p><p>Transparency also builds trust. I remember in a past reorg one of my managers was unusually transparent. He brought the team into the decision-making process and shared the rationale for the change as soon as possible. As a result, the reorg was well received and there was no attrition. In fact, <strong>the people who he brought in to the discussion trusted my manager more since they could give input and agreed with the rationale.</strong></p><div><hr></div><p>Your manager is often the single most important person at work. You can often tell if you have a great one by looking at turnover rates. If the team isn’t stable or you see clear gaps in their behaviors, consider switching teams. </p><p><strong>Over to you: In your experience, what behaviors do you think are most important in an EM?</strong></p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 2500+ software engineers who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div><p><em>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></em></p>",
+  "truncated_body_text": "There are plenty of resources out there that cover the traits of a good engineering manager (EM) like Project Oxygen from Google. Now that I've had 7 managers, here are a few more points I'd add from what I saw work well.",
+  "wordcount": 584,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [
+    {
+      "id": "a6522e0b-303a-4867-a27c-03ff246cc20a",
+      "publication_id": 1340878,
+      "name": "Manager",
+      "slug": "manager",
+      "hidden": false
+    }
+  ],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        84,
+        148,
+        205
+      ],
+      "population": 13
+    },
+    "DarkVibrant": {
+      "rgb": [
+        28,
+        20,
+        12
+      ],
+      "population": 9
+    },
+    "LightVibrant": {
+      "rgb": [
+        229,
+        180,
+        153
+      ],
+      "population": 135
+    },
+    "Muted": {
+      "rgb": [
+        167,
+        135,
+        114
+      ],
+      "population": 417
+    },
+    "DarkMuted": {
+      "rgb": [
+        78,
+        60,
+        51
+      ],
+      "population": 102
+    },
+    "LightMuted": {
+      "rgb": [
+        210,
+        193,
+        176
+      ],
+      "population": 237
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 26,
+  "comment_count": 6,
+  "child_comment_count": 4,
+  "audio_items": [
+    {
+      "post_id": 115990433,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/115990433/tts/e4a58d59-efb3-43c2-b708-dee09326f6e5/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 21843931,
+      "body": "Great post as always, Ryan!\n\nI prefer an engineering manager who creates a balance between independence and support in the workplace. \n\nWhile I am a person who can figure out things on my own with a bit of struggle, I like knowing that there is a leader who can offer support and guidance when I need it.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Great post as always, Ryan!"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I prefer an engineering manager who creates a balance between independence and support in the workplace."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "While I am a person who can figure out things on my own with a bit of struggle, I like knowing that there is a leader who can offer support and guidance when I need it."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 115990433,
+      "user_id": 135589200,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-08-04T06:08:01.461Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Neo Kim",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/c103940f-0d8b-47e7-9a33-013202e17bb8_389x389.jpeg",
+      "handle": "systemdesignone",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "systemdesignone",
+      "metadata": {
+        "is_author": false,
+        "membership_state": "unsubscribed",
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "The System Design Newsletter",
+          "id": 1511845,
+          "base_url": "https://newsletter.systemdesign.one"
+        }
+      },
+      "user_bestseller_tier": 1000,
+      "can_dm": false,
+      "userStatus": {
+        "bestsellerTier": 1000,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": {
+          "type": "bestseller",
+          "tier": 1000
+        },
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    },
+    {
+      "id": 15070699,
+      "body": "I think you've outlined a great set of traits for an EM to have. I hope I've lived up to them for those I've managed!",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I think you've outlined a great set of traits for an EM to have. I hope I've lived up to them for those I've managed!"
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 115990433,
+      "user_id": 27801024,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2023-04-22T10:38:03.970Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "John Crickett",
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5216b4ab-f9a8-4803-b318-a8285e26a873_800x800.jpeg",
+      "handle": "johncrickett",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 1
+      },
+      "reaction_count": 1,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "johncrickett",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Coding Challenges",
+          "id": 1483213,
+          "base_url": "https://codingchallenges.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 6,
+      "children_count": 0,
+      "reported_by_user": false,
+      "restacked": false
+    }
+  ]
+}

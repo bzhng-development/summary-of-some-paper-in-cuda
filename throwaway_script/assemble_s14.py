@@ -22,12 +22,11 @@ from pathlib import Path
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--pull-dir", type=Path,
-                    default=Path("local_data/regen_pulldown"))
-    ap.add_argument("--output", type=Path,
-                    default=Path("local_data/regen_assembled_s14.jsonl"))
-    ap.add_argument("--require-all", action="store_true", default=True,
-                    help="Only emit papers that have all 4 sections (default).")
+    ap.add_argument("--pull-dir", type=Path, default=Path("local_data/regen_pulldown"))
+    ap.add_argument("--output", type=Path, default=Path("local_data/regen_assembled_s14.jsonl"))
+    ap.add_argument(
+        "--require-all", action="store_true", default=True, help="Only emit papers that have all 4 sections (default)."
+    )
     args = ap.parse_args()
 
     sections: dict[str, dict[int, str]] = defaultdict(dict)
@@ -52,8 +51,7 @@ def main() -> int:
                 continue
             ordered = [secs[i] for i in sorted(secs)]
             summary = "\n\n".join(ordered)
-            out.write(json.dumps({"arxiv_id": aid, "summary": summary},
-                                 ensure_ascii=False) + "\n")
+            out.write(json.dumps({"arxiv_id": aid, "summary": summary}, ensure_ascii=False) + "\n")
             n_full += 1
 
     print(f"assembled {n_full} papers ({n_partial} partial skipped)")

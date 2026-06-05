@@ -59,8 +59,6 @@ import asyncio
 import json
 import re
 import sys
-import time
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -81,8 +79,9 @@ ARXIV_URL_RE = re.compile(r"arxiv\.org/(?:abs|pdf)/(\d{4}\.\d{4,5})")
 
 def _valid_arxiv_id(aid: str) -> bool:
     try:
-        yy = int(aid[:2]); mm = int(aid[2:4])
-    except (ValueError, IndexError):
+        yy = int(aid[:2])
+        mm = int(aid[2:4])
+    except ValueError, IndexError:
         return False
     if not (1 <= mm <= 12):
         return False
@@ -212,7 +211,10 @@ async def follow_paper_links(
         if (i + 1) % 25 == 0:
             logger.info(
                 "    {} per-paper progress: {}/{} ({} total arxiv ids)",
-                label_for_log, i + 1, len(hrefs), len(out),
+                label_for_log,
+                i + 1,
+                len(hrefs),
+                len(out),
             )
     return out
 
@@ -347,9 +349,20 @@ async def scrape_uber(page: Page, max_pages: int = 30) -> dict[str, str]:
     collect post URLs, then follow each to mine arxiv from the post body."""
     all_posts: set[str] = set()
     CATEGORY_SLUGS = (
-        "engineering", "research", "advertising", "business",
-        "community-support", "ai-prototyping", "ai", "product", "safety",
-        "rider", "driver", "eats", "transit", "delivery",
+        "engineering",
+        "research",
+        "advertising",
+        "business",
+        "community-support",
+        "ai-prototyping",
+        "ai",
+        "product",
+        "safety",
+        "rider",
+        "driver",
+        "eats",
+        "transit",
+        "delivery",
     )
     for p in range(1, max_pages + 1):
         url = (
@@ -457,8 +470,7 @@ async def scrape_via_sitemap(
             for aid in harvest_arxiv_from_text(rr.text):
                 out.setdefault(aid, f"arxiv:{aid}")
             if (i + 1) % 50 == 0:
-                logger.info("    {} httpx progress: {}/{} ({} ids)",
-                            label, i + 1, len(filtered), len(out))
+                logger.info("    {} httpx progress: {}/{} ({} ids)", label, i + 1, len(filtered), len(out))
         return out
 
 
@@ -544,8 +556,7 @@ async def scrape_stitchfix(page: Page, http_client: httpx.AsyncClient) -> dict[s
         for aid in harvest_arxiv_from_text(rr.text):
             out.setdefault(aid, f"arxiv:{aid}")
         if (i + 1) % 50 == 0:
-            logger.info("    stitchfix httpx progress: {}/{} ({} ids)",
-                        i + 1, len(all_posts), len(out))
+            logger.info("    stitchfix httpx progress: {}/{} ({} ids)", i + 1, len(all_posts), len(out))
     return out
 
 
@@ -595,7 +606,11 @@ async def scrape_instacart(page: Page, http_client: httpx.AsyncClient) -> dict[s
                         rr = await http_client.get(u.strip(), timeout=20.0)
                         if rr.status_code == 200:
                             for u2 in re.findall(r"<loc>([^<]+)</loc>", rr.text):
-                                if "/tagged/" not in u2 and "tech.instacart.com" in u2 and u2 != "https://tech.instacart.com/":
+                                if (
+                                    "/tagged/" not in u2
+                                    and "tech.instacart.com" in u2
+                                    and u2 != "https://tech.instacart.com/"
+                                ):
                                     post_urls.add(u2.split("?")[0])
                     except Exception:
                         continue
@@ -638,11 +653,7 @@ async def scrape_ebay(page: Page) -> dict[str, str]:
             # Story posts: stories/<slug>, tech/<topic>/<slug>, or post/<slug>
             if base.endswith("/stories/") or base.endswith("/tech/"):
                 continue
-            if not (
-                "/stories/" in base
-                or "/tech/" in base
-                or "/post/" in base
-            ):
+            if not ("/stories/" in base or "/tech/" in base or "/post/" in base):
                 continue
             # Filter out category landing pages — they end with /<topic>/
             # Heuristic: a real post slug contains 3+ words separated by '-'
@@ -657,7 +668,9 @@ async def scrape_ebay(page: Page) -> dict[str, str]:
 
 def _gh_token() -> Optional[str]:
     """Use `gh auth token` if available, else GITHUB_TOKEN env."""
-    import os, subprocess
+    import os
+    import subprocess
+
     tok = os.environ.get("GITHUB_TOKEN")
     if tok:
         return tok
@@ -867,7 +880,7 @@ async def run(args: argparse.Namespace) -> int:
     http_client = httpx.AsyncClient(
         headers={
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                          "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.9",
         },
@@ -898,6 +911,7 @@ async def run(args: argparse.Namespace) -> int:
                     await route.continue_()
             except Exception:
                 pass
+
         await context.route("**/*", block_route)
         page = await context.new_page()
         page.set_default_timeout(30_000)
@@ -944,16 +958,24 @@ async def run(args: argparse.Namespace) -> int:
                 per_org_stats.append(stat)
                 logger.info(
                     "[{}] DONE found={} NEW={}",
-                    label, stat["total_unique"], stat["new_emitted"],
+                    label,
+                    stat["total_unique"],
+                    stat["new_emitted"],
                 )
 
-                out_fh.write(json.dumps({
-                    "_completed": True,
-                    "org_label": label,
-                    "total_unique": stat["total_unique"],
-                    "new_emitted": stat["new_emitted"],
-                    "errors": err_notes,
-                }, ensure_ascii=False) + "\n")
+                out_fh.write(
+                    json.dumps(
+                        {
+                            "_completed": True,
+                            "org_label": label,
+                            "total_unique": stat["total_unique"],
+                            "new_emitted": stat["new_emitted"],
+                            "errors": err_notes,
+                        },
+                        ensure_ascii=False,
+                    )
+                    + "\n"
+                )
                 out_fh.flush()
                 await asyncio.sleep(args.sleep_between_orgs)
         finally:
@@ -979,19 +1001,12 @@ async def run(args: argparse.Namespace) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--output", type=Path,
-                    default=Path("local_data/playwright_user_specified_orgs.jsonl"))
-    ap.add_argument("--main-output", type=Path,
-                    default=Path("local_data/playwright_company_pubs.jsonl"))
-    ap.add_argument("--crack-output", type=Path,
-                    default=Path("local_data/playwright_crack_failed.jsonl"))
-    ap.add_argument("--extra-output", type=Path,
-                    default=Path("local_data/playwright_extra_companies.jsonl"))
-    ap.add_argument("--only",
-                    type=lambda s: [x.strip() for x in s.split(",") if x.strip()],
-                    default=None)
-    ap.add_argument("--force", action="store_true",
-                    help="re-run orgs already marked _completed")
+    ap.add_argument("--output", type=Path, default=Path("local_data/playwright_user_specified_orgs.jsonl"))
+    ap.add_argument("--main-output", type=Path, default=Path("local_data/playwright_company_pubs.jsonl"))
+    ap.add_argument("--crack-output", type=Path, default=Path("local_data/playwright_crack_failed.jsonl"))
+    ap.add_argument("--extra-output", type=Path, default=Path("local_data/playwright_extra_companies.jsonl"))
+    ap.add_argument("--only", type=lambda s: [x.strip() for x in s.split(",") if x.strip()], default=None)
+    ap.add_argument("--force", action="store_true", help="re-run orgs already marked _completed")
     ap.add_argument("--sleep-between-orgs", type=float, default=1.5)
     args = ap.parse_args()
     return asyncio.run(run(args))

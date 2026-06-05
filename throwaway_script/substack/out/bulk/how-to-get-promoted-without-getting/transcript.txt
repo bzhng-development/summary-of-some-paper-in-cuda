@@ -1,0 +1,126 @@
+If you want to get promoted to Staff, there are a few guiding principles that will get you there. I wrote a Twitter thread on the topic and figured it’d be worth expanding on since it got solid traction. Below I’ll quote the tweets and give some additional thoughts where relevant.
+
+
+## 1) Impact Is King:
+
+
+> Focus on impact. Impact is any measurable and objective outcome that benefits your company.
+
+Focus on impact. Impact is any measurable and objective outcome that benefits your company.
+
+The definition of “impact” depends on what part of the business you work on. It’s important to learn what your organization considers impactful.
+
+> Promotions are a byproduct of your elevated, sustained impact.
+
+Promotions are a byproduct of your elevated, sustained impact.
+
+“Sustained” is an important part of this tweet. Promotions are “lagging” which means you need to perform at the next level for some time first. It depends, but this is often at least 6 months of next-level performance.
+
+
+## 2) Leverage Is How You Have More Impact:
+
+
+> “Give me a lever long enough, and a place to stand, and I will move the earth.” - ArchimedesHaving more impact with limited time requires leverage. Software engineers increase their leverage through people, writing, and code.
+
+“Give me a lever long enough, and a place to stand, and I will move the earth.” - Archimedes
+
+Having more impact with limited time requires leverage. Software engineers increase their leverage through people, writing, and code.
+
+Leverage is what differentiates higher-level ICs from lower-level ones.
+
+> People leverage comes from technical leadership. This means setting direction, reviewing designs/code, and growing others.Learn to influence. If you can sell your ideas, you can multiply your impact through others.Writing gives us leverage by influencing and helping others without your active involvement.Not all code is created equal. High-leverage code solves problems that few others can or helps engineers move faster at scale.
+
+People leverage comes from technical leadership. This means setting direction, reviewing designs/code, and growing others.
+
+Learn to influence. If you can sell your ideas, you can multiply your impact through others.
+
+Writing gives us leverage by influencing and helping others without your active involvement.
+
+Not all code is created equal. High-leverage code solves problems that few others can or helps engineers move faster at scale.
+
+High-level ICs can get their primary leverage from different places, for instance:
+
+  - Tech leads coordinate and drive large initiatives across the company. People are their primary source of leverage.
+
+Tech leads coordinate and drive large initiatives across the company. People are their primary source of leverage.
+
+  - Specialists write state-of-the-art code that pushes the industry forward. Code is their primary source of leverage.
+
+Specialists write state-of-the-art code that pushes the industry forward. Code is their primary source of leverage.
+
+You can focus on the type of leverage that suits your strengths most and still have excellent results.
+
+
+## 3) Your Brand Matters:
+
+
+> Obsess over the quality of your work. High-quality work is more impactful in the long term and markets itself.But don't only rely on the quality of your work for recognition. Share the results of your work. No one gets promoted unless their work is known.Embrace accountability and take projects under your name. When your work is going well, your internal brand will also grow.
+
+Obsess over the quality of your work. High-quality work is more impactful in the long term and markets itself.
+
+But don't only rely on the quality of your work for recognition. Share the results of your work. No one gets promoted unless their work is known.
+
+Embrace accountability and take projects under your name. When your work is going well, your internal brand will also grow.
+
+When people hear “personal brand” their mind often goes to social media. But, the brand that matters most is your “internal brand”. What do people within your company think about your work and its value? This is the brand that you should care most about.
+
+Most of the top ICs I know are not well-known outside of Meta. They are legendary within the company though because people see the impressive work they are doing. Build your internal brand by doing great work and then letting others know about it (further reading here).
+
+
+## 4) Help Others Help You:
+
+
+> Be a good collaborator. Working with others is a necessity to do anything of consequence.Being someone that others want to work with also makes it easier to find mentors that will uplift you along the way.Be transparent with your manager. Help them understand your goals and get clarity on what your gaps are to the next level.
+
+Be a good collaborator. Working with others is a necessity to do anything of consequence.
+
+Being someone that others want to work with also makes it easier to find mentors that will uplift you along the way.
+
+Be transparent with your manager. Help them understand your goals and get clarity on what your gaps are to the next level.
+
+Soft skills are underrated among software engineers. It’s important to be an excellent IC, but you can go so much further if you also communicate well.
+
+Also, since engineers don’t often prioritize soft skills, having them will help you stand out and lead.
+
+
+## 5) Put the Work In:
+
+
+> Reading is faster than listening. Fight inefficient meetings and processes. Protect your focus time so that you can do work that matters.Work as hard as you can. Even though what you work on is more important than how hard you work.
+
+Reading is faster than listening. Fight inefficient meetings and processes. Protect your focus time so that you can do work that matters.
+
+Work as hard as you can. Even though what you work on is more important than how hard you work.
+
+My first performance review taught me that what you work on is more important than how hard you work.
+
+I worked a ton of hours yet realized even if I doubled my hours, I wouldn’t have had the same impact as our more senior engineers. The projects I was working on had a ceiling for how beneficial they could be.
+
+> Follow your curiosity and do work that you enjoy. Working long hours doesn't need to be a chore.
+
+Follow your curiosity and do work that you enjoy. Working long hours doesn't need to be a chore.
+
+Even though I worked a lot (~60 hours a week), I never felt like I had a bad work-life balance because I loved what I was working on.
+
+> When you finally get promoted, you'll realize that it wasn't what you were seeking in the first place. But that's for another day.
+
+When you finally get promoted, you'll realize that it wasn't what you were seeking in the first place. But that's for another day.
+
+This was my cheeky comment since I modeled this Twitter thread after Naval’s famous one on how to get rich without getting lucky.
+
+I hope this concise set of principles was helpful. If you liked the content, you can find more of my stuff here:
+
+  - LinkedIn
+
+LinkedIn
+
+  - Twitter
+
+Twitter
+
+  - Threads
+
+Threads
+
+Thanks for reading,
+Ryan Peterman

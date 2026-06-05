@@ -26,8 +26,8 @@ from openai import OpenAI
 
 load_dotenv()
 
-from multi_prompt import SECTION_SPECS, _SYSTEM_PREAMBLE
-from neon_db import NeonDB
+from multi_prompt import SECTION_SPECS, _SYSTEM_PREAMBLE  # noqa: E402
+from neon_db import NeonDB  # noqa: E402
 
 EXAMPLES_DIR = Path(__file__).parent / "examples"
 

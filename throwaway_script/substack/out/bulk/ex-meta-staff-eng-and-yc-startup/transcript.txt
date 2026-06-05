@@ -1,0 +1,182 @@
+Rahul Pandey got to Staff (IC6) at Meta through a few interesting legs of his career:
+
+  - Stanford -> Startup - He joined a startup that one of his professors was starting right out of college. This startup was acquired within a year by Pinterest.
+
+Stanford -> Startup - He joined a startup that one of his professors was starting right out of college. This startup was acquired within a year by Pinterest.
+
+  - Junior -> Mid-level @ Pinterest - His promotion was rejected twice. He appealed the second rejection and got the promotion.
+
+Junior -> Mid-level @ Pinterest - His promotion was rejected twice. He appealed the second rejection and got the promotion.
+
+  - Senior -> Staff @ Meta - He interviewed for Senior at Meta and got a promotion through job hopping. From there, he worked towards his Staff promotion and got it.
+
+Senior -> Staff @ Meta - He interviewed for Senior at Meta and got a promotion through job hopping. From there, he worked towards his Staff promotion and got it.
+
+After Meta, he left to start a YC-funded startup, which he still works on to this day. He shared a few interesting perspectives from the conversation we had:
+
+  - Many decisions in your career are “two-way doors” - He joined a startup out of college because he knew he could go back to big tech if it failed.
+
+Many decisions in your career are “two-way doors” - He joined a startup out of college because he knew he could go back to big tech if it failed.
+
+  - Appealing his promo rejection - When Rahul’s promotion was rejected for the 2nd time at Pinterest, he got his case reconsidered through the company’s appeal process.
+
+Appealing his promo rejection - When Rahul’s promotion was rejected for the 2nd time at Pinterest, he got his case reconsidered through the company’s appeal process.
+
+  - Job hopping’s value in your career - Rahul shared that job hopping is productive early in your career but counterproductive when you’re more senior. Later in your career, impact comes through your influence, which is difficult to build if you keep hopping around.
+
+Job hopping’s value in your career - Rahul shared that job hopping is productive early in your career but counterproductive when you’re more senior. Later in your career, impact comes through your influence, which is difficult to build if you keep hopping around.
+
+  - Real networking - He credited a lot of his career success to luck. Knowing how to network increased his luck. What worked for him was doing interesting things and genuinely wanting to hear about what other people were doing.
+
+Real networking - He credited a lot of his career success to luck. Knowing how to network increased his luck. What worked for him was doing interesting things and genuinely wanting to hear about what other people were doing.
+
+Here’s the written summary of what we discussed:
+
+
+## Stanford -> Startup (“Kosei”)
+
+
+In his final year at Stanford, Rahul joined a research lab, where the work spun out into a company where he could be one of the first employees. He took the chance since he already had big tech’s approval (previous Meta internship and five big tech offers at graduation).
+
+Within the year, the startup was acquired by Pinterest. He shared that not all acquisitions are great. While his company’s acquisition wasn’t amazing, he said it gave him a slightly larger compensation package than he would’ve had at Pinterest if he joined straight out of college.
+
+
+## Junior -> Mid-level @ Pinterest
+
+
+Rahul started as a junior engineer (L3 or “IC13”) at Pinterest. He joined their mobile dev team working because he wanted to learn to make his own apps and because it was one of the company’s top business priorities.
+
+His first two promotion attempts were rejected. He appealed the second rejection and represented his work in a way that addressed the promotion committee’s feedback. This got him the promotion.
+
+Takeaways:
+
+  - Top factors for picking a team - He mentioned that the quality of his peers and the importance of the team’s work to the company were the most important looking back.
+
+Top factors for picking a team - He mentioned that the quality of his peers and the importance of the team’s work to the company were the most important looking back.
+
+  - How to avoid a bad onboarding - He floundered a bit at the beginning until he started working closely with a Staff engineer who joined his team. This again shows the importance of picking teams where you have strong peers.
+
+How to avoid a bad onboarding - He floundered a bit at the beginning until he started working closely with a Staff engineer who joined his team. This again shows the importance of picking teams where you have strong peers.
+
+  - Be clear on the narrative behind your work - Rahul’s promotion was blocked because one of his projects had taken 16 months and showed a lack of urgency. This was not the case though. Fixing this misunderstanding got him the promotion and showed how important it is to be clear about the story behind your work.
+
+Be clear on the narrative behind your work - Rahul’s promotion was blocked because one of his projects had taken 16 months and showed a lack of urgency. This was not the case though. Fixing this misunderstanding got him the promotion and showed how important it is to be clear about the story behind your work.
+
+
+## Senior -> Staff @ Meta
+
+
+After a few years at Pinterest, Rahul decided to leave to Meta for more career growth. He interviewed well and got a job hop promo to Senior (IC5).
+
+The biggest cultural differences he noticed were that Meta was much faster-paced than Pinterest, and people were not afraid to be direct.
+
+He was promoted to Staff (IC6) after establishing trust and leading two big initiatives. He transitioned to TLM soon after but didn’t stay long even though he was making more than $800k per year.
+
+Takeaways:
+
+  - Credibility led to his Staff promo opportunity - Leadership was looking for someone to drive a large migration that was clear Staff scope. He was picked to lead that initiative because he had shown he’d be the best fit for it.
+
+Credibility led to his Staff promo opportunity - Leadership was looking for someone to drive a large migration that was clear Staff scope. He was picked to lead that initiative because he had shown he’d be the best fit for it.
+
+  - How he created Staff scope - The other project that got him promoted to IC6 was something he identified on his own. He saw an opportunity to build tooling that’d make engineers on his team faster. He got the whole org (~100 engs) to use it which led to leveraged impact.
+
+How he created Staff scope - The other project that got him promoted to IC6 was something he identified on his own. He saw an opportunity to build tooling that’d make engineers on his team faster. He got the whole org (~100 engs) to use it which led to leveraged impact.
+
+  - Job hop promo to Senior at Meta - Interesting data point in that he got the job hop promo from Mid-level at Pinterest to Senior at Meta with just 3 years of experience.
+
+Job hop promo to Senior at Meta - Interesting data point in that he got the job hop promo from Mid-level at Pinterest to Senior at Meta with just 3 years of experience.
+
+  - Why he transitioned to management - He found it was a good natural fit for his strengths and interests. He learned that he enjoyed working through others and seeing them grow as a tech lead on his team.
+
+Why he transitioned to management - He found it was a good natural fit for his strengths and interests. He learned that he enjoyed working through others and seeing them grow as a tech lead on his team.
+
+
+## Founding a Startup (Taro)
+
+
+At this point, Rahul was finally ready to start a company. He felt satisfied with what he had accomplished in big tech and felt his growth at Meta had plateaued. He had also met the perfect cofounder at Meta and saved enough money so he didn’t need to worry about finances for a few years.
+
+Takeaways:
+
+  - The skills you don’t learn in big tech - There’s a whole set of skills about taking in user feedback and considering what to build for them that you don’t learn in big tech. These product management skills are critical when you’re starting your own company.
+
+The skills you don’t learn in big tech - There’s a whole set of skills about taking in user feedback and considering what to build for them that you don’t learn in big tech. These product management skills are critical when you’re starting your own company.
+
+  - When to try starting your own company - Rahul recommended that you make sure you have enough money and commitment from a cofounder you’d like to work with. Finding the right cofounder is potentially the most important part of starting a company.
+
+When to try starting your own company - Rahul recommended that you make sure you have enough money and commitment from a cofounder you’d like to work with. Finding the right cofounder is potentially the most important part of starting a company.
+
+  - YC is a no-brainer for most first-time founders - Rahul said it depends on how strong your existing network is. If you’re like most first-time founders, joining YC is well worth it from his experience.
+
+YC is a no-brainer for most first-time founders - Rahul said it depends on how strong your existing network is. If you’re like most first-time founders, joining YC is well worth it from his experience.
+
+
+## Career Reflections
+
+
+At the end of our conversation, I asked him a few questions reflecting on:
+
+  - When he experienced the most growth - He mentioned a few key points in his career that led to a lot of growth:Co-working with a Staff eng at Pinterest - This engineer taught him his engineering fundamentals much faster. He went from struggling in onboarding to doing well and getting promoted thanks to working with this engineer.Taking initiative at Meta - Rahul took initiative and pushed adoption of his tooling which led to a ton of impact. This is what got him his IC6 promo, but also he learned a lot about creating impact rather than just “being a good worker bee.”Sprinting for demo day for YCombinator - Rahul mentioned it was a grind to get his startup ready for demo day, but he learned a lot of new skills he hadn’t learned in big tech. Also, the environment and expectation of weekly results pushed him to learn a lot.
+
+When he experienced the most growth - He mentioned a few key points in his career that led to a lot of growth:
+
+  - Co-working with a Staff eng at Pinterest - This engineer taught him his engineering fundamentals much faster. He went from struggling in onboarding to doing well and getting promoted thanks to working with this engineer.
+
+Co-working with a Staff eng at Pinterest - This engineer taught him his engineering fundamentals much faster. He went from struggling in onboarding to doing well and getting promoted thanks to working with this engineer.
+
+  - Taking initiative at Meta - Rahul took initiative and pushed adoption of his tooling which led to a ton of impact. This is what got him his IC6 promo, but also he learned a lot about creating impact rather than just “being a good worker bee.”
+
+Taking initiative at Meta - Rahul took initiative and pushed adoption of his tooling which led to a ton of impact. This is what got him his IC6 promo, but also he learned a lot about creating impact rather than just “being a good worker bee.”
+
+  - Sprinting for demo day for YCombinator - Rahul mentioned it was a grind to get his startup ready for demo day, but he learned a lot of new skills he hadn’t learned in big tech. Also, the environment and expectation of weekly results pushed him to learn a lot.
+
+Sprinting for demo day for YCombinator - Rahul mentioned it was a grind to get his startup ready for demo day, but he learned a lot of new skills he hadn’t learned in big tech. Also, the environment and expectation of weekly results pushed him to learn a lot.
+
+  - What regrets he had looking back - He regretted his reasoning for going to a startup out of college. The experience wasn’t bad, but he said the decision wasn’t sound. He felt it was based on ego, and he wasn’t mature enough as an engineer to do well in that environment.
+
+What regrets he had looking back - He regretted his reasoning for going to a startup out of college. The experience wasn’t bad, but he said the decision wasn’t sound. He felt it was based on ego, and he wasn’t mature enough as an engineer to do well in that environment.
+
+  - How much of his career growth was luck - He credited almost all of his career success to luck. He shared that what helped him get lucky was being visible and networking. Opportunities came to him because of his increased “luck surface area”.
+
+How much of his career growth was luck - He credited almost all of his career success to luck. He shared that what helped him get lucky was being visible and networking. Opportunities came to him because of his increased “luck surface area”.
+
+  - Advice to his younger self - Don’t be an NPC. You can just do things. He wished that he had learned that sooner in his life. Even before entering the industry, he wished he had built things and exercised his creativity more, rather than just doing well at school.
+
+Advice to his younger self - Don’t be an NPC. You can just do things. He wished that he had learned that sooner in his life. Even before entering the industry, he wished he had built things and exercised his creativity more, rather than just doing well at school.
+
+If you found anything above interesting, you can hear it in more detail in the podcast. You can listen to it wherever you prefer getting your podcasts:
+
+  - YouTube
+
+YouTube
+
+  - Spotify
+
+Spotify
+
+  - Apple Podcasts
+
+Apple Podcasts
+
+And for more from Rahul you can check out his company, Taro, and his socials here:
+
+  - YouTube
+
+YouTube
+
+  - LinkedIn
+
+LinkedIn
+
+  - Instagram
+
+Instagram
+
+  - Twitter
+
+Twitter
+
+If you have any questions for me or future guests, feel free to drop them here. I will use these questions to make future content, so I can answer the questions you care about most.
+
+Thanks for reading,
+Ryan Peterman

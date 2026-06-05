@@ -33,34 +33,42 @@ ARXIV_TAG_RE = re.compile(r"arxiv:(\d{4}\.\d{4,5})")
 # /api/models?author=<slug>&limit=1; if it returns >=1 model, we harvest.
 PROBE_ORGS: dict[str, list[str]] = {
     # T32 orgs that returned 0 — try slug variants
-    "Netflix":       ["netflix", "Netflix", "netflix-research"],
-    "Spotify":       ["spotify", "Spotify", "spotify-research"],
-    "Airbnb":        ["airbnb", "Airbnb", "airbnb-engineering"],
-    "Pinterest":     ["pinterest", "Pinterest", "pinterest-engineering"],
-    "StitchFix":     ["stitchfix", "stitch-fix", "StitchFix"],
-    "TikTok":        ["tiktok", "TikTok", "TikTokResearch", "tiktok-research"],
-    "Uber":          ["uber", "Uber", "uber-research"],
-    "Zillow":        ["zillow", "Zillow", "zillow-research"],
-    "eBay":          ["ebay", "eBay", "ebayinc"],
-    "X-Twitter":     ["twitter", "Twitter", "x-twitter", "x-corp"],
-    "Lyft":          ["lyft", "Lyft", "lyft-research"],
-    "Roblox":        ["roblox", "Roblox", "RobloxResearch", "roblox-research"],
-    "PayPal":        ["paypal", "PayPal", "paypal-research"],
-    "Zoom":          ["zoom", "Zoom", "zoom-research"],
-    "Yandex":        ["yandex", "Yandex", "yandex-research"],
-    "THUNLP":        ["thunlp", "THUNLP", "tsinghua-nlp"],
-    "UW-NLP":        ["uw-nlp", "UW-NLP", "uwnlp", "washingtonNLP", "uwiml"],
+    "Netflix": ["netflix", "Netflix", "netflix-research"],
+    "Spotify": ["spotify", "Spotify", "spotify-research"],
+    "Airbnb": ["airbnb", "Airbnb", "airbnb-engineering"],
+    "Pinterest": ["pinterest", "Pinterest", "pinterest-engineering"],
+    "StitchFix": ["stitchfix", "stitch-fix", "StitchFix"],
+    "TikTok": ["tiktok", "TikTok", "TikTokResearch", "tiktok-research"],
+    "Uber": ["uber", "Uber", "uber-research"],
+    "Zillow": ["zillow", "Zillow", "zillow-research"],
+    "eBay": ["ebay", "eBay", "ebayinc"],
+    "X-Twitter": ["twitter", "Twitter", "x-twitter", "x-corp"],
+    "Lyft": ["lyft", "Lyft", "lyft-research"],
+    "Roblox": ["roblox", "Roblox", "RobloxResearch", "roblox-research"],
+    "PayPal": ["paypal", "PayPal", "paypal-research"],
+    "Zoom": ["zoom", "Zoom", "zoom-research"],
+    "Yandex": ["yandex", "Yandex", "yandex-research"],
+    "THUNLP": ["thunlp", "THUNLP", "tsinghua-nlp"],
+    "UW-NLP": ["uw-nlp", "UW-NLP", "uwnlp", "washingtonNLP", "uwiml"],
     # Tencent broader — the T32 slug tencent-AILab 404'd; try the variants
     # known to work and the ones the user explicitly asked for
-    "Tencent":       ["tencent", "Tencent", "TencentAILab", "tencent-AI-Lab",
-                      "TencentARC", "tencent-arc", "TencentBAC", "wechat-ai",
-                      "WeChatAI"],
+    "Tencent": [
+        "tencent",
+        "Tencent",
+        "TencentAILab",
+        "tencent-AI-Lab",
+        "TencentARC",
+        "tencent-arc",
+        "TencentBAC",
+        "wechat-ai",
+        "WeChatAI",
+    ],
     # Slack / GitHub / Stripe / Mozilla / Dropbox were partially hit; try
     # extra slug variants in case more exist
-    "Slack":         ["slack", "Slack", "slack-engineering"],
-    "GitHub":        ["github", "GitHub", "github-research"],
-    "Stripe":        ["stripe", "Stripe", "stripe-research"],
-    "Dropbox":       ["dropbox", "Dropbox", "dropbox-research"],
+    "Slack": ["slack", "Slack", "slack-engineering"],
+    "GitHub": ["github", "GitHub", "github-research"],
+    "Stripe": ["stripe", "Stripe", "stripe-research"],
+    "Dropbox": ["dropbox", "Dropbox", "dropbox-research"],
 }
 
 
@@ -77,7 +85,7 @@ def load_seen(*paths: Path) -> set:
                 aid = rec.get("arxiv_id")
                 if aid:
                     seen.add(aid)
-            except (json.JSONDecodeError, KeyError):
+            except json.JSONDecodeError, KeyError:
                 pass
     return seen
 
@@ -121,7 +129,7 @@ def harvest_slug(client: httpx.Client, slug: str, seen: set, throttle: float = 0
         if not mid:
             continue
         # arxiv tag
-        for tag in (m.get("tags") or []):
+        for tag in m.get("tags") or []:
             tm = ARXIV_TAG_RE.search(tag)
             if tm:
                 aid = tm.group(1)
@@ -159,7 +167,7 @@ def harvest_slug(client: httpx.Client, slug: str, seen: set, throttle: float = 0
         did = d.get("id") or ""
         if not did:
             continue
-        for tag in (d.get("tags") or []):
+        for tag in d.get("tags") or []:
             tm = ARXIV_TAG_RE.search(tag)
             if tm:
                 aid = tm.group(1)

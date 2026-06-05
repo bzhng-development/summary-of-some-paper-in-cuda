@@ -1,0 +1,68 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership; we hit 63,000 readers this week 🙏 🎉
+
+This week I’m answering subscriber questions about promoting your work. Hope it is helpful; enjoy!
+
+> Related questions from subscribers on self-promotion:What are your thoughts on self-promotion and how much time did you spend on it? What audience is the most important to promote your work to?Any general tips for promoting your work?
+
+Related questions from subscribers on self-promotion:
+
+  - What are your thoughts on self-promotion and how much time did you spend on it?
+
+What are your thoughts on self-promotion and how much time did you spend on it?
+
+  - What audience is the most important to promote your work to?
+
+What audience is the most important to promote your work to?
+
+  - Any general tips for promoting your work?
+
+Any general tips for promoting your work?
+
+People decide promotions (usually committees of managers and staff+ engineers). To get promoted, your work needs to be both impactful and known by the right people. Imagine how smooth a promotion would be if everyone on the committee already thought your work was at the next level.
+
+In a perfect world, you’d do impactful work and that would be enough. However, in reality, your work can’t be recognized unless people know about it. Communicating the results of your work will help you get the recognition you deserve.
+
+
+## How Much Time To Spend
+
+
+Although important, you don’t need to spend much time doing it. Just make sure you always write a summary of the results from your notable projects. This is the main way people learned about my work. I would take an hour or two to put together launch posts using a template like this.
+
+Aside from making your work visible, it’ll also make your performance reviews less work since you can just link to these posts.
+
+
+## Who To Share It With
+
+
+There are two ways I distributed this writing:
+
+  - Tagging people - I tagged relevant engineers and managers on each post. They were usually people who worked on the project and their managers.
+
+Tagging people - I tagged relevant engineers and managers on each post. They were usually people who worked on the project and their managers.
+
+  - Org highlights process - My org writes a biweekly post with all the top wins that shipped in the last two weeks. Many managers read this summary. My launch posts were often pulled into these.
+
+Org highlights process - My org writes a biweekly post with all the top wins that shipped in the last two weeks. Many managers read this summary. My launch posts were often pulled into these.
+
+I never targeted people to promote my work to. I just shared it with who I thought it was relevant to and if the work was impactful it often spread further. Sometimes I’d get asked to speak at team meetings to share knowledge about the changes.
+
+You don’t need to strategize about who knows your work. The only person I’d say you should always include is your manager. It will help them represent your work during performance reviews.
+
+
+## Launch Post Tip
+
+
+The goal of a launch post is to convey what changed and how impactful it was. If you read my previous post on writing then you’ll know to “make the first line interesting”.
+
+Here, this means the first line should be a summary of the biggest wins. If it’s impactful enough, people will be curious to read the whole thing.
+
+Make sure to mention the wins your audience cares most about before you go into the details of what changed. This will get the critical message across and increase the chance someone reads your whole post.
+
+Self-promotion is never a replacement for quality work. Focus almost all your energy on doing great work.  Once you have results, just make sure to do the incremental work to document and share it.
+
+If you have a question you’d like me to answer in a future post, you can submit it anonymously here.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already.
+
+Thanks for reading,
+Ryan Peterman

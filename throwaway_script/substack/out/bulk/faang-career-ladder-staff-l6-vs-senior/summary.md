@@ -1,0 +1,15 @@
+<sup>Source: <https://www.developing.dev/p/faang-career-ladder-staff-l6-vs-senior></sup>
+
+Here are the takeaways from this Ryan Peterman article (comparing the Staff (L6) and Senior Staff (L7) levels in the FAANG career ladder):
+
+**Similar Behaviors, Larger Scope**
+
+Ryan directly addresses the common industry refrain that Senior Staff (L7) promotions can feel "easier" than Staff (L6) promotions. He clarifies it's not actually easier, but "there is some truth in the rationale." The behaviors needed for both levels are fundamentally similar—so by the time an engineer is navigating the L7 promo, the path is already familiar. The critical difference between the two is scope of influence. An L6 leads projects and shapes engineering culture across teams of roughly 8 or more engineers; an L7 operates across broader engineering organizations of 50 or more. Both levels are expected to solve problems that other engineers can't, but the L7 must be an "even stronger engineer" who solves problems an L6 would struggle with. Both levels grow others, but an L7 does so with higher leverage by growing L6s—engineers who "already get a lot done." This broader influence is the key to the significant difference in impact. Both levels work in similar ways; the L7 "just has much more leverage."
+
+**Engineering Archetypes**
+
+When Ryan first joined Facebook as an L3, stories about L7+ "engineering archetypes" inspired him. They made engineers at these levels "sound like superheroes." Archetypes are high-level descriptions of how engineers at the senior-staff-and-above levels have impact, serving as tools for managers to discuss the otherwise ambiguous expectations of IC7+ engineers. An engineer can fit one or more archetypes and may switch between them depending on their projects. Knowing these archetypes helps clarify expectations. While general industry classifications exist (Ryan links to a common set), he finds clear gaps in them—notably missing "code machine" and "specialist" archetypes—and much prefers Meta's internal classification (which he credits another writer for capturing well). The same pattern of similar behaviors but larger scope that distinguishes L6 from L7 extends upward to define IC8+ expectations. He notes that big tech is one of the few environments that allows for significant career growth without switching to management, since smaller companies simply don't have as much business need for IC7+ engineers.
+
+---
+
+The **similar behaviors, larger scope** pattern is the engine not just for the L6-to-L7 jump but for the entire senior IC ladder. The **engineering archetypes** framework is what makes that scope legible—turning the otherwise fuzzy "have more impact" expectation into a concrete shape a manager and engineer can discuss. Ryan's closing nod to big tech as one of the few places that sustains IC growth past Staff implicitly frames the entire "FAANG Career Ladder" series as a map of a rare terrain.

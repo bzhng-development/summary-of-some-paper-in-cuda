@@ -1,0 +1,72 @@
+👋 Hi, this is Ryan with another post for my newsletter. I write about software engineering, big tech/startups and career growth. If you find the post helpful, please share it with your friends and coworkers. Enjoy!
+
+> Q: How did you set up cross-team workstreams as an L4/L5? What steps did you take? Who did you engage first? How did you secure financing? How did you maintain leadership/ownership?
+
+Q: How did you set up cross-team workstreams as an L4/L5? What steps did you take? Who did you engage first? How did you secure financing? How did you maintain leadership/ownership?
+
+Influencing across teams is a baseline expectation for Staff Engineers (L6). To set up a cross-team workstream, first you need to find a problem that is large enough to need others. Then, you’ll have to convince them that it’s worth solving and what direction to go in. In this post, I’ll go over how to build this alignment using concrete examples from my Staff promotion.
+
+
+## Getting Buy-In
+
+
+The first step is convincing others that the problem is worth tackling. If it’s clear why the work is important, then people will prioritize it. The general strategy to build alignment is to start with a smaller group and then expand outward to relevant parties. For example, in the workstream that was part of my L6 promotion, here are the steps I took after I found a major problem:
+
+  - Team Alignment - Discussed the opportunity with a specialist and a tech lead on my team. This discussion got them on board and their feedback refined our direction.
+
+Team Alignment - Discussed the opportunity with a specialist and a tech lead on my team. This discussion got them on board and their feedback refined our direction.
+
+  - Org Alignment - Wrote publicly about the problem and why we needed to solve it. This got managers in my org on board, which made staffing discussions easier.
+
+Org Alignment - Wrote publicly about the problem and why we needed to solve it. This got managers in my org on board, which made staffing discussions easier.
+
+  - Partner Alignment - Booked discussions with relevant tech leads in our partner org. This helped us get their buy-in to collaborate.
+
+Partner Alignment - Booked discussions with relevant tech leads in our partner org. This helped us get their buy-in to collaborate.
+
+Your strategy might differ depending on the specifics of your workstream, but this approach works for most cases. You can also consult with your manager about who to align with since your manager should know the org structure well.
+
+Some of you have mentioned that you have trouble getting people to prioritize impactful work you found. If you’re failing here, either the work isn’t that impactful or you’re not explaining its impact well. Here are two tips that can help if the problem is communication:
+
+  - Speak in terms of impact your audience knows - If your workstream moves a metric that people already care about it’s much easier to be convincing.
+
+Speak in terms of impact your audience knows - If your workstream moves a metric that people already care about it’s much easier to be convincing.
+
+  - Be concise - People are busy. Maximize how much of your message you can get across with limited time.
+
+Be concise - People are busy. Maximize how much of your message you can get across with limited time.
+
+
+## Roadmapping
+
+
+After people agree the problem is worth solving, you need to come up with a concrete plan. Thanks to your previous work, it should be easy to get time with relevant engineers to do this. Use your domain knowledge and drive discussions to put together the roadmap. Continuing with my earlier example, here’s how I did it:
+
+  - Leveraged domain expertise - I already had several high-level ideas. I started to hash out the designs to figure out what we needed to get done.
+
+Leveraged domain expertise - I already had several high-level ideas. I started to hash out the designs to figure out what we needed to get done.
+
+  - Aligned on project plans - Led a few meetings to agree on the solutions, who would take on what part, and set rough timelines.
+
+Aligned on project plans - Led a few meetings to agree on the solutions, who would take on what part, and set rough timelines.
+
+  - Communicated alignment - For each cross-team project, I shared an update about what we planned to do, why we were doing it, who was working on what, and rough timelines.
+
+Communicated alignment - For each cross-team project, I shared an update about what we planned to do, why we were doing it, who was working on what, and rough timelines.
+
+You can see how the better you are at communicating, the easier it is to get alignment. That’s why a lot of strong engineers stress the importance of communication.
+
+If you’re looking to improve your communication skills, here are two ways to get started:
+
+  - Visit your local Toastmasters to improve your speaking skills. It’s an international public speaking club that provides a supportive environment to practice in. I’ve been doing it since college and it’s helped me better articulate myself during meetings.
+
+Visit your local Toastmasters to improve your speaking skills. It’s an international public speaking club that provides a supportive environment to practice in. I’ve been doing it since college and it’s helped me better articulate myself during meetings.
+
+  - Write more and solicit feedback to become a better writer. That’s one of the top reasons I write this Substack. I can already tell my writing has improved a lot compared to my first few articles.
+
+Write more and solicit feedback to become a better writer. That’s one of the top reasons I write this Substack. I can already tell my writing has improved a lot compared to my first few articles.
+
+The last part of the original question “how did you maintain ownership/leadership?” comes up a lot. This topic is worth it’s own post since there are a lot of misconceptions. If you feel like more senior engineers often take opportunities from you, you’ll find my next article relevant.
+
+Thanks for reading,
+Ryan Peterman

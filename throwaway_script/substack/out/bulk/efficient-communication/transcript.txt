@@ -1,0 +1,54 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups and career growth. Thank you for your readership, we hit 33,000 readers this week 🙏 🎉
+
+This week, I’m writing about efficient communication and how it can cut down on meetings. If you find the post helpful, please share it with your friends and coworkers. Enjoy!
+
+It’s not controversial to say that meetings hurt productivity for software engineers. That’s because meetings cost engineers more.
+
+Async communication via writing is one of the best ways to reduce meeting load, yet still efficiently exchange information. This can help us defragment our calendars.
+
+There are a few reasons why writing is more efficient than speaking in engineering organizations.
+
+
+## Higher Baud Rate
+
+
+Reading is faster than listening. A quick Google search shows that on average, people read around 2x faster than they can listen. This efficiency gap is even more pronounced when you consider skimming.
+
+People don’t need to read every word to understand the full message; they can skip unnecessary words and read just the important ones.
+
+
+## Easier To Reference
+
+
+Technical content often takes more than one pass to understand. You’re bound to miss critical details if you’re listening to a presentation. However, written material is easy to reread for anything you might have missed.
+
+Not to mention that writing is searchable, which is a huge bonus for when you want to look back on the content down the road.
+
+
+## Preparation Drives Higher Quality
+
+
+In my experience, putting work into writing yields a higher quality end result than prepping for a speech does.
+
+My guess on why this happens for most engineers is because there’s a lot more you need to nail to give a high-quality speech. It’s not just what you say but how you say it (e.g. vocal variety, pacing, avoiding filler).
+
+With writing, you only need to consider the words. Because of that, time spent on editing goes a lot further than speech prep does.
+
+Given the above, it’s clear that writing is often more efficient than speaking is. Here are some recommendations:
+
+  - Opt for Written Information Exchange - Postmortems, design discussions, and planning exercises can all be more efficient with writing.  Exchange information through write-ups and schedule shortened real-time discussions if needed.
+
+Opt for Written Information Exchange - Postmortems, design discussions, and planning exercises can all be more efficient with writing.  Exchange information through write-ups and schedule shortened real-time discussions if needed.
+
+  - Consider Taking Meetings Offline - Some meetings don’t need any real-time discussion (e.g. status meetings). Propose canceling those in favor of async writing.
+
+Consider Taking Meetings Offline - Some meetings don’t need any real-time discussion (e.g. status meetings). Propose canceling those in favor of async writing.
+
+  - Use Writing Templates - Don’t start with a blank slate when you write. Try these software engineering templates to save time and structure your thoughts.
+
+Use Writing Templates - Don’t start with a blank slate when you write. Try these software engineering templates to save time and structure your thoughts.
+
+Speaking has its place though. It’s better for real-time engagement, sensitive discussion, and building connectedness. Otherwise, I’d recommend writing if you want to be a more effective engineer.
+
+Thanks for reading,
+Ryan Peterman

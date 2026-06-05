@@ -1,0 +1,32 @@
+During my grad year, I failed to secure offers from all the companies I interviewed with, except one. My resume landed interviews, but I didn’t perform well during the process. A year later, I received offers at nearly every company I interviewed at such as Facebook, Google, Blend, Affirm, Riot Games, and some startups. Here’s how I went from an 8% to 88% interview-to-offer success rate.
+
+
+## The Zen of Python
+
+
+In college, I became passionate about Python because I loved how easy it is to read and intuitive it is to write. I used it for all of my personal projects. But, because I didn’t learn Python in school (UCLA teaches C++), I lacked the confidence to use it for interviews.
+
+Post-college, I committed to Python for interviews. This improved how fast I could get solutions out and made them easy for my interviewers to understand. For example, I used ChatGPT to create equivalent C++ and Python solutions for “Two Sum”, a popular Leetcode question.
+
+The Python solution is only eight lines of code and easy to read, even if you’ve never used Python before. It almost reads like English. The C++ solution below, on the other hand, is almost twice as long and has extra syntax that gets in the way. This might seem small but it matters since time is so limited during interviews.
+
+
+## Practice Like It’s Game Day
+
+
+I spent a lot of time practicing Leetcode in my grad year. I did over 100+ questions but still wasn’t that great at it. I later realized that I didn’t practice how I would be tested in interviews. For every question, I’d hit “submit” a lot and if I couldn’t get the solution after a few minutes, I’d look it up.
+
+The second time around, I changed my approach to practice just like I’d be interviewed. I set a 30-minute timer for each Leetcode question and graded myself on the % of questions I could get right on the first submission. I only let myself submit code if I was confident it was right and only looked at solutions after the timer was up.
+
+
+## Play The Game Like It’s Practice
+
+
+I made a minor process change that had a huge effect on my confidence. I split my job applications into two waves. In the first wave, I applied to companies I’d be content with but were not my top choice. Because I wasn’t afraid to fail with these companies, I felt more confident. This, along with generally easier interviews, helped me pass and further increased my confidence.
+
+After a month of practicing like this, I moved on to the companies I was most excited to work at. At this point, I was high on confidence and used to the motions of interviewing. I found that even though I really wanted these jobs, I didn’t feel anxious during interviews because I was desensitized to the process.
+
+Although people criticize Leetcode for not testing the skills we use on the job, it’s here to stay. Focus your energy on getting good at it. By doing so, you’ll increase your chances of getting offers significantly. If you’re looking for a place to get started, these curated lists are solid. Over to you: What has worked well for you when preparing for interviews?
+
+Thanks for reading,
+Ryan Peterman

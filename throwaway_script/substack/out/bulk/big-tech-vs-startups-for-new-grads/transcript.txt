@@ -1,0 +1,80 @@
+> Subscriber Question: For your first job, is it better to join a big tech company (FAANG) or a startup?
+
+Subscriber Question: For your first job, is it better to join a big tech company (FAANG) or a startup?
+
+When I graduated from UCLA, my friends and I had the same question. After being in the industry for 7 years, I have learnings from our experience that will help you make an informed decision.
+
+Here are the top 5 considerations when deciding between big tech and startups (~Series B and earlier) for your first job:
+
+1) Prestige - Like it or not, the prestige of the companies you have worked at opens many doors. Before I had any notable company on my resume I applied to hundreds of places only to get a few responses. The next time I applied I had Amazon on my resume and was able to get an interview at every place I applied to.
+
+Big Tech - If you work for a large company (even if just for a year), you’ll get a well-known stamp of approval. This will make it easier to access future opportunities.
+
+Startups - It depends a lot on the startup but most aren’t that well known. Therefore the prestige doesn’t have as wide of an effect. Top startups with great funding do have prestige within smaller entrepreneurial circles though.
+
+2) Career Growth
+
+Big Tech - Promotions through the first few levels are fast and exponentially easier than later ones. Once you earn them, they can help open doors. For instance, once I got Staff (IC6) at Meta, I was able to get Staff-level interviews even though I only had a few years of experience.
+
+Startups - Smaller companies often don’t even have leveling systems. Your career growth is tied to the growth of the company. If you were early at a startup and it grows a lot you can claim some credit. The issue is that startups fail in the average case so this is risky. It has a higher ceiling though. For instance, if you were early at Uber your career would have grown much faster than if you joined big tech.
+
+3) Skill Development
+
+Big Tech - There’s excellent structure in place to help you learn industry best practices. Also, mentorship is easy to get since it’s a baseline expectation for Senior engineers to grow others. This will help you develop your engineering fundamentals fast.
+
+Startups - Your work will vary widely at most startups and require you to wear many hats. You’ll focus more on zero-to-one work and may do more non-engineering work. Also, there’s often less mentorship since small companies are strapped for resources. Developing your engineering fundamentals in this environment is riskier.
+
+4) Talent & Network
+
+Big Tech - There are good and bad outliers, but talent in big tech is solid on average. Among the high-level engineers, there is less entrepreneurial spirit but a lot of deeply technical experts which you can learn a lot from.
+
+Startups - Talent varies a lot depending on the company. Some companies have higher talent density like OpenAI. Although the ones that have higher talent density probably don’t hire new grads. One advantage to startups though is you get direct access to founders and execs which would be unheard of in big tech.
+
+5) Compensation
+
+Big Tech - Excellent compensation that is liquid and lower risk.
+
+Startups - On average, lower compensation since the equity is unlikely to be worth much. There’s a chance at a much higher peak though if the company does well.
+
+
+## Recommendation
+
+
+For most cases, I’d recommend you start in big tech even if your eventual goal is to be more entrepreneurial. There are a few reasons this is optimal:
+
+  - Well-known stamp of approval - Getting a well-known company on your resume early will set you up for the rest of your career. It will be much easier to get interviews afterward.
+
+Well-known stamp of approval - Getting a well-known company on your resume early will set you up for the rest of your career. It will be much easier to get interviews afterward.
+
+  - Skill development - Even if you want to eventually work at a startup, learning industry best practices first is worth a lot. This will help you raise the engineering quality bar no matter where you go later. Mentorship and structure are especially helpful when you’re just getting started.
+
+Skill development - Even if you want to eventually work at a startup, learning industry best practices first is worth a lot. This will help you raise the engineering quality bar no matter where you go later. Mentorship and structure are especially helpful when you’re just getting started.
+
+  - Career growth - The first few levels in the big tech career ladder are straightforward to achieve and also unlock another axis of social proof. Once you run out of the fast early career gains you can re-evaluate your options.
+
+Career growth - The first few levels in the big tech career ladder are straightforward to achieve and also unlock another axis of social proof. Once you run out of the fast early career gains you can re-evaluate your options.
+
+  - Compensation - It isn’t a major differentiator but earning a bit more early in your career will give you more optionality. Many of my friends quit their big tech jobs after a few years to start their own companies. They were able to do this because they built up savings from their high-paying big tech jobs.
+
+Compensation - It isn’t a major differentiator but earning a bit more early in your career will give you more optionality. Many of my friends quit their big tech jobs after a few years to start their own companies. They were able to do this because they built up savings from their high-paying big tech jobs.
+
+Joining a startup out of college could also go well too but it depends. The general pattern across all areas is that startups have higher variance and lower average case outcomes.
+
+I checked this thought process with some of my friends (all of which work at startups) to confirm I wasn’t just being biased. It’s not a hot take to think that big tech is a great choice for your first 1-3 years. After that point, it depends on your career goals and interests.
+
+If you have a friend deciding between big tech and startups, consider sharing this with them. As always, you can find more of my stuff here:
+
+  - LinkedIn
+
+LinkedIn
+
+  - Twitter
+
+Twitter
+
+  - Threads
+
+Threads
+
+Thanks for reading,
+Ryan Peterman

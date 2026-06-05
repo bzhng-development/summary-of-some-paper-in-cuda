@@ -1,0 +1,569 @@
+This is James Everingham, former head of engineering at Instagram and a veteran of the tech world with experience at Netscape. We talked about his unconventional start in the industry, learnings from every leg of his career, and regrets he has looking back.
+
+Check out the episode wherever you get your podcasts: YouTube, Spotify, Apple Podcasts.
+
+
+## Timestamps
+
+
+0:57 - Kicked out of college
+
+5:35 - FBI showed up at his house
+
+7:43 - Pre-IPO Netscape experience
+
+25:19 - Joining Instagram as head of eng
+
+29:12 - Why shrinking teams improves velocity
+
+32:59 - Working with Mike Krieger
+
+37:16 - Leading Cryptocurrency project at Meta
+
+42:30 - What he is working on now
+
+54:29 - Career regrets
+
+56:27 - Advice for his younger self
+
+
+## Transcript
+
+
+
+## 0:57 — Kicked out of college
+
+
+James:
+
+[0:57] I kind of got kicked out of college when I was just starting out when I was 18, but they hired me two weeks later as a full time computer scientist at Netscape. No, this was like early in my career. I was 18, I was in college. I didn’t go to my classes. I was just programming my computer. The library computer information at Penn State started using my software that I uploaded and they learned I was local.
+
+[1:26] So they actually had me come in and they wanted me to come in and actually help them with migrating all their mainframe stuff to PCs. Meanwhile the computer science program. I didn’t go to any of my classes, so they kicked me out. But totally like the left hand not knowing what the right hand was doing. They were like, hey, we want to offer you a full time staff position. And I was like the first person hired at the university in over 50 years without a degree and a full staff position.
+
+[1:53] I had to call up my mom and tell her this, you know, like, hey, I got bad news and good news. She start crying, you know, like when she got kicked out.
+
+Ryan:
+
+[2:02] So am I understanding correctly? They, they booted you as a student and then they hired you as a full time.
+
+James:
+
+[2:09] They full time kicked me out. They sent me a letter saying, you need to reevaluate your educational goals so you can reapply later. But like you, I literally got a 0. 0. Oh my God. I literally didn’t go to any of my classes. Like I was just programming at home and totally, you know, was, was, was working on this software that I was like obsessed with. I was all night working And I was uploading it.
+
+[2:33] It was open source at the time. It was called shareware. And the university just randomly got a hold of it and was using it. And they were like, this guy’s local. Let’s, let’s get him in. We don’t have anyone with this expert expertise. So I ended up working for the university for years.
+
+Ryan:
+
+[2:49] That’s so interesting. When you, when you got booted and hired at the same time, was that a positive, like a net positive for
+
+James:
+
+[2:56] you or is that, oh, unbelievably so. It was like, you know, I basically was able to go and like I, I did was interested in learning. So like I ended up taking pretty much all the computer science classes that the university had over the next few years. And I never got a degree because I never took any of the electives. But I, I had like 150 credits of like advanced comp Sci because I took them for free.
+
+[3:20] I was staff. I could just go take. They couldn’t even argue with me. They couldn’t even say like, you can’t go into this class. Some of them were honors classes and you had to be an honor student or staff.
+
+Ryan:
+
+[3:30] You didn’t get the degree, but you got the education.
+
+James:
+
+[3:33] I did. It was more of a, yeah, I did, but I can’t say that I learned the most from school. It was more from, you know, from going off and pursuing my software, my curiosity outside of the university because I worked there for two years and people kept sending me money for this open source software. I’m like, I’m going to quit and start my own company and just go do this. So I did that. I left university and started my first company when I was 20.
+
+Ryan:
+
+[4:04] You said open source and in my mind that’s GitHub.
+
+James:
+
+[4:08] Oh yeah. No, that this was a very different world back in the early 80s. This was like you write code and you would use a modem and you’d connect to a bulletin board and you’d upload your code and it was called shareware freeware at the time. And then people would go on these bulletin boards. It was like, you know, one user per bulletin board. You had to sit there and redial until you could get your chance to connect and you could browse.
+
+[4:34] You know, it was like, I’m talking like 1200 baud. You know, like you can almost read the characters and then you’d find the file and then it would take, you know, sometimes a half a day to download. You know, I mean a very different time.
+
+Ryan:
+
+[4:46] I see. Oh, so you Would connect to some shared server that was horrendously slow.
+
+James:
+
+[4:51] It wasn’t even shared. It was like bulletin boards were sort of these. Like, you know, I ran one too. So it was like this system that was running on someone’s computer in their house with a single modem and a single phone line on it. And you would connect to this and then you could use it. And then the way these. If you wanted to send a message, some of these were like networks. And the way they would work is they would all shut down at like one in the morning and start calling each other and syncing their messages.
+
+[5:22] So like, there was like a few hours a night where they were just doing that. This was like early. This was like wild west. Yeah.
+
+Ryan:
+
+[5:29] I mean, I can just imagine all of the security potential security vulnerabilities from.
+
+
+## 5:35 — FBI showed up at his house
+
+
+James:
+
+[5:35] Oh, well, it was a whole different time. Yeah, of course. Yeah, it was. It was. Security wasn’t a thing back then. And, you know, like, that was. I was a hacker. Right. That’s how I got into it too. As I was writing software that would take over the phone systems When I was a teenager, the FBI showed up at my house and asked me to stop.
+
+Ryan:
+
+[5:55] How did they find you?
+
+James:
+
+[5:57] They traced my number. I was like a kid.
+
+Ryan:
+
+[5:59] Oh.
+
+James:
+
+[5:59] There was two things. One, they traced my number. But the other thing was I wrote hacking software. And I was like 16 when I wrote this. And I was proud of my software. And so I put my name on it.
+
+Ryan:
+
+[6:13] Okay. Okay. That’s how they find you.
+
+James:
+
+[6:15] You can go still search the Internet and you’ll find it.
+
+Ryan:
+
+[6:18] What did it do?
+
+James:
+
+[6:19] It allowed you to completely take over an operator’s phone line. Like you could blow using frequencies. At the time, it was called freaking. And like, I had a Commodore and the Commodore had this like multi sound chip. So you could generate two tones at once. And you could basically call and blast 2600HZ into an operator line if they were on the right system. And it would literally blow off the line.
+
+[6:43] And then the keypads generated different tones than a regular touch tone. So you had to have those. And there were a couple extra keys, KP and st. So you had to have these extra keys and know then the sequences. My software emulated all those frequencies, did the 2600 tone and then had stuff built into it to allow you to do anything an operator would do. Like you wanna listen in on somebody’s conversation, you could do that.
+
+[7:09] You could do free phone calls.
+
+Ryan:
+
+[7:11] When the FBI showed up on your doorstep, is that who answered the door? Is that you or your parents? Okay. Did she know what was going on?
+
+James:
+
+[7:22] She knew it was for me. And so, you know, I was concerned. Like, you know, she was the. She didn’t understand what a computer was like. I didn’t either at the time, to be honest. I thought I was wasting my life. And she was like that you’re down on that video game, you’re not doing your schoolwork. I was like, oh, well, I did not know. She was wrong.
+
+
+## 7:43 — Pre-IPO Netscape experience
+
+
+Ryan:
+
+[7:43] So at the beginning of your career, something stood out to me. I saw Netscape and I know Netscape is super famous for the first iteration of the browser wars. And I was curious, because you joined so early, what’s the story behind you joining and what was it like at the time?
+
+James:
+
+[8:00] Like, it sort of goes back to like how I got to California in the first place is like there was a company called Borland back in the day that was, it was sort of like where all the good engineers were in the valley and they wrote Borland C and Turbo Pascal. They were a languages company. They were probably the main competitor back in the early 90s to Microsoft. And I learned on Borland Tools. So, you know, I got a call because of my open source software that I had.
+
+[8:31] They had seen that I was building developer tools, so they, they recruited me to come out and interview. I didn’t think they’d hire me, but they did. And so I went in there and I worked there for years. And when Netscape, when Netscape first came on my radar, it was through some Borland colleagues that went over. Mainly my close friend Lloyd Tabb, who went on to found Looker. And he recruited me over and it was probably like some of the worst judgment that worked out for the positive for me ever, because Microsoft was just beating us up bad at Borland.
+
+[9:17] They were, you know, Visual Studio came out and like they were competing with everything and we were just losing market share, layoff after layoff. And I’m like, I gotta go get out of Microsoft’s way. Like, I, I’ll go join this little Internet startup. You know, Microsoft wants nothing to do with that. Turns out that was pretty, that was wrong. We kind of got square, more square in like the bullseye of Microsoft.
+
+[9:44] They turned the entire company against us, right? Like, they, they were, they were off, you know, building, building the browser into the operating system and all these things that were just almost impossible to compete with. And it ended up being a pretty intense time. But it was Borland. You know, like, one of the things I think that’s Interesting about my career, and I think it’s a good pattern for others is like, you end up building great relationships with people and companies and that opens up doors and creates opportunity for you later in your career.
+
+[10:20] So Borland, you know, building great relationships there, took me to Netscape, which honestly, even my current company, Guild, that I have three people that have been along that journey all the way since Netscape with me, and we’ve done five, six companies together.
+
+Ryan:
+
+[10:39] Wow, six companies. Yeah. I think when you’re like kind of going through your career, a lot of people, they give you that advice, they say, yeah, you should network or you should kind of. But in the immediate action is like, oh, do I. Do I start talking to people? Do I start, I don’t know, coffee chats? I don’t know exactly what. But if you were to sum up your understanding of what good networking is for someone who’s in tech, what does that look like?
+
+James:
+
+[11:09] Yeah, it looks different now to me than when I was younger. And I wish I had this filter when I was younger, but one, I think people that ask a lot of questions going in and are curious, it’s a great way to build relationships in a company when you’re first starting out your career. And I was the same. It’s like, I wanted good mentors around me and my good buddy Lloyd, who I already mentioned, he has the best advice.
+
+[11:39] And it’s like, look, if you want to find a mentor, don’t go and ask someone, hey, I need a mentor. Go offer them help. Like, hey, how can I help you? And it will naturally evolve into a good mentorship for you. So try to be useful to others, be curious about others work. Don’t be afraid to speak up in meetings. Like, just start, just start talking and listening. And I think that it’s important to build this network and, or at least, you know, don’t.
+
+[12:13] Don’t make enemies. Right? It’s like, I think that there was a quote. I can’t remember who said it. It might have been Bill Gates, but he might have been re quoting as, like, you know, friends come and go, but enemies collect. And, you know, I think that’s something to that, like, you know, build good relationships and don’t burn bridges. You know, I remember sitting at Netscape, the people sitting around me, like, even, you know, John Gianandrea sitting right next to me building the plugin interface.
+
+[12:41] He now reports to Tim Cook running all AI at Apple and, you know, he ran all search at Google and, you know, the next person, you know, my, my first one of my first college hires, went on to found a company and sold it for 400 million a few years later. Like, the people that you’re sitting next to are going to look a lot different in 20 years.
+
+Ryan:
+
+[13:00] You mentioned Netscape, and in my research, I saw that the company went from just starting to IPO in 16 months. In today’s market, I feel like companies wait a lot longer for ipo. What was it like at the time and why did it IPO so quickly?
+
+James:
+
+[13:21] That was a crazy ride. Like, first off, the rapid scaling was insanity even by any standards today. I think when I started there, there was about 150 people total. But the engineering team was incredibly small compared to that. It was not majority engineering at that point. I think within a year we were over 3,000 people.
+
+Ryan:
+
+[13:46] Within a year. Yeah.
+
+James:
+
+[13:47] So I, I worked seven days a week and like, there was a time where I took two days off and I came back in and there were people sitting around me. I had no idea who they were. I’m like, it was just like a, a parade of people coming in, sitting. It was complete chaos. So, yeah, so that went very quick. But like, on the IPO question, I believe that was September 9th as like sort of a day that sticks in my head of 1995.
+
+[14:14] I was there pre IPO, looking forward. Like, there are a lot of. It was a lot less regulation back then. You know, you didn’t have Sarbanes, Oxley or any of these things that, like, would prevent you from going public. It was a way to raise more capital. If you had a good story, you could go out. I mean, there was a crazy stream of like, the dot com bubble is crazy IPO after ipo, right? Like, and everyone was just buying stock that was a web company.
+
+[14:47] They didn’t care what it was because they wanted to get in for the ipo. And a lot of people didn’t do well with that. You know, if you bought webvan or, you know, one of these, I even saw, I even saw a company that was formed to, to ship potatoes. Like, it was like potatoes direct or something. It’s like, wait, you’re. You’re going to charge 100 bucks to FedEx a bag of potatoes? That’s your business.
+
+[15:09] But people were like investing in this stuff, and so they decided to come in and put some regulation around that, which was a good thing. So, you know, now and the competition, there’s a lot more companies out there competing, and people know that you need to have real revenue. You need to be able to predict what that is going to look like in a year. You have to show steady growth. So that’s evolved into a space that is a little more organized, a little more governed and a little more sane these days.
+
+Ryan:
+
+[15:42] You mentioned that you left your previous company to get away from the competition with Microsoft. And then I understand that Netscape’s like one of the most famous competitors with early Microsoft. And I want to know, when you got to Netscape, at what point were you realizing, oh crap, we’re competing with Microsoft?
+
+James:
+
+[16:02] It was pretty quick. We got in there and suddenly Microsoft put out this big like communication saying, like, this is an existential threat. You know, they looked at us like an operating system and people were going to start using web applications instead of shrink wrapped, you know, operating systems and software that they sold. You know, interestingly though, it ended up the, the thing that they were afraid of ended up actually making them one of the biggest companies in the world because it expanded.
+
+[16:36] Like they adapted well. It expanded the market so dramatically that they, you know, they were able to offer services, reinvent and do all that stuff. But it came pretty quick. And you know, our mistake was my big mistake. A big learning for me was I was working on this browser and I kept thinking like, look, we’re going to build a better browser. The technology is superior. And it was, for a long time it was like, and it was like, so people are going to use a superior solution, right?
+
+[17:08] Nope. Microsoft’s like, watch this. It’s not a technology war, it’s a distribution war. And we’re going to just bundle this and give it away and people will not use your stuff anymore. And that’s literally what happened, right? Like people didn’t care once, especially when like the quality became pretty equal, right? Like if you have two products that the quality is pretty equal, people are going to just use the one that’s the default.
+
+[17:34] There’s no reason to switch. And that’s how Netscape made money. We sold these browsers, right? That was our original model. Like we sold these, they were like 35 bucks. We were growing fast. And then Microsoft gave it away and instantly killed all the revenue going to Netscape for the browsers.
+
+Ryan:
+
+[17:53] What was the internal reaction at Netscape among you and your peers when the competition was happening?
+
+James:
+
+[18:00] At first we felt like we were on a mission. The engineers, we felt like we were on this mission of interconnecting the world and bringing it. So we were really focused on that. So in one way it was validating, like, oh, this is a big space. Microsoft sees it but on the other hand, it was completely depressing and stressful. It’s like, okay, they just gave away our product. What do we do? Luckily, you know, we had the Netscape browser would default to netscape.
+
+[18:00] com that was like the landing page. And we had a tremendous amount of traffic. So we started monetizing Netscape. com as the first like, web service and added like, email to it, like webmail and things like that. And so that started actually filling that gap. But we had to invent that on the fly. And it was a stressful time to get there.
+
+Ryan:
+
+[18:53] I was reading the Wikipedia page about the browser wars, and I saw, like, a really interesting part about the competition. It said, In 1997, September, they launched Internet Explorer 4. And on the release, they. They put a giant E logo somewhere in San Francisco. And it says, Netscape employees showing up to work the following morning found the logo on their front lawn paired with a greeting card signed best wishes.
+
+[19:27] The IE team did. Did you work in the office? And see that?
+
+James:
+
+[19:31] That was literally. That wasn’t in San Francisco. They put that on our front lawn of our office, the one I was in. So. So, yeah, they went and put this big. I mean, it was. It was friendly competition in one way, like, you know, because the Valley engineers move around. So there was a bunch of my Borland colleagues were at Microsoft and there was some friendly rivalry, but, like, you know, it was interesting that they did that.
+
+[19:57] And I actually know exactly the person who did that. And yeah, I believe that was Hadi Partovi. And when I went to after Netscape, I went to tell me networks. Hadi and I were, you know, I worked with Hadi directly. Like, he. We were both running parts of engineering. I actually reported in initially to Hadi and we would just basically tell stories about, like, yeah, we were doing this and he was like.
+
+[20:26] And he was running IE and I was running the Netscape browser. So we got to tell these stories back and forth.
+
+Ryan:
+
+[20:33] Yeah, so I guess the story goes is, I mean, the superior technology didn’t work for Netscape, and the distribution advantage that Microsoft had was too much. And so ultimately, Microsoft ended up winning. I saw that Mozilla was created because Netscape just gave away the technology, gave away the browser. Why would Netscape choose to give the source code away?
+
+James:
+
+[20:58] Sure, it was a bold move at the time. And I believe the person who originally suggested it was Jamie Zelinsky, also known as jwz, and he’s pretty well known out there. So here was the thing. We were out resourced we were a small company compared to Microsoft. We had dozens of engineers working on the browser. They had thousands. It was very hard to compete. So we’re like, how do we completely change the game?
+
+[21:27] And why don’t we invite the world to help us? We’re on this righteous mission to. Make people connected and share information. So why don’t we give away the browser? Let’s give it away. Let’s open source it and invite the world to come in and help. That was the only way we could see of engaging thousands of developers to come help. And it was a lot of work to get there. Right? And it did work, right?
+
+[21:57] Like Mozilla became the foundation of lots of components that had made it into Chrome and there was Firefox and still going strong. So in one way that did work, but it was hard getting there. The story is even open sourcing the code. You couldn’t even distribute SSL source code back then. It was deemed a munition by the government. So we had the not only remove SSL from the open source version, we couldn’t even like show how the APIs would work.
+
+[22:27] So we had to obfuscate APIs. And then we were a bunch of young idiots working on the source code. So we had like swear words in it and like inappropriate variable names. So we had to like print out all the code and go through it with like highlighters and like censor our own code.
+
+Ryan:
+
+[22:44] Why didn’t you just grep the code for bad words?
+
+James:
+
+[22:48] Because you don’t know what they are. If you have a, a variable named G G netlib breeding like bunnies, like how do you grep for that? Literally that was a variable name. So you know, so like we had to go through and, and, and make sure like it was something that wasn’t going to get us trouble sharing. Funny story. I think JW’s Jamie, he saved all the censored code and then he released it all. So like it’s, you can go out there and find all of the censored code from, from that.
+
+Ryan:
+
+[23:19] Oh, that’s funny. You mentioned the government deemed SSL like a munition. What does that mean?
+
+James:
+
+[23:27] It meant that it was like a dangerous technology. Like if people could encrypt stuff and the government or legal authorities couldn’t ever encrypt it. So back then, even like very small levels of encryption were concerning and we couldn’t distribute it because people could weaponize it if they got a hold of it. That was the theory.
+
+Ryan:
+
+[23:56] Before we leave. This part of your career is There any, I guess, lesson learned or favorite other story that you’d want to share? Otherwise, we can go on.
+
+James:
+
+[24:07] I think the lessons learned there is like, when you’re joining a company, understand what, what the actual, who the competition is and what the war is. I think that’s interesting, especially today, right? Like, everyone’s fighting to win the AI wars. Like, what does that mean? And what is the war? Is it a technology war? Is it a data war? Is it a distribution war?
+
+Ryan:
+
+[24:37] if I’m understanding correctly, you’re saying like, as an engineer even you should be thinking almost like an investor. Like where, which company you go to because there’s much more outside of the technology.
+
+James:
+
+[24:50] That’s right. Think about. I think that’s a good way to look at it is like, you know, look, if, you know, when we’re young, we probably don’t have a lot of funds to start going investing in companies. So we invest with our time, you know, we get stock often as a compensation, you know, for our time. So, like, look at your portfolio and see where you’re overweighted. And if that’s your goal, I think that’s a reasonable way to look at it.
+
+
+## 25:19 — Joining Instagram as head of eng
+
+
+Ryan:
+
+[25:19] Later in your career, I saw that you joined Instagram and actually when I worked at Instagram in the past, you were the head of engineering when I joined as a new grad. And yeah, I kind of want to ask a little bit about that. So how’d you get hired there? Was it based off your network like you’re saying, or did you go through some other process?
+
+James:
+
+[25:38] Well, this is a great example of sort of failure leading you to a place that’s better, right? So like I went and I, I founded a company called Luminate. And Luminate I worked at for six and a half years. And basically it was Instagram shopping, by the way. It was, it was that product but for publisher sites. And we, we worked a long time and we couldn’t get it working. Now one of my board members was.
+
+[26:03] This was Elliot Schragg. Elliot reported to, I believe to Cheryl at the time, and he was on my board when I sold the company. I sold it to Yahoo, but Instagram actually tried to buy it. So I met Emily White and Mike Krieger and stuff briefly. I committed to only one year at Yahoo. I was very good friends with the chairman of the board and so he convinced me to go there and help. One year came up and Elliot actually reached out and said, hey, Instagram’s still looking.
+
+[26:39] Would you please just come and talk? And he didn’t know it, but I had been talking to other companies and I had verbally accepted a pretty large position. But I had to go meet just because it was Elliot and he wanted me to talk. So I went in and I met Mikey again and some of the other people. I’m like, oh, this is the job I want. This is like, this is the call. Like, the values were clear. I was passionate.
+
+[27:10] I realized I used the product. I’m like, I actually use Instagram. The company I was almost going to go to, I don’t even use. I think at the end of the process I probably would have paid to take that job, but I wasn’t going to tell them that. But it was a job I really wanted. So. So it was my network, it was the timing. It was like my previous company that I couldn’t make run, that ran out the Runway to make that timing perfect for me.
+
+[27:36] It was my experience working on image stuff at the previous company that sort of was also helpful.
+
+Ryan:
+
+[27:43] When I think about an employee in big tech, oftentimes when people consider starting their own company, the thinking is either that company is going to succeed and obviously that’s great, or the company will maybe not do so hot and I’ll just come back to where I was. But it seems like I’ve seen in other many careers, it seems like yours as well, that even if it’s not a incredible IPO success, there’s this middle ground where companies get acquired and then you can come in at very high roles.
+
+[28:15] Like someone might have left, I guess the big tech companies at like maybe middle role or something like that. They start their company, it goes not good enough for breakout success. But they’re a leader at that company and they get, you know, hired back in at like a senior leadership position in big tech. And I was curious, what’s the mechanism for like the level that you come in at when you enter back after starting your own thing.
+
+James:
+
+[28:42] So there’s a lot of those, but like you can’t. I mean, people aren’t going to bring you in at a senior level unless you can back it up, unless you can show your experience. Even though I came from a smaller startup and went into Yahoo and I went from 15 engineers to 1,200 or something, I had previously ran large organizations at Netscape and tell me was even pretty large. So I had that background already.
+
+
+## 29:12 — Why shrinking teams improves velocity
+
+
+Ryan:
+
+[29:12] I interviewed Ryan Olson, he was one of the original.
+
+James:
+
+[29:15] I know Ryan well Okay, great.
+
+Ryan:
+
+[29:17] Yeah. And so we were talking about Instagram Stories and he mentioned something really interesting in that project, which was that actually when the project started, you immediately kind of cut the size of the team almost in half or significantly just down to like, Ryan Olson, a few other people, so that the project could move faster. And he said that was a big part of the project success. And you were the head of engineering at the time, so I was curious if you had any thoughts on what.
+
+[29:49] Did you see that that made that a good decision at the time?
+
+James:
+
+[29:53] You know, Instagram Stories was an interesting thing. Now, like, your natural instinct is like, hey, Snapchat’s gaining traction and like, we need to go do what Microsoft did, turn the whole company against this. But really, this is where your entrepreneurial skills come in. It’s like, hey, what we need is a small team that can move really fast. So, like, you want to set it up so that you have really capable people, you have the right types of engineers who are very proactive, and then you remove any roadblocks from them.
+
+[30:24] So you give them a separate, you give them a separate area where it’s not dependent upon like, you know, deep, deep APIs and blocking points into other organizations. So you set it up so that they can move fast and that if that’s. So we did that purposefully. Right. And I think it was like three months we had. It was a three month project. We went from zero to releasing stories, you know, and it was a pretty big success.
+
+Ryan:
+
+[30:55] But I, I think maybe a lot of managers might naively think, oh, competitors coming, we gotta move fast. That means throw a lot of engineering resources at it. So here’s, here’s a 20 person team. Go, go, go. As opposed to. It sounds like you have a different philosophy here, which is a few. A small talent, dense team.
+
+James:
+
+[31:17] That’s right. With founders leading it directly. Kevin and Mikey were heavily involved and brilliant product thinking and execution at that level as well. When you get a small team that’s capable and you give them clear ownership and you remove dependencies, that is one way to increase speed. So if you get a large team, they tend to be interdependent. You start federating large pieces of architecture and pretty soon those dependencies end up slowing you down.
+
+[31:52] So I think sometimes it’s better to start with something small and build on it rather than trying to build the big thing at the beginning and evolve it over time. And that’s sort of what this was, is like, let’s get it working, let’s get it stood up. Let’s. Let’s get this thing working and then plug it into the product and we’ll scale it instead of like, what does this look like at large scale? And let’s build that from assuming that that ends up often being a way less efficient way to get something done.
+
+[32:25] And it’s definitely a lot slower. Mikey Krieger had, like, and it was the name of my conference room, it was called this value that he said, do the simple thing first. I don’t know if you recall this, but, like, hey, if we’re going to go off and we have a thesis before we go off and just pour the whole company in it, what’s the simplest, hackiest thing we can do to go prove this thesis True, that was part of the values of Instagram is like, what’s the simplest thing we can do to go prove this thesis before we scale it?
+
+
+## 32:59 — Working with Mike Krieger
+
+
+Ryan:
+
+[32:59] You were hired as the head of engineering, and at the time, Mike Krieger was still the CTO there. What are the differences between that CTO role and the head of engineering role? And how did you partner with Mike Krieger? And what went well? What didn’t?
+
+James:
+
+[33:15] Yeah, so Mikey brought me in. The engineering was hitting about 100 people. It’s a common place where teams start to break. And Mikey’s brilliant. He was actually a really gifted manager too, but he just didn’t want to do that. And he wanted to focus on the technology and even coding. That was his true joy. So he brought me in. So the initial confusing things to the team was like, what are our different roles?
+
+[33:44] Like, you know, who do I listen to? I’m used to getting directions from Mikey, so you have to be pretty clear. So the first thing that we did is like, we wrote our job descriptions and we published them to the Org. And so, you know, and classically, a CTO is like, works with customers, new technologies, works on the product, and the technology roadmap experiments, all of these things, builds the external engineering brand.
+
+[34:12] And the VP or the head of engineering is usually a people management thing. It’s like hiring, execution, org structure, performance reviews, all that fun stuff, right? And so think technology, roadmap for cto. Think process people staffing, execution with a VP of Eng. So we published that and we even came up with like, flowcharts like, hey, I want to. I want, you know, we. We put it out to the team.
+
+[34:44] We’re like, hey, I want to. I want five more headcount. Go do this project. And it’s like, come to me. Hey, you know, I Want to use this new technology? I think it would be cool. Go to Mikey. So, like, we. We also put, like, a roadmap out there, and then it took some evangelism, you know, like, hey, you know, to get people to learn where to go for what they needed. People often confuse this, by the way.
+
+[35:06] You know, it’s like people confuse the difference between a CTO and a VP of Eng. Like, I get called into a lot of companies saying, hey, we need a new cto. And I’m like, why? What’s breaking? And they almost always describe VP of Inch problems. I’m like, I don’t think you need a cto. I think you need a VP of Inch. It’s a very different person.
+
+Ryan:
+
+[35:26] As we kind of wrap up this Instagram leg of your career, is there anything that you think I might have missed or kind of, like, lessons that you learned from this part of your career?
+
+James:
+
+[35:35] Yeah, no. You know, I. I think that the one thing that I remember is, like, you know, when I came into Instagram, it was a different company. Everyone’s nervous when they go into a new job. And they brought me in right when engineering teams start to break. But, like, these weren’t breaking. And I was very confused at the beginning, and I was starting to feel like I was a dinosaur. I’m like, wait, you know, this is all working.
+
+[36:01] This isn’t breaking. Like, what kind of management voodoo is going on here that I don’t understand? And then about 150 to 200 engineers just started breaking, and I’m like, oh, wait, these people are so smart, they’re able to IQ their way past, like, that normal barrier. Because what usually breaks is communication lines. Like, you have to hold a lot of stuff in your head, use face, familiarity with people.
+
+[36:25] It’s called, you know, Dunbar’s number, all that stuff. But, like, the people were just so gifted and smart at Instagram, they were able to IQ past that. Plus, the great thing, the reinforcing thing about Instagram was the best software is built by people who use it. And, like, everyone in Instagram was a power user, right? Like, and even if you go back to Boomerang, do you know. Do you remember Boomerang?
+
+[36:51] When it first came about, it was. I think it was an intern. Tim Leonardo, I think, was the intern. He went and built it as a hackathon in, like, three days. Like, one of the most engaging features the Instagram released was a hackathon built by an intern in three days. Like, it’s just amazing to work in a team where you’re the primary customer and you’re building stuff for yourself. So anytime you can do that, like, that’s awesome.
+
+
+## 37:16 — Leading Cryptocurrency project at Meta
+
+
+Ryan:
+
+[37:16] Moving to the next part of your career. I saw you. I remember when I joined Instagram, all these very high profile people were leaving Instagram to work on Novi. It was the hot, hot project at the time. I was thinking, oh, wow, this, this new crypto thing must be really big. And so, yeah, what drew you to working on Novi or the crypto project at Meta? And what was the impact you saw on it?
+
+James:
+
+[37:42] So inside Meta, I had met David Marcus. David was running messenger at the time and we had just met, but he’s like, hey, I want to run something by you. And I went. And he was like, don’t tell anyone, but I’m going to leave messenger and this is what I’m going to do. And this is my first meeting with David. And he’s like, I’ve heard good things about you. Would you consider coming and running the engineering aspect of this?
+
+[38:08] And he was selling me this crazy crypto story, like, and I loved Instagram, right? And I was like, you’re insane. Like, that’s a crazy thing. Why would I go join that? And like, I just couldn’t get it out of my head. And then like the next day it started hitting me like, oh, wait, this is an area for impact. And so I went back the next day and David was kind of grinning and he was like, I knew you’d be back.
+
+[38:35] And he’s like, he called it, he’s like, I call this Dementel virus. He goes, it takes about 24 hours for to infect people. People. And then they get it. And I was like, darn you, David. And long story short, I’m like, okay, I’m gonna come start this. I was heavily invested in the mission, which was financial inclusion and bringing safety and low cost money movement to people around the world that needed it.
+
+[39:03] And I loved that idea. And I remember telling my product partner, Kevin Weil at the time, hey, I think I’m gonna go do this. And he, I explained it to him and he was kind of like, had that same look I had. And then like the next day he throws a 30 minute meeting on my calendar. And I’m like, oh, he’s gonna try and talk me out of this. And he comes in, he goes, I think I gotta go do this too.
+
+Ryan:
+
+[39:30] What?
+
+James:
+
+[39:32] Like, oh, this is gonna be tricky. So I connected him with David and I’m like, great, this is gonna be a tricky one to navigate, but it well, and you know, we went over and started the Libra project at the time.
+
+Ryan:
+
+[39:44] How did the project go and you know, what were the pivotal points in it?
+
+James:
+
+[39:47] Oh man, I think it’s pretty public how that project went. Like we, we weren’t able to ship it right. Like it was. There was a lot of pressure on, on Facebook at the time, just political, political and regulatory. And like they weren’t excited about us, what their view was as thinking we’re going to rewrite currency. It’s like not what we were doing, but like there was not a lot of strong understanding on the government.
+
+[40:11] They’re not the best, deepest technologists, but they didn’t want us to release this. And it was a shame. David tried to do this like the right thing. He’s like, we announced what we were going to do, that we were going to work with regulators and everything. In retrospect, we probably should have just released it and asked for forgiveness. But that sort of put us into a tailspin where we had to keep re architecting the project to be regulatory compliant and took us years to do that.
+
+[40:42] And ultimately we got it to the point where even the government said this was the platinum version of stablecoin, but they still didn’t want us to release it. And I think that’s when we gave up. And we were a pretty big org by then. I think we were like 3,500 people. And yeah, they put all payments and everything under David at that point. And I think in a funny moment David came to me. Well, I’m like, I can’t keep doing this.
+
+[41:13] I’m going to go do something different. And I loved David and, you know, felt like he was a friend. I didn’t want to let him down. So it took me a couple of weeks to get the courage up and practice my resignation. And I was ready. And I’m like, I’m gonna go in our one on one, here’s my story. I’m gonna give them all the time, but tell them I need to move on. I go in there and I sit down and David goes, well, before we get into whatever you want to get into, I have some news to share with you.
+
+[41:40] I’m like, what? And he’s like, I’m gonna leave. That’s what I was gonna tell you. I’m like, what are you gonna do? And he’s like, I think I’m gonna go get into my entrepreneurial roots. I’m like, how? And like, one thing led to another. We kept talking and I ended up leaving Meta for a couple of years. And I went and started lightspark with David because I was invested in this mission of. And that’s what like, Spark’s doing.
+
+[42:03] And I love it. It’s just an amazing mission of, like, you know, the way I think about it is finance is the last area for disruption, you know, But I do think, like, the cost and latency of moving value globally needs to go to zero. Because when it does that, when you can move money, like packets of information, like you can stream money, you can move at low cost to areas that need it, it’s just going to be revolution.
+
+[42:27] I have no doubt that that’s going to happen at some point.
+
+
+## 42:30 — What he is working on now
+
+
+Ryan:
+
+[42:30] And so you were working in the crypto space and now you’re working in AI. What made you leave the crypto space if you know there’s impact there?
+
+James:
+
+[42:41] Yeah, first off, I’m like a crypto skeptic. I never was a buyer into all of this stuff, but I do think that it’s really good for money movement and as a base la. So what happened there was like, I was working and I co founded lightspark and David wanted to do it in la, so I figured I’d move down there. I commuted for two years down there and I formed a team and built it. And I was kind of like at a point where the team was formed.
+
+[43:11] I’m commuting three days a week. I didn’t feel like I was adding a lot of value until we were at the next level of scaling. So I talked to David and, you know, David and I agreed, like, hey, yeah, fine, I’ll step back. And, you know, we’re, we’re, we’re very good friends. So it was like an easy conversation. I groomed a successor and stepped back. And at that time, Meta learned I was free. And they were like, hey, you know, we have a role we want to run by you, we hear you’re free.
+
+[43:42] And I’m like, I don’t know what I would, what that role would be that I’d be interested in. And they’re like, well, what about Dev infra, you know, like running all the developer infrastructure at Meta? And I’m like, oh, hold on, that’s my background. Like, I’m a developer tools person. That was the first 10 years of my career. Like, and it hit me like, oh, wait, what was I even doing at Instagram and all these things?
+
+[43:58] I’m a developer tools person. Like, that’s really what I want to do. And with AI coming into a picture, it was like, awesome. We get to go write science fiction stories about how developer productivity is going to be and go try to make that happen with unlimited resources. I’m like, sign me up for that. So I came back and I love that team. Dev Infra is amazing. And such a senior team, like 1,000 engineers building all of the developer tooling for inside Meta.
+
+[44:35] It was just amazing. I love that job. Did it for almost two years. And the only reason I left is because I had that observation and I had to go start this company.
+
+Ryan:
+
+[44:49] And what was the observation?
+
+James:
+
+[44:51] Well, so we built something internal called devmate. Devmate was an agentic platform that allowed engineers to sort of go learn from each other and then scale these agents. And these agents were working on tooling, not just coding. They were driving tools and doing all types of things. And it went viral internally. We couldn’t keep up with the demand. Within months, it needed an entire dev server per devmate instance.
+
+[45:22] And there are 40,000 plus engineers at Meta and pretty soon everybody wanted an instance and some of them wanted three instances. So you’re like, how do we allocate all dev server? But it was such strong pool. You’re like, oh, I see the dynamics that work here. Like 40,000 developers is fun, but it would be fun to go do this for 40 million. So we took a lot of these lessons and we’re like, yeah, we kind of think we see around the corner of what the world needs for this to work inside their companies.
+
+[45:57] And that led to the formation of Guild.
+
+Ryan:
+
+[45:59] When I look at the AI space, it feels like a bloodbath or it’s incredibly competitive. When you saw the space, I guess what, what gives you the confidence that you will compete well or what is the niche that you’re going to focus on?
+
+James:
+
+[46:15] First off, I don’t have the confidence, but I have the drive and I’ll tell you that much. It’s like I deeply believe that what we are building is needed. So there’s that. But I’m always looking out of the corners of my eyes of who else is building this and who might now execute. That’s just what an entrepreneur does. So if you look at a lot of the startups and a lot of the companies, I think a lot of them are building for the future past.
+
+[46:48] What I mean by that is they’re building for things that fill in gaps of what LLMs will probably be able to do. Like look at cursor, it’s autocomplete. Now LLMs are starting to get to be able to completely write code without an IDE it’s like, okay, you wrote you build a product on a bus stop, not where the end of the line is. You know, so what’s that end of the line and like what is needed regardless of all of that.
+
+[47:15] So what we’re building is a control plane and it’s a, it’s a layer of infrastructure that allows you to manage these agents inside a company. Like you know, your agents, if they’re rolling around in your infrastructure, you want to treat them like employees, right? Like some of them they, some of them you want to have access to things, some you want to restrict, you want to report on what they’re doing.
+
+[47:35] You need to observe auto. You don’t want one agent just like tanking your token budget. You need circuit breakers, you need a governance layer for that. Regardless of where this ends or which model company wins, you need this. Right? So we believe that we’re building something that’s needed and in any like scenario where anthropic or OpenAI or meta or somebody else wins, you just need this layer.
+
+[48:07] Let me paint you a vision of where I think like things are going to go. Okay? So I think a few years, like right now inside the company, you have a bunch of internal web applications, you have your HRIS systems and you know, your intranet and like developer like CICD tools and you have a lot of internal apps. I think there’s going to be a layer of like thousands of agents that will sit on top of this and help drive them.
+
+[48:33] Right. For example, we build an agent that we use on our own system here that basically doesn’t make duplicate bugs possible. Right. It’s really simple thing. It’s like you submit a get issue, it fires a webhook, our agent wakes up and goes, let me look and see if there’s one that’s like this and it just marks a duplicate and goes back to sleep. That’s different than a coding agent. Right. So you can imagine anywhere where there’s a tool integration prompts and evals.
+
+[49:04] You can go into design, you can go into product, you can go to hr. It’s just basically workflow management in a company. And that’s the thing where we think it’s going. But if that’s the case, then, you know, you’re just like people. You probably don’t want your engineers having access to your finance systems, you don’t want your finance people having access to your code base. Like, you know, all of these things you’re going to need to set up policies around and even like regulatory policies.
+
+[49:32] You’re going to need that, especially in a large public company. So you need layers to be able to enforce that. AI is non deterministic. Right. Like, it’s like you can’t guarantee what the outcome is based on any inputs. If you’re building a stable infrastructure layer, you need it to be deterministic. So you need to put a deterministic layer on top of this non deterministic technology. It’s the only way right now.
+
+Ryan:
+
+[50:00] Okay, so it’s almost like this harness that. Well, yeah, control plane is a great way to put it. Control plane for the agents within, maybe a corporate environment.
+
+James:
+
+[50:10] Centralize it. Like right now you see people using these AI agents. We had one customer that they have their developers running agents on their laptops. They don’t know where they’re running. This is one that blew through their token budget. One agent in 12 hours and they didn’t know. So you centralize that. Okay, here’s a central runtime. You make it so agents can work together in a secure way. So you put bubble wraps around them.
+
+[50:41] You don’t want these agents just yellowing at your infrastructure. Right. So you have to put control around them. I use this analogy. There’s this movie, Gremlins. You remember Gremlin?
+
+Ryan:
+
+[50:53] I haven’t seen it, but Gremlins.
+
+James:
+
+[50:55] Yeah, it was like this easy Spielberg movie where these little furry creatures started multiplying quick and they just were causing chaos in town, ticking over the electricity, power grids. Like AI agents are like that. Right. It’s like they’re just like, once they start multiplying and they’re like, you can’t predict what they’re doing. Like that’s a problem. So you need to be able to put a layer there that provides some predictability and control around that.
+
+[51:18] That’s what we’re building.
+
+Ryan:
+
+[51:19] Yeah. At this point I feel like you have so much management experience. So I wanted to discuss this high level management philosophy that I see in the industry, which is that I see that this Elon style, Elon Musk style of management is kind of like getting in the details, micromanaging. And I hear a lot of people who are against that as well and curious what side of that you’re on. And maybe we can discuss the pros and cons of each of the approaches.
+
+James:
+
+[51:52] Yeah, sure. Well, look, I think that there’s different tools for different jobs. And so what you’re describing when you talk about these two different management styles, they’re in two very different environments. And so I’m not a micromanager. But I’ve also been fortunate enough to have incredibly capable people to work with. So, you know, you can think of an org as a top down org, like where you have a leader with a very clear vision and he’s hired, you’re hiring a workforce, he or she’s hiring a workforce to help achieve that mission.
+
+[52:24] Or you know, you can be the opposite of that and consider yourself at the bottom of the org chart and you’re trying to act as a tool to help that team achieve their vision. That’s the one. I am. Now that being said, there are times where if your team isn’t performing and I’ve inherited some teams that were not working well and things like that, where I’ve had to go in and micromanage, but not for long.
+
+[52:56] You want to only use it as a tool in my opinion, to fix things and then step back out of that. I think that our job in technology is a creative. This is a creative job. You don’t know what it looks like. Often you just know what outcome you want. And if you’re going to do that, you have to free people. You don’t want to hire smart people and think for them. You want to just focus them on the outcomes.
+
+[53:26] You want to like clear what’s blocking them. You want to be able to probe and like ask great questions and course correct them. But if you start micromanaging really smart people, you’re going to lose them. Now if you look at some of these classic examples that you mentioned, like Elon and stuff like that, think there was a lot of, lot of lost a lot of smart people that weren’t willing to work in that environment.
+
+[53:51] But I didn’t understand the environment. Maybe it was necessary. I can’t speak to that. I’ve built my career around hiring really smart people much smarter than me and getting out of their way and just supporting them, you know, trying to make them, give them the space to be the best that they’re at. And so I think, you know, not saying there isn’t room for this micromanagement, like get down into the details, you need to do that every once in a while.
+
+[54:21] But like that’s not. If you just, that’s your only mode of operation, that’s your only tool. It’s only good for a very specific thing.
+
+
+## 54:29 — Career regrets
+
+
+Ryan:
+
+[54:29] When you look back on your, your whole career, is there any career regret that comes to mind that you think other people could learn from?
+
+James:
+
+[54:37] Oh man. So yeah, there’s a lot actually. And I wouldn’t say they’re regrets. Because, like, I’m pretty happy where I’m at and, like, everywhere led me here. So, like, you have to also look back and go, I’m not going to punish myself over mistakes if you’re happy where you’re at. I’ll tell you things though, that, like, I wish I would have known or I wish I would appreciated when I was younger is like, I’m.
+
+[55:01] I’m not an intern age anymore. I’m a little older and, you know, time is my scarce commodity now. Like, so back when I was younger, it was okay to like, beat my head against a wall for six, seven years. I’m like, I have all the time in the world. I would like to have that time back and spend it well. So, like, be sure you’re doing what you love and be sure you’re having good days, because that’s really your scarce commodity, you know, so that’s one thing.
+
+[55:29] Go where the smart people are. Like, I learned this by accident. Like, I was fortunate enough to get recruited into Netscape and Borland, like, where all the smart people were, like, going there really helped build me a network that’s just, you know, people, the early engineers at Netscape and Borland are kind of like owning the Valley now and Marc Andreessen and, you know, so. So that, that’s also good.
+
+[55:55] And that’s where I got the best mentors and learned the most. And I’d say one simple tactical one. If you’re just starting at a company like this may sound silly, but I would say I wish I would have just maxed out my 401k on day one. Like, just go, max out your 401k. It sounds like, like, you’re going to get a reduction in salary and you may not be starting out at high, but trust me, you’ll forget it.
+
+[56:17] But, like, when you’re my age, that there’s going to be a giant amount of money. I wish I would have done that earlier. So that’s the other tactical thing I would do.
+
+
+## 56:27 — Advice for his younger self
+
+
+Ryan:
+
+[56:27] If you could go back to the beginning of your career and give yourself some advice, knowing everything you know now, what would you say?
+
+James:
+
+[56:34] I would speak up more. Like, you know, I. I remember thinking, being afraid to speak up because, like, I was worried that people would think I was an idiot. But it turns out that, like, those are the people now that I notice are the people that even if what they say is off, they’re not afraid to speak up. So speak up. Like, be curious. Like, I wish I would have networked more and asked people like, more about what they were doing.
+
+[57:01] And, you know, one simple thing is, like, it didn’t occur to me. It’s sort of a version of go where the smart people. Or like, I was seven years in Pennsylvania working. That’s where I’m from. It didn’t occur to me to, like, go to, like, I got recruited into Borland. But, like, in retrospect, it was like if I were an actor and like, it didn’t occur to me in seven years to go try Hollywood. It’s like, you know, it made all the difference was getting into the Valley where there was so much opportunity and resources.
+
+[57:31] I wish I would have done that earlier.
+
+Ryan:
+
+[57:34] That makes sense. Awesome. Well, thank you so much for your time, James. I really appreciate it. It was great to meet you.
+
+James:
+
+[57:39] Yeah, great. Thanks for taking the time. It’s a fun conversation.

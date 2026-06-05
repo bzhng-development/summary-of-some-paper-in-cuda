@@ -1,0 +1,78 @@
+Philip Su is one of the rare software engineers who reached the Distinguished Engineer (IC9) level. Because he was early at Facebook and performing at such a high level he had interesting stories about people like Mark Zuckerberg and John Carmack.
+
+His career arch was roughly the following:
+
+  - Grew very fast to ~IC7 (Senior Staff Eng) equivalent at Microsoft
+
+Grew very fast to ~IC7 (Senior Staff Eng) equivalent at Microsoft
+
+  - Joined Facebook as an IC7 then got promoted to Distinguished Eng (IC9)
+
+Joined Facebook as an IC7 then got promoted to Distinguished Eng (IC9)
+
+  - Left and joined OpenAI before it was big
+
+Left and joined OpenAI before it was big
+
+He was promoted to IC9 at Meta by founding and scaling the company’s London office. He scaled the team there from around a dozen engineers to 500+ which gave him the blast radius to have IC9 impact.
+
+I interviewed him to hear everything he had to say about career growth and what he learned along the way. The full conversation is available wherever you get your podcasts (YouTube, Spotify, Apple Podcasts).
+
+Here are a few interesting takeaways from our conversation:
+
+  - Working with Mark Zuckerberg and John Carmack - Philip said that what made Zuck outstanding was his constant devotion to growth and shared a personal story. Also John Carmack was one of the most impressive engineers he worked with because of his prolific engineering ability. Carmack could drop into a codebase he knew nothing about and give excellent feedback.
+
+Working with Mark Zuckerberg and John Carmack - Philip said that what made Zuck outstanding was his constant devotion to growth and shared a personal story. Also John Carmack was one of the most impressive engineers he worked with because of his prolific engineering ability. Carmack could drop into a codebase he knew nothing about and give excellent feedback.
+
+  - How to write well - Philip is an excellent writer, so I asked him how he improved. His number one tip was that to write well, you need to read examples of good writing. Then you can take inspiration from that writing to improve your own.
+
+How to write well - Philip is an excellent writer, so I asked him how he improved. His number one tip was that to write well, you need to read examples of good writing. Then you can take inspiration from that writing to improve your own.
+
+  - What IC9 expectations look like - Expectations at the highest levels are based on the blast radius you have and what you can guarantee the success of. His example for IC9 in his case was that he was responsible for the success of a 500+ engineer site.
+
+What IC9 expectations look like - Expectations at the highest levels are based on the blast radius you have and what you can guarantee the success of. His example for IC9 in his case was that he was responsible for the success of a 500+ engineer site.
+
+  - Qualitative feedback drives the highest-level promotions - He shared that promotion at the highest levels is not a checklist of quantitative points. At some point, you need the judgment of someone at a higher level to explain what makes that person’s work special.
+
+Qualitative feedback drives the highest-level promotions - He shared that promotion at the highest levels is not a checklist of quantitative points. At some point, you need the judgment of someone at a higher level to explain what makes that person’s work special.
+
+  - IC vs EM commonalities for generalists - Philip switched between IC and EM six times in his career. He mentioned that for generalists, there is a lot of commonality between management and tech leadership. This kept the door open and allowed him to switch roles based on business need and personal enjoyment.
+
+IC vs EM commonalities for generalists - Philip switched between IC and EM six times in his career. He mentioned that for generalists, there is a lot of commonality between management and tech leadership. This kept the door open and allowed him to switch roles based on business need and personal enjoyment.
+
+  - Getting demoted from IC9 -> IC7 - Philip eventually requested a demotion to IC7 because he wanted to do more technical work. The demotion helped relieve him from the pressures of the high expectations of IC9 and allowed him to switch roles.
+
+Getting demoted from IC9 -> IC7 - Philip eventually requested a demotion to IC7 because he wanted to do more technical work. The demotion helped relieve him from the pressures of the high expectations of IC9 and allowed him to switch roles.
+
+  - Where generalists are better than specialists - Philip mentioned that he believes generalists are much more effective at smaller companies. Once companies get larger though, specialists have more potential since they can go as deep as they want.
+
+Where generalists are better than specialists - Philip mentioned that he believes generalists are much more effective at smaller companies. Once companies get larger though, specialists have more potential since they can go as deep as they want.
+
+If you found anything above interesting, you can hear it in more detail in the podcast. You can listen to it wherever you prefer getting your podcasts:
+
+  - YouTube
+
+YouTube
+
+  - Spotify
+
+Spotify
+
+  - Apple Podcasts
+
+Apple Podcasts
+
+And for more from Philip, check out his podcast and socials below:
+
+  - LinkedIn
+
+LinkedIn
+
+  - Peak Salvation podcast he referenced
+
+Peak Salvation podcast he referenced
+
+If you have any questions for me or future guests, feel free to drop them here. I will use these questions to make future content so I can answer the questions you care about most.
+
+Thanks for reading,
+Ryan Peterman

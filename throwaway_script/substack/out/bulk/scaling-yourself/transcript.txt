@@ -1,0 +1,60 @@
+👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups, and career growth. Thank you for your readership, we hit 51,000 readers this week 🙏 🎉
+
+This week, I wrote about how to scale yourself which is a necessity for growth to Staff. If you find the post helpful, please share it with your friends and coworkers. Enjoy!
+
+My manager told me my main gaps in growing to Staff were all similar; I needed to “scale myself”. This differed from what helped me grow my career up to that point. That’s why failure to do this is one of the most common blockers for promotion to Staff. It requires a mindset shift.
+
+Instead of doing everything yourself, you need to multiply your impact through others. Let’s break down the idea of what “scaling yourself” means so you don’t get blocked like most engineers do.
+
+The key to scaling yourself is to expand who or what can do impactful work on your behalf. This allows you to have more impact without more time investment. Here are some of the ways you can scale yourself:
+
+
+## 1. Influence & Delegation
+
+
+Find impactful problems and guide others on how to solve them. This scales well since it often takes much less time than writing the code yourself.
+
+It’s natural to wonder if you deserve credit for projects that others complete. The best test for this is to think about what would have happened if you weren’t there. If the work got done only because of your involvement, then you deserve credit. This is how some tech leads write little code yet still have a lot of impact.
+
+I’ve written about finding problems and influencing others to pick up your projects. These should help you learn this critical behavior.
+
+
+## 2. Knowledge Sharing
+
+
+> Lao Tzu: “Give a man a fish, and you feed him for a day; teach a man to fish and you feed him for a lifetime.”
+
+Lao Tzu: “Give a man a fish, and you feed him for a day; teach a man to fish and you feed him for a lifetime.”
+
+Sharing technical knowledge helps others have more impact without your continued time investment. This approach scales by how many people you grow and by how much. There are many ways to do this, here are a few examples that scale well:
+
+  - Giving Tech Talks - This scales well since each additional attendee costs no extra time. You can also record the talk to expand your reach.
+
+Giving Tech Talks - This scales well since each additional attendee costs no extra time. You can also record the talk to expand your reach.
+
+  - Writing - Answering common questions in public Q&A forums or wikis scales well since people can learn from your writing without your involvement.
+
+Writing - Answering common questions in public Q&A forums or wikis scales well since people can learn from your writing without your involvement.
+
+  - Code Review - Each review is an opportunity to give feedback so that others will write better code even when you’re not around.
+
+Code Review - Each review is an opportunity to give feedback so that others will write better code even when you’re not around.
+
+  - Hosting Office Hours - If you get a lot of requests for hands-on support, you can batch all the requests together during office hours.
+
+Hosting Office Hours - If you get a lot of requests for hands-on support, you can batch all the requests together during office hours.
+
+
+## 3. Building Tooling
+
+
+Developer tooling scales well since it costs nothing to share with others. Next time you build a tool for yourself (e.g. scripts, testing tools, visualizers) think about how you can package it so others can benefit too. The impact of your tool scales with the number of people that use it. For more about tooling, take a look at this article about when to build tooling and how to maximize its impact.
+
+If you scale yourself right, you’ll have much more impact without investing more time. This behavior is sustainable which is part of why it is needed for growth to the Staff level.
+
+For those of you who are more junior, try to apply (2) or (3). Don’t just solve problems for yourself. Get more impact out of the time you spend by sharing knowledge and tools that help you move faster.
+
+If you found this useful, please share it with a friend and consider subscribing if you haven’t already.
+
+Thanks for reading,
+Ryan Peterman

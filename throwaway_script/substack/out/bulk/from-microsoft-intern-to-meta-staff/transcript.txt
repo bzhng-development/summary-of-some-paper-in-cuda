@@ -1,0 +1,309 @@
+👋 Hi, this is Ryan with another edition of my weekly newsletter. Each week, I write about software engineering, big tech/startups and career growth. ​​Thank you for your readership, we hit 29,000 readers this week 🙏 🎉
+
+Today’s post is an engineering career story from Raviraj Achar who is a Staff Engineer (E6) at Meta. He shares his story of growth from being an intern at Microsoft all the way to Staff. If you’re new to FAANG levels, here’s a side-by-side comparison from levels.fyi that shows his journey:
+
+What sets his story apart is how transparent he is about what didn’t go well with actionable learnings for all levels.
+
+For more from Raviraj, I recommend you subscribe to his newsletter, Tech Lead Mentor and follow him on LinkedIn.
+
+Also if you like the content, please share it with your friends and coworkers. Enjoy!
+
+I am a Staff Engineer (E6) at Meta. I work in an infrastructure team (i.e. Meta's internal cloud) that enables microservices to communicate with each other. I completed my Masters at Georgia Tech, interned at Microsoft, and worked there full-time for 4 years before joining Meta.
+
+I don't consider myself exceptionally smart, but I believe I am hardworking. I have made mistakes, faced imposter syndrome, and held myself back due to self-doubt. I didn't possess all the qualities required to be a Staff Engineer initially; I had to acquire them over time. If you feel stuck for similar reasons, I hope my story can inspire you to overcome challenges and grow quickly.
+
+I will share my journey going from a new graduate → mid-level engineer → senior engineer, and eventually to a staff engineer. The story is divided into the following chapters:
+
+  - Microsoft Internship
+
+Microsoft Internship
+
+  - Microsoft (Level 59 -> 62): Growth and taking feedback
+
+Microsoft (Level 59 -> 62): Growth and taking feedback
+
+  - Mid-level @ Meta (E4 -> E5): Finding my place
+
+Mid-level @ Meta (E4 -> E5): Finding my place
+
+  - Senior @ Meta (E5): Becoming a leader
+
+Senior @ Meta (E5): Becoming a leader
+
+  - Journey to Staff @ Meta (E5 -> E6): Learning Staff behaviors
+
+Journey to Staff @ Meta (E5 -> E6): Learning Staff behaviors
+
+
+## Microsoft Internship (2011)
+
+
+I did my Master's in Computer Science, focusing on distributed systems. I was thrilled when I got an internship at Microsoft even though it wasn’t in distributed systems. I worked on adding a new feature called "Auto Collage" to Windows Photo Gallery. This feature would allow the app to take multiple pictures and generate a beautiful collage. The app was a Win32 desktop application written in C++ (pre C++ 11).
+
+On my first day, my mentor asked me to explain how one of our team’s features worked. I spent the entire day trying to understand the code. When the time came, I shared with my mentor what I learned and where I struggled. To my relief, my understanding exceeded his expectations. This positive start made me more comfortable reaching out to him sooner thereafter.
+
+After a few minor changes and a couple of weeks, I sent a giant code change for review to establish the groundwork for the feature. I got around 120 comments on it. There were a bunch labeled as “nits”. This made me think I was good for nothing and wouldn’t get the return offer. However, after resolving the comments and landing the change, my mentor appreciated my attention to detail.
+
+> What? He made 100+ comments and liked my attention to detail. Why!
+
+What? He made 100+ comments and liked my attention to detail. Why!
+
+That taught me that feedback (even nitpicks) is a part of learning and receiving feedback does not mean everything else I am doing is wrong.
+
+At the end of the internship, I got a return offer. I was too lazy to look for a "distributed systems" job that I wanted and enjoyed my experience working in the Photos team, so I decided to join them.
+
+Takeaways
+
+  - Don't be afraid of the number of comments you receive in your first set of code reviews. In retrospect, I can see how his feedback helped bring attention to complex things that I overlooked. It saved me time dealing with bugs later!
+
+Don't be afraid of the number of comments you receive in your first set of code reviews. In retrospect, I can see how his feedback helped bring attention to complex things that I overlooked. It saved me time dealing with bugs later!
+
+  - If you are concerned about your performance, it is natural. It simply means you are motivated to excel. Ask your mentor for feedback, and they should either mitigate your worries or give you actionable feedback to improve.
+
+If you are concerned about your performance, it is natural. It simply means you are motivated to excel. Ask your mentor for feedback, and they should either mitigate your worries or give you actionable feedback to improve.
+
+
+## Microsoft (Level 59 -> 62 | March’12 - April’16)
+
+
+The rest of the team was wrapping up Windows 8 Photos, so I was assigned to a couple of siloed projects. I was responsible for shipping the RAW image codec via Windows Update and making it work on Windows 8 ARM devices (with SSE to Neon translation).
+
+We had a tight deadline, but I finished those projects ahead of schedule. I took ownership of the entire process and learned a lot. I was overwhelmed by the information overload, so I ended up overworking myself during the first two months. I was doing a lot of learning on the side to “catch up”.
+
+Since I finished early, I was asked to prototype the next version of the Photo Editor. That went quite well. In fact, this opportunity opened up more opportunities for many other critical projects.
+
+Two incidents that left a mark:
+
+  - I spent a week chasing a very elusive memory leak in the codec - That alone significantly stretched the limits of my understanding. I learned a lot from this in hindsight.
+
+I spent a week chasing a very elusive memory leak in the codec - That alone significantly stretched the limits of my understanding. I learned a lot from this in hindsight.
+
+  - Accidentally broke the Windows build - I was scared when it happened, but later it turned out to be just okay. It taught me to stay calm when you mess up and do your part to clean up, and prevent it from happening again.
+
+Accidentally broke the Windows build - I was scared when it happened, but later it turned out to be just okay. It taught me to stay calm when you mess up and do your part to clean up, and prevent it from happening again.
+
+
+## Receiving Tough Feedback
+
+
+A year later, I was working with a lot of people. In one of my performance reviews, I received critical feedback that I didn't "listen" and someone found it hard to get their point across. It felt devastating to hear that feedback. I even denied it. Fortunately, I had a good manager who helped dissect the feedback and also taught me how to take feedback. The issue boiled down to me getting defensive or using trigger words like responding with a "no" and cutting off people before they finished. With their help I fixed the problem and I have shared the story in depth here.
+
+The first three years were great. However, I felt I had stopped learning. My projects and challenges became repetitive, and with a re-org and constant replanning, I realized it was time for a change. This time, I was determined to find a team in distributed systems.
+
+Takeaways
+
+  - Finishing your projects quickly and with high quality will build credibility. This leads to more opportunities.
+
+Finishing your projects quickly and with high quality will build credibility. This leads to more opportunities.
+
+  - When you encounter hard engineering problems try to fix it yourself. This will fast-track your technical skill growth.
+
+When you encounter hard engineering problems try to fix it yourself. This will fast-track your technical skill growth.
+
+  - When someone shares feedback, take it with an open mind. Your instinct will tell you to deny it but pause and listen. Seek improvements and act on them.
+
+When someone shares feedback, take it with an open mind. Your instinct will tell you to deny it but pause and listen. Seek improvements and act on them.
+
+  - When your job gets repetitive and devoid of new challenges, you have stopped learning. If that happens and your career goals can’t be met there, then it’s time to move. It is always scary to leave your comfort zone, but it will be fine.
+
+When your job gets repetitive and devoid of new challenges, you have stopped learning. If that happens and your career goals can’t be met there, then it’s time to move. It is always scary to leave your comfort zone, but it will be fine.
+
+
+## Mid-level @ Meta (April’16 - Dec’17)
+
+
+I finally joined a hardcore distributed systems team like I wanted since college. This team managed Zookeeper for Meta and enabled service discovery for microservices running inside the Meta cloud. I got what I wanted. Yayy!
+
+
+## Feeling Out of Place
+
+
+Oh boy! I was overwhelmed by ‘geeks' around me. I had no real Linux experience and the domain discussions made no sense. The only intersection between my previous job and this one was C++. Heck, I didn’t even touch type at that time and with open offices I felt all my shortcomings were publicly visible. I felt out of place. Imposter syndrome kicked in hard!
+
+I faked not feeling overwhelmed by focusing on two things
+
+  - Finishing tasks fast with high quality and volunteering for more tasks.
+
+Finishing tasks fast with high quality and volunteering for more tasks.
+
+  - Learning about Zookeeper and digging into the code base.
+
+Learning about Zookeeper and digging into the code base.
+
+The ramp up was steep but it was fun. By the end of 2016 I got over these onboarding hurdles and even gave a talk at a Zookeeper summit.
+
+
+## What Got Me To Senior
+
+
+2017 was an interesting year for me. My main project in service discovery got canceled by the end of Q1 due to my mistake. I was focused on adding ‌functionality instead of how impactful it was to the company. The cancellation was upsetting but it taught me to “focus on impact”. At that time, reducing costs was what mattered most.
+
+So for the remainder of the year, I solved problems that had a real impact. I found plenty of opportunities in the service discovery area. I also became the go-to person for several areas of the team and mentored new hires. I actively drove the team's direction and played a key role in developing the plan for the upcoming half. As a result, I received the highest rating at Meta, Redefines Expectation (top 1% of ratings), and was promoted to E5. You can read the full story here.
+
+Takeaways
+
+  - When you feel like an imposter, focus on what you can accomplish. At E4, pace through your deliverables and slowly work through your learning backlog.
+
+When you feel like an imposter, focus on what you can accomplish. At E4, pace through your deliverables and slowly work through your learning backlog.
+
+  - Understand what impact means for your team and company. It can be very temporal and change due to various factors. So, adjust your plans accordingly.
+
+Understand what impact means for your team and company. It can be very temporal and change due to various factors. So, adjust your plans accordingly.
+
+  - Identify and act on problems that are affecting the team's reliability, scalability, and operations. Strong ownership is key to getting to senior.
+
+Identify and act on problems that are affecting the team's reliability, scalability, and operations. Strong ownership is key to getting to senior.
+
+
+## Senior (Jan’18 - March’19): Becoming a Leader
+
+
+Our team had an ambitious goal with multiple projects that would help us achieve it. A couple months in, we learned we severely underestimated the most important project. We needed more people, so I paused what I was working on to help with the main one.
+
+This new scope was ambiguous, so I just started by adding a bunch of integration and load tests. This surfaced a bunch of bugs and showed us that we needed to add special load shedding and rate limiting mechanisms. I built those and fixed more bugs.
+
+We also needed to frequently communicate our project status, and I volunteered to take that up as well. Next, I took on project management and helped generate scope for more engineers in my team on this project. This was the first time I had taken on project management of this scale. That took a lot of my time, and I felt like I was not coding enough. I did not know how to handle that feeling and simply overworked myself to make both things happen.
+
+Gradually, we had 5 people working on this project and it ran for over a year.
+
+Takeaways
+
+  - Easiest way to find scope is to take up stuff related to testing and trying to hit milestones sooner. Bug fixes & feature gaps are a nice way to find your own work.
+
+Easiest way to find scope is to take up stuff related to testing and trying to hit milestones sooner. Bug fixes & feature gaps are a nice way to find your own work.
+
+  - The feeling of not coding enough is pretty common among new tech leads. It will go away. You will soon learn how to quantify leadership work against other coding tasks.
+
+The feeling of not coding enough is pretty common among new tech leads. It will go away. You will soon learn how to quantify leadership work against other coding tasks.
+
+
+## Troubles Growing to Staff
+
+
+I had become the go-to person for many of the team's areas. I improved our wikis and processes, handled many incidents, supported my peers, mentored engineers to be better mentors, resolved many cross team (XFN) issues, conducted tech talks, and presented team plans to senior leadership. I even received feedback appreciating how I led the team well and built a great culture.
+
+So you may think that I became Staff after that, right? No.
+
+During this time, I cycled through three managers and also lacked a Staff-level mentor which posed a challenge of its own. The conversation about my promo never actually happened either. To be honest, I was also afraid of failing at the next level and wasn’t sure if I was ready. I wrote about my struggle in a previous article.
+
+Some of the feedback that I received was along these lines:
+
+  - While I was a solid leader within my team, I was not seen as a Staff-level leader outside the team.
+
+While I was a solid leader within my team, I was not seen as a Staff-level leader outside the team.
+
+  - I should have handled some complex XFN with better empathy. This didn’t make sense to me then but I agree now.
+
+I should have handled some complex XFN with better empathy. This didn’t make sense to me then but I agree now.
+
+  - I had to be OK with ambiguity and I had to build a multi-year vision for the team.
+
+I had to be OK with ambiguity and I had to build a multi-year vision for the team.
+
+I didn’t know how to close these gaps. In retrospect, I didn’t have all the help I needed.
+
+Takeaways
+
+  - When dealing with no managers or poor managers, seek support from your skip-level manager and other managers in your organization. When your manager changes, you need to rebuild your credibility again. So if other leaders in the organization can speak well about you, that will help.
+
+When dealing with no managers or poor managers, seek support from your skip-level manager and other managers in your organization. When your manager changes, you need to rebuild your credibility again. So if other leaders in the organization can speak well about you, that will help.
+
+  - If you believe you are ready for a promotion but receive vague feedback, respectfully dig in. Ask for tactical action items you can work on.
+
+If you believe you are ready for a promotion but receive vague feedback, respectfully dig in. Ask for tactical action items you can work on.
+
+
+## Journey to Staff (March’19 - Dec’20)
+
+
+Some people talk about projects that got them promoted to Staff, but that is wrong. Staff promotions are all about having the right set of behaviors.
+
+
+## The Right Mentor
+
+
+We hired a very experienced engineer (E6+) and they were a great mentor to me. Let’s call them “TL” for simplicity. TL and I partnered together on a lot of things. For instance, I watched them handle a very difficult XFN situation well. It seemed the outcome would force us to make our system less “efficient”. TL was direct but respectful with the partner team. There was a lot of metaphorical yelling and disagreements before things settled. These discussions ran for weeks but eventually we arrived at a solid conclusion. In fact, it spun up a huge project that the TL owned thereafter and branched out of the team.
+
+TL made it happen with their people skills. I had a cockpit view of how they mitigated a sour relationship. This taught me some valuable lessons:
+
+  - Some agreements take time & intentional effort to resolve by even pausing your main “project”.
+
+Some agreements take time & intentional effort to resolve by even pausing your main “project”.
+
+  - You cannot predict the outcome with these so it would feel like a gamble. You have to be brave to accept a potential failure with these ambiguous explorations.
+
+You cannot predict the outcome with these so it would feel like a gamble. You have to be brave to accept a potential failure with these ambiguous explorations.
+
+  - Empathize with the opposing views. Sometimes you need to make decisions that seem "wrong," but in reality, they are the right trade-off overall.
+
+Empathize with the opposing views. Sometimes you need to make decisions that seem "wrong," but in reality, they are the right trade-off overall.
+
+TL and I also worked together on defining an ambiguous problem. I had the technical depth and got help in solidifying the problem statement. I learned:
+
+  - Technical writing is hard and takes a lot of time to craft the message correctly
+
+Technical writing is hard and takes a lot of time to craft the message correctly
+
+  - How to quantify the non-coding leadership tasks and feel good about the time I spend
+
+How to quantify the non-coding leadership tasks and feel good about the time I spend
+
+  - How to rally a team full of smart senior engineers to buy into the problem and potential solution that would take a long time to build.
+
+How to rally a team full of smart senior engineers to buy into the problem and potential solution that would take a long time to build.
+
+That became the team’s main focus for the next couple of years, which I was the tech lead for.
+
+Our team also got a new manager that I worked closely with on my promo bar. I worked with them to convert all vague feedback into actionable next steps. Here’s an example of what I’d ask to get clarity: "I see this feedback, and I understand I should improve XYZ, but I don't know what I should do next. What would you do? Can you find some success stories that I could learn from?" Then we had a simple checklist that I could refer to.
+
+
+## Building Empathy
+
+
+One day, we received several escalations that AI workloads were being throttled by our system and they needed higher limits to meet their growing needs. Their requests were much higher than what we could safely support. The escalations were unstructured and I did not have a single point of contact to work with. Also, I could not simply "increase the limit" since it was not feasible, but I did not want to keep repeating that to them. Instead, I asked questions about how and why they needed a higher limit and the internals of their architecture. I provided a status update and asked questions in a broader forum, proposing alternatives, but also stating that I lacked context. This got me a strong senior point of contact from their side. That made things easier.
+
+They didn't have all the answers, but they listened. I listened. We did our homework. Both our teams had constraints. My team was already working on scaling but could only support what they needed 6 months down the line. They couldn't wait. After more investigation, I suggested a few tweaks to their architecture and made some short-term changes that allowed batching requests on our side to make it work for them for the next 6 months. The issue was mitigated, and I received huge kudos from that org.
+
+
+## Consistent Performance
+
+
+Promotions are lagging, so I needed to demonstrate continued Staff-level performance. I executed the team-wide project and also built the team's vision with org-level buy-in. There were more instances of exceptional cross-functional resolutions. For example, I bootstrapped a working group between my team and a customer to eliminate overload and improve our disaster readiness. I continued to support my team and partnered with the manager to keep the team running smoothly. I had established myself as a strong team leader even outside our org.
+
+I checked off items in my promo bar with solid impact, and as a result, I got promoted.
+
+Takeaways
+
+  - When there is unclear or no feedback, don’t assume that there isn’t anything to improve. Don’t make it difficult for your manager to share feedback. Instead, work with them to get a tactical growth plan.
+
+When there is unclear or no feedback, don’t assume that there isn’t anything to improve. Don’t make it difficult for your manager to share feedback. Instead, work with them to get a tactical growth plan.
+
+  - I learned the hard way that you can’t fix everything on your own. Learn from individuals who tackle complex and ambiguous problems better than you.
+
+I learned the hard way that you can’t fix everything on your own. Learn from individuals who tackle complex and ambiguous problems better than you.
+
+  - Writing is an important skill for a leader. You need it to share your vision for the product and resolve disagreements. Invest in it today.
+
+Writing is an important skill for a leader. You need it to share your vision for the product and resolve disagreements. Invest in it today.
+
+
+## What I’d Do Differently
+
+
+By no means is this story‌ complete. I made more mistakes and had more to celebrate than I have time for here. I tried to capture just the pivotal moments that shaped my career.
+
+As you can see, I didn’t have all the skills to be a Staff Engineer at first. I picked them up at different points in my career. Some I learned by trial & error and others through mentorship.
+
+Three pieces of wisdom I wish I'd understood better earlier in my career.
+
+Accept your fears: In my career, I felt nervous about projects, ideas, or XFN issues. Though it was my nature to hide my fears and appear confident. I couldn't have been more wrong. Being open about my feelings with my mentors and leaders would have helped me address my concerns sooner. They would have helped me spot gaps in my thinking or my approach, and given me the support to be brave.
+
+Be brave: Fear of failure held me back from taking bold steps. I was overthinking the risks and trying to suppress all my fears instead of addressing them. As a result, I accepted the status quo for too long, hesitated to propose ambitious projects, and failed to take calculated risks. In reality, when you take the first step with a good idea, others will follow, and your idea will gain momentum. There is a fine line between being rash and brave, but you can find the balance by asking for help.
+
+Ask for help: I didn't know how to identify things I needed help with. Asking for help is more than just posing a question to unblock yourself in the moment or seeking feedback for growth. It requires a great deal of introspection to discover where you struggle. I had trouble seeking help on how to build aggressive plans, how to mitigate major concerns, and with writing. However, I was lucky to have great mentors who identified where I struggled.
+
+Lastly, even though I dealt with imposter syndrome and didn't have all the skills I needed to be a Staff Engineer at first, working hard was the foundation for my growth.
+
+Hey Ryan here again. Thanks for reading! I hope you enjoyed Raviraj’s career story. We put a lot of effort into making it as actionable and high quality as possible. If you have any questions for Raviraj feel free to drop a comment for him here.
+
+If you enjoyed it, consider following more of Raviraj’s writing on his LinkedIn and Newsletter here:

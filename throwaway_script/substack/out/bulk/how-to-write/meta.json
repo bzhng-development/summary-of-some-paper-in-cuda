@@ -1,0 +1,436 @@
+{
+  "audience": "everyone",
+  "audience_before_archived": null,
+  "canonical_url": "https://www.developing.dev/p/how-to-write",
+  "default_comment_sort": null,
+  "editor_v2": false,
+  "exempt_from_archive_paywall": false,
+  "free_unlock_required": false,
+  "id": 140271212,
+  "podcast_art_url": null,
+  "podcast_duration": null,
+  "podcast_preview_upload_id": null,
+  "podcast_upload_id": null,
+  "podcast_url": null,
+  "post_date": "2024-01-05T14:01:29.763Z",
+  "updated_at": "2024-01-05T14:06:45.233Z",
+  "publication_id": 1340878,
+  "search_engine_description": null,
+  "search_engine_title": null,
+  "section_id": null,
+  "should_send_free_preview": false,
+  "show_guest_bios": true,
+  "slug": "how-to-write",
+  "social_title": null,
+  "subtitle": "",
+  "teaser_post_eligible": true,
+  "title": "How To Write",
+  "type": "newsletter",
+  "video_upload_id": null,
+  "write_comment_permissions": "everyone",
+  "meter_type": "none",
+  "live_stream_id": null,
+  "is_published": true,
+  "restacks": 17,
+  "reactions": {
+    "❤": 176
+  },
+  "top_exclusions": [],
+  "pins": [],
+  "section_pins": [],
+  "has_shareable_clips": false,
+  "previous_post_slug": "how-promotions-and-ratings-work",
+  "next_post_slug": "why-most-engineers-arent-10x-engineers",
+  "cover_image": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4b056c5e-e56d-45d4-9431-4c689bb8779d_701x477.png",
+  "cover_image_is_square": false,
+  "cover_image_is_explicit": false,
+  "videoUpload": null,
+  "podcastFields": null,
+  "podcastUpload": null,
+  "podcastPreviewUpload": null,
+  "voiceover_upload_id": null,
+  "voiceoverUpload": null,
+  "has_voiceover": false,
+  "description": "In 2018, Naval Ravikant wrote a famous thread about “how to get rich (without getting lucky)”. It’s worth reading if you haven’t yet. One idea from it changed the way I think about how to have more impact:",
+  "body_html": "<p>👋<em> Hi, this is&nbsp;<a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan</a>&nbsp;with this week’s newsletter. I write about software engineering, big tech/startups, and career growth. Thank you for your readership, we hit 41,000 readers this week </em>🙏<em> </em>🎉</p><p><em>This week, I’m sharing how to write for software engineers. If you find the post helpful, please share it with your friends and coworkers. Enjoy!</em></p><div><hr></div><p>In 2018, Naval Ravikant wrote a <a href=\"https://twitter.com/naval/status/1002103360646823936\">famous thread about “how to get rich (without getting lucky)”</a>. It’s worth reading if you haven’t yet. One idea from it changed the way I think about how to have more impact:</p><div class=\"captioned-image-container\"><figure><a class=\"image-link image2\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!C2_V!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbe76d564-b6af-455e-98f5-e113d894317c_1042x395.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!C2_V!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbe76d564-b6af-455e-98f5-e113d894317c_1042x395.png 424w, https://substackcdn.com/image/fetch/$s_!C2_V!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbe76d564-b6af-455e-98f5-e113d894317c_1042x395.png 848w, https://substackcdn.com/image/fetch/$s_!C2_V!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbe76d564-b6af-455e-98f5-e113d894317c_1042x395.png 1272w, https://substackcdn.com/image/fetch/$s_!C2_V!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbe76d564-b6af-455e-98f5-e113d894317c_1042x395.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!C2_V!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbe76d564-b6af-455e-98f5-e113d894317c_1042x395.png\" width=\"521\" height=\"197.5\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/be76d564-b6af-455e-98f5-e113d894317c_1042x395.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:395,&quot;width&quot;:1042,&quot;resizeWidth&quot;:521,&quot;bytes&quot;:69353,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:false,&quot;topImage&quot;:true,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!C2_V!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbe76d564-b6af-455e-98f5-e113d894317c_1042x395.png 424w, https://substackcdn.com/image/fetch/$s_!C2_V!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbe76d564-b6af-455e-98f5-e113d894317c_1042x395.png 848w, https://substackcdn.com/image/fetch/$s_!C2_V!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbe76d564-b6af-455e-98f5-e113d894317c_1042x395.png 1272w, https://substackcdn.com/image/fetch/$s_!C2_V!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fbe76d564-b6af-455e-98f5-e113d894317c_1042x395.png 1456w\" sizes=\"100vw\" fetchpriority=\"high\"></picture><div></div></div></a></figure></div><p>“Business leverage” helps us have more impact with less effort. To me, code and media stood out as the most actionable. I was already coding a lot, but I hadn’t thought much about creating media.</p><p>The most relevant media to create as a software engineer is writing. This is because of <a href=\"https://www.developing.dev/p/why-engineers-need-to-write\">its importance in our careers</a>. That’s why I started caring more about it and part of why I write this newsletter.</p><p>After writing for thousands of hours, I’ve made some adjustments to the basic writing process to improve my writing quality. As a refresher, here are the basic steps:</p><ol><li><p>Outline - create a bulleted list to structure your thoughts</p></li><li><p>Rough Draft - turn your outline into prose</p></li><li><p>Final Draft - polish your rough draft until satisfied</p></li></ol><p>There’s nothing wrong with this basic process, but it’s easy to make mistakes at each step. Here are the adjustments that I’ve made after some mistakes:</p><h4>1) Spend Extra Time on the Outline</h4><blockquote><p>“Measure twice, cut once”</p></blockquote><p>I’ve wasted a lot of time throwing away rough drafts that were off-track. Each time, I realized my thinking wasn’t clear in the outline. Now, I spend more time on the outline to make sure the draft will make sense.</p><p>It’s worth spending extra time here while you can make efficient changes. The outline is the most simple and malleable form of our writing.</p><h4>2) Don’t Sweat the Rough Draft</h4><p>It’s common to get blocked because your writing seems bad while creating the rough draft. This is expected though because it’s “rough”. I found that the best way to fight writer’s block is to get all the words down without thinking about quality yet.</p><h4>3) Polish Until Perfect</h4><p>Consider the read-to-write ratio for your writing. In most cases, your writing will be read orders of magnitude more times than it’s written. All future readers will benefit from your work to polish your words. Not to mention that it’s more satisfying to produce something you can be proud of.</p><p>I spend about 80% of my writing time polishing the final draft. I read it over and over trying to reduce clutter and make it easier to read. Here are a few tools that help me:</p><ol><li><p>For typos and grammar errors → <a href=\"https://www.grammarly.com/\">Grammarly</a></p></li><li><p>For making my writing easier to read → <a href=\"https://hemingwayapp.com/\">Hemingway (I aim for ~6th grade readability)</a></p></li><li><p>For rewordings → <a href=\"https://chat.openai.com/\">ChatGPT</a></p></li></ol><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!hV3R!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4b056c5e-e56d-45d4-9431-4c689bb8779d_701x477.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!hV3R!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4b056c5e-e56d-45d4-9431-4c689bb8779d_701x477.png 424w, https://substackcdn.com/image/fetch/$s_!hV3R!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4b056c5e-e56d-45d4-9431-4c689bb8779d_701x477.png 848w, https://substackcdn.com/image/fetch/$s_!hV3R!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4b056c5e-e56d-45d4-9431-4c689bb8779d_701x477.png 1272w, https://substackcdn.com/image/fetch/$s_!hV3R!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4b056c5e-e56d-45d4-9431-4c689bb8779d_701x477.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!hV3R!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4b056c5e-e56d-45d4-9431-4c689bb8779d_701x477.png\" width=\"551\" height=\"374.9315263908702\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/4b056c5e-e56d-45d4-9431-4c689bb8779d_701x477.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:477,&quot;width&quot;:701,&quot;resizeWidth&quot;:551,&quot;bytes&quot;:80037,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!hV3R!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4b056c5e-e56d-45d4-9431-4c689bb8779d_701x477.png 424w, https://substackcdn.com/image/fetch/$s_!hV3R!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4b056c5e-e56d-45d4-9431-4c689bb8779d_701x477.png 848w, https://substackcdn.com/image/fetch/$s_!hV3R!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4b056c5e-e56d-45d4-9431-4c689bb8779d_701x477.png 1272w, https://substackcdn.com/image/fetch/$s_!hV3R!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4b056c5e-e56d-45d4-9431-4c689bb8779d_701x477.png 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">A rough illustration of how much time I spend on each step</figcaption></figure></div><h3>The Ultimate Goal</h3><p>After some time, you’ll find a writing process that works best for you. The process itself isn’t as important; it’s just an implementation detail<em>. </em><strong>What matters most is to focus on being understood by the reader.</strong></p><p>There are two components to writing to be understood:</p><ol><li><p><strong>Make the reader want to read</strong> - Write in a way that is interesting for your audience. Knowing your audience is a critical skill and worth exploring in another post.</p></li><li><p><strong>Make your writing easy to read</strong> - Once they want to read it, help them by making it easy to. There are two aspects to this:</p><ol><li><p><strong>Be concise</strong> - don’t waste your reader’s mental capacity on needless words</p></li><li><p><strong>Write simply</strong> - don’t pick words that are more complicated than they need to be. <a href=\"https://www.paulgraham.com/simply.html\">Paul Graham’s essay explains this well</a>. I’ve included a blurb from it below:</p></li></ol></li></ol><div class=\"captioned-image-container\"><figure><a class=\"image-link image2 is-viewable-img\" target=\"_blank\" href=\"https://substackcdn.com/image/fetch/$s_!-jA2!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5ffe2a52-a578-48cd-b387-3e024a7a0a20_1604x1138.png\" data-component-name=\"Image2ToDOM\"><div class=\"image2-inset\"><picture><source type=\"image/webp\" srcset=\"https://substackcdn.com/image/fetch/$s_!-jA2!,w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5ffe2a52-a578-48cd-b387-3e024a7a0a20_1604x1138.png 424w, https://substackcdn.com/image/fetch/$s_!-jA2!,w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5ffe2a52-a578-48cd-b387-3e024a7a0a20_1604x1138.png 848w, https://substackcdn.com/image/fetch/$s_!-jA2!,w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5ffe2a52-a578-48cd-b387-3e024a7a0a20_1604x1138.png 1272w, https://substackcdn.com/image/fetch/$s_!-jA2!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5ffe2a52-a578-48cd-b387-3e024a7a0a20_1604x1138.png 1456w\" sizes=\"100vw\"><img src=\"https://substackcdn.com/image/fetch/$s_!-jA2!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5ffe2a52-a578-48cd-b387-3e024a7a0a20_1604x1138.png\" width=\"461\" height=\"327.06936813186815\" data-attrs=\"{&quot;src&quot;:&quot;https://substack-post-media.s3.amazonaws.com/public/images/5ffe2a52-a578-48cd-b387-3e024a7a0a20_1604x1138.png&quot;,&quot;srcNoWatermark&quot;:null,&quot;fullscreen&quot;:null,&quot;imageSize&quot;:null,&quot;height&quot;:1033,&quot;width&quot;:1456,&quot;resizeWidth&quot;:461,&quot;bytes&quot;:246238,&quot;alt&quot;:null,&quot;title&quot;:null,&quot;type&quot;:&quot;image/png&quot;,&quot;href&quot;:null,&quot;belowTheFold&quot;:true,&quot;topImage&quot;:false,&quot;internalRedirect&quot;:null,&quot;isProcessing&quot;:false,&quot;align&quot;:null,&quot;offset&quot;:false}\" class=\"sizing-normal\" alt=\"\" srcset=\"https://substackcdn.com/image/fetch/$s_!-jA2!,w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5ffe2a52-a578-48cd-b387-3e024a7a0a20_1604x1138.png 424w, https://substackcdn.com/image/fetch/$s_!-jA2!,w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5ffe2a52-a578-48cd-b387-3e024a7a0a20_1604x1138.png 848w, https://substackcdn.com/image/fetch/$s_!-jA2!,w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5ffe2a52-a578-48cd-b387-3e024a7a0a20_1604x1138.png 1272w, https://substackcdn.com/image/fetch/$s_!-jA2!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5ffe2a52-a578-48cd-b387-3e024a7a0a20_1604x1138.png 1456w\" sizes=\"100vw\" loading=\"lazy\"></picture><div class=\"image-link-expand\"><div class=\"pencraft pc-display-flex pc-gap-8 pc-reset\"><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container restack-image\"><svg role=\"img\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke-width=\"1.5\" stroke=\"var(--color-fg-primary)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" xmlns=\"http://www.w3.org/2000/svg\"><g><title></title><path d=\"M2.53001 7.81595C3.49179 4.73911 6.43281 2.5 9.91173 2.5C13.1684 2.5 15.9537 4.46214 17.0852 7.23684L17.6179 8.67647M17.6179 8.67647L18.5002 4.26471M17.6179 8.67647L13.6473 6.91176M17.4995 12.1841C16.5378 15.2609 13.5967 17.5 10.1178 17.5C6.86118 17.5 4.07589 15.5379 2.94432 12.7632L2.41165 11.3235M2.41165 11.3235L1.5293 15.7353M2.41165 11.3235L6.38224 13.0882\"></path></g></svg></button><button tabindex=\"0\" type=\"button\" class=\"pencraft pc-reset pencraft icon-container view-image\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-maximize2 lucide-maximize-2\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" x2=\"14\" y1=\"3\" y2=\"10\"></line><line x1=\"3\" x2=\"10\" y1=\"21\" y2=\"14\"></line></svg></button></div></div></div></a><figcaption class=\"image-caption\">Ryan: One of my favorite passages from <a href=\"https://www.paulgraham.com/simply.html\">Paul Graham’s essay on writing simply</a>. If you liked it, he also has another <a href=\"https://www.paulgraham.com/talk.html\">relevant essay on writing like you talk</a></figcaption></figure></div><div><hr></div><p>The best way to get better at writing is to write more. Try writing and asking for feedback from someone who writes well. Over time, this feedback loop will make you an excellent writer.</p><p>Thanks for reading,<br><a href=\"https://www.linkedin.com/in/ryanlpeterman/\">Ryan Peterman</a></p><div class=\"subscription-widget-wrap-editor\" data-attrs=\"{&quot;url&quot;:&quot;https://www.developing.dev/subscribe?&quot;,&quot;text&quot;:&quot;Subscribe&quot;,&quot;language&quot;:&quot;en&quot;}\" data-component-name=\"SubscribeWidgetToDOM\"><div class=\"subscription-widget show-subscribe\"><div class=\"preamble\"><p class=\"cta-caption\">Join 41000+ software engineers from companies like Google, Meta, Amazon, and Microsoft who receive new posts and support my work</p></div><form class=\"subscription-widget-subscribe\"><input type=\"email\" class=\"email-input\" name=\"email\" placeholder=\"Type your email…\" tabindex=\"-1\"><input type=\"submit\" class=\"button primary\" value=\"Subscribe\"><div class=\"fake-input-wrapper\"><div class=\"fake-input\"></div><div class=\"fake-button\"></div></div></form></div></div>",
+  "truncated_body_text": "👋 Hi, this is Ryan with this week’s newsletter. I write about software engineering, big tech/startups, and career growth. Thank you for your readership, we hit 41,000 readers this week 🙏 🎉",
+  "wordcount": 692,
+  "post_preview_limit": null,
+  "language": "en",
+  "postTags": [],
+  "postCountryBlocks": [],
+  "headlineTest": null,
+  "coverImagePalette": {
+    "Vibrant": {
+      "rgb": [
+        98.07692307692312,
+        32.692307692307686,
+        222.30769230769232
+      ],
+      "population": 0
+    },
+    "DarkVibrant": {
+      "rgb": [
+        51.00000000000002,
+        16.999999999999996,
+        115.60000000000001
+      ],
+      "population": 0
+    },
+    "LightVibrant": {
+      "rgb": [
+        183,
+        153,
+        240
+      ],
+      "population": 8
+    },
+    "Muted": {
+      "rgb": [
+        136,
+        136,
+        135
+      ],
+      "population": 123
+    },
+    "DarkMuted": {
+      "rgb": [
+        100,
+        100,
+        100
+      ],
+      "population": 1
+    },
+    "LightMuted": {
+      "rgb": [
+        184,
+        196,
+        186
+      ],
+      "population": 5
+    }
+  },
+  "publishedBylines": [
+    {
+      "id": 38830210,
+      "name": "Ryan Peterman",
+      "handle": "ryanlpeterman",
+      "previous_name": null,
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F20f314b5-e648-438c-87ae-94017be476b4_400x400.jpeg",
+      "bio": "Sharing the transparent career stories of technical people",
+      "profile_set_up_at": "2023-01-18T22:33:03.111Z",
+      "reader_installed_at": "2023-01-26T08:31:29.524Z",
+      "publicationUsers": [
+        {
+          "id": 1301048,
+          "user_id": 38830210,
+          "publication_id": 1340878,
+          "role": "admin",
+          "public": true,
+          "is_primary": true,
+          "publication": {
+            "id": 1340878,
+            "name": "The Peterman Post",
+            "subdomain": "ryanlpeterman",
+            "custom_domain": "www.developing.dev",
+            "custom_domain_optional": false,
+            "hero_text": "Sharing learnings from the transparent career stories of technical people, written by an ex-software engineer @ Instagram\n\n",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/5381e1ae-726f-45da-ae2c-21f0a14a3336_1280x1280.png",
+            "author_id": 38830210,
+            "primary_user_id": 38830210,
+            "theme_var_background_pop": "#FF5CD7",
+            "created_at": "2023-01-24T07:51:25.087Z",
+            "email_from_name": "Ryan Peterman",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": "Founding Member",
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        },
+        {
+          "id": 3359136,
+          "user_id": 38830210,
+          "publication_id": 2734951,
+          "role": "admin",
+          "public": true,
+          "is_primary": false,
+          "publication": {
+            "id": 2734951,
+            "name": "Compose",
+            "subdomain": "composekb",
+            "custom_domain": "read.compose.llc",
+            "custom_domain_optional": false,
+            "hero_text": "Building an ultra low-profile, entirely wireless, ergonomic keyboard.",
+            "logo_url": "https://substack-post-media.s3.amazonaws.com/public/images/091d5f01-d901-4167-8534-0f8e5e8945a5_1280x1280.png",
+            "author_id": 129014596,
+            "primary_user_id": 129014596,
+            "theme_var_background_pop": "#E8B500",
+            "created_at": "2024-06-25T06:27:43.156Z",
+            "email_from_name": "Ryan Peterman from Compose",
+            "copyright": "Ryan Peterman",
+            "founding_plan_name": null,
+            "community_enabled": true,
+            "invite_only": false,
+            "payments_state": "disabled",
+            "language": null,
+            "explicit": false,
+            "homepage_type": "newspaper",
+            "is_personal_mode": false,
+            "logo_url_wide": null
+          }
+        }
+      ],
+      "twitter_screen_name": "ryanlpeterman",
+      "is_guest": false,
+      "bestseller_tier": null,
+      "status": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "paidPublicationIds": [],
+        "subscriber": null
+      }
+    }
+  ],
+  "reaction": null,
+  "reaction_count": 176,
+  "comment_count": 21,
+  "child_comment_count": 11,
+  "audio_items": [
+    {
+      "post_id": 140271212,
+      "voice_id": "en-US-JennyNeural",
+      "audio_url": "https://substack-video.s3.amazonaws.com/video_upload/post/140271212/tts/54abafd9-562a-4970-a4fb-7f3aebeca5fb/en-US-JennyNeural.mp3",
+      "type": "tts",
+      "status": "completed"
+    }
+  ],
+  "is_geoblocked": false,
+  "hasCashtag": false,
+  "unlockedWithIP": false,
+  "unlockedWithCampaign": false,
+  "themeVariables": {
+    "color_theme_bg_pop": "#5365d0",
+    "background_pop": "#5365d0",
+    "color_theme_bg_web": "#ffffff",
+    "cover_bg_color": "#ffffff",
+    "cover_bg_color_secondary": "#f0f0f0",
+    "background_pop_darken": "#3f53cb",
+    "print_on_pop": "#ffffff",
+    "color_theme_bg_pop_darken": "#3f53cb",
+    "color_theme_print_on_pop": "#ffffff",
+    "color_theme_bg_pop_20": "rgba(83, 101, 208, 0.2)",
+    "color_theme_bg_pop_30": "rgba(83, 101, 208, 0.3)",
+    "print_pop": "#5365d0",
+    "color_theme_accent": "#5365d0",
+    "cover_print_primary": "#363737",
+    "cover_print_secondary": "#757575",
+    "cover_print_tertiary": "#b6b6b6",
+    "cover_border_color": "#5365d0",
+    "font_family_body_preset": "'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+    "font_weight_body_preset": 400,
+    "font_preset_body": "sans",
+    "home_hero": "podcast",
+    "home_posts": "custom",
+    "home_show_top_posts": true,
+    "web_bg_color": "#ffffff",
+    "background_contrast_1": "#f0f0f0",
+    "background_contrast_2": "#dddddd",
+    "background_contrast_3": "#b7b7b7",
+    "background_contrast_4": "#929292",
+    "background_contrast_5": "#515151",
+    "color_theme_bg_contrast_1": "#f0f0f0",
+    "color_theme_bg_contrast_2": "#dddddd",
+    "color_theme_bg_contrast_3": "#b7b7b7",
+    "color_theme_bg_contrast_4": "#929292",
+    "color_theme_bg_contrast_5": "#515151",
+    "color_theme_bg_elevated": "#ffffff",
+    "color_theme_bg_elevated_secondary": "#f0f0f0",
+    "color_theme_bg_elevated_tertiary": "#dddddd",
+    "color_theme_detail": "#e6e6e6",
+    "background_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "color_theme_bg_contrast_pop": "rgba(83, 101, 208, 0.4)",
+    "theme_bg_is_dark": "0",
+    "print_on_web_bg_color": "#363737",
+    "print_secondary_on_web_bg_color": "#868787",
+    "background_pop_rgb": "83, 101, 208",
+    "color_theme_bg_pop_rgb": "83, 101, 208",
+    "color_theme_accent_rgb": "83, 101, 208"
+  },
+  "comments": [
+    {
+      "id": 46662928,
+      "body": "An alternate view: \n\nThe best way to get better at writing is to read more.\nThen after reading more, write more.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "An alternate view:"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "The best way to get better at writing is to read more."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Then after reading more, write more."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 140271212,
+      "user_id": 27801024,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-01-05T14:42:57.641Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "John Crickett",
+      "photo_url": "https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5216b4ab-f9a8-4803-b318-a8285e26a873_800x800.jpeg",
+      "handle": "johncrickett",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 15
+      },
+      "reaction_count": 15,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "johncrickett",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Coding Challenges",
+          "id": 1483213,
+          "base_url": "https://codingchallenges.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 20,
+      "children_count": 3,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "4 replies"
+    },
+    {
+      "id": 46663535,
+      "body": "In my case, my outline goes to chapter titles as the high-level storytelling. Then, I write two paragraphs to tell what I want in each of them. This makes me being more productive, no hanging around with blurred topics, and writing what I want to write about.",
+      "body_json": {
+        "type": "doc",
+        "attrs": {
+          "schemaVersion": "v1"
+        },
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "In my case, my outline goes to chapter titles as the high-level storytelling. Then, I write two paragraphs to tell what I want in each of them. This makes me being more productive, no hanging around with blurred topics, and writing what I want to write about."
+              }
+            ]
+          }
+        ]
+      },
+      "publication_id": 1340878,
+      "post_id": 140271212,
+      "user_id": 26618976,
+      "ancestor_path": "",
+      "type": "comment",
+      "deleted": false,
+      "date": "2024-01-05T14:50:20.481Z",
+      "edited_at": null,
+      "status": "published",
+      "pinned_by_user_id": null,
+      "restacks": 0,
+      "name": "Jaime López",
+      "photo_url": "https://substack-post-media.s3.amazonaws.com/public/images/ea285b82-e3f5-434e-bdd8-8fb2df19023c_1530x1530.jpeg",
+      "handle": "intranetfromthetrenches",
+      "reactor_names": [
+        "Ryan Peterman"
+      ],
+      "reaction": null,
+      "reactions": {
+        "❤": 4
+      },
+      "reaction_count": 4,
+      "children": [],
+      "bans": [],
+      "suppressed": false,
+      "user_banned": false,
+      "user_banned_for_comment": false,
+      "user_slug": "intranetfromthetrenches",
+      "metadata": {
+        "is_author": false,
+        "membership_state": null,
+        "eligibleForGift": false,
+        "author_on_other_pub": {
+          "name": "Intranet from the Trenches",
+          "id": 1284148,
+          "base_url": "https://intranetfromthetrenches.substack.com"
+        }
+      },
+      "user_bestseller_tier": null,
+      "can_dm": true,
+      "userStatus": {
+        "bestsellerTier": null,
+        "subscriberTier": null,
+        "leaderboard": null,
+        "vip": false,
+        "badge": null,
+        "subscriber": null
+      },
+      "score": 9,
+      "children_count": 1,
+      "reported_by_user": false,
+      "restacked": false,
+      "childrenSummary": "1 reply"
+    }
+  ]
+}

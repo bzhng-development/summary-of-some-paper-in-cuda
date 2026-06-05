@@ -1,0 +1,104 @@
+👋 Hi, this is Ryan with another edition of my weekly newsletter. Each week, I write about software engineering, big tech/startups and career growth.
+
+I’m starting a periodic series of guest posts I’m calling “Engineering Career Stories” that feature engineers with noteworthy career trajectories. The goal of each story is to give readers insight into what has worked so you can learn from others’ experience.
+
+Today’s post comes from Jordan Cutler, who is a front-end specialist that grew from junior (L3) to senior (L5) in 2 years at Gusto. His story has learnings that work well for growth to senior.
+
+For more from Jordan, you can follow him on LinkedIn. He also writes a great newsletter, High Growth Engineer, about software engineering career growth.
+
+It was my first week at my first job and I broke production.
+
+I also just started this job after wondering if I would even get a tech job given that I didn’t get a return offer as an intern at Twitter.
+
+This is the story of how I went from that—to the youngest Senior Engineer at Gusto among 200+ engineers.
+
+Before we start… a quick glossary:
+
+I’ll use FAANG leveling to describe the transitions. I started out as a junior engineer (L3) and was promoted to senior engineer (L5) after 2 promotions.
+
+
+## 2019 - L3 SWE on Financial Products
+
+
+Just starting out, I 100% had imposter syndrome. Not getting the return offer from Twitter really messed with me and made me feel like the same thing would happen again and I’d get fired after a few months.
+
+The main lesson I learned from not getting the return offer is that it’s incredibly important to be a contributing member of the team and to show you are a “sponge” for growth from the people around you. At the time, I was so focused on my intern project that I didn’t take feedback and wasn’t a great team player. I even pushed back on some Staff engineers’ suggestions as an intern.
+
+So starting out at Gusto I made some major changes to prevent that from happening again by:
+
+  - Asking for feedback a lot from my manager and teammates
+
+Asking for feedback a lot from my manager and teammates
+
+  - Scheduling pairing sessions with everyone on the team and really embracing Gusto’s culture.
+
+Scheduling pairing sessions with everyone on the team and really embracing Gusto’s culture.
+
+  - Making the team better any way I could, like documenting what I learned and improving onboarding for future members, recommending process improvements to my manager–bringing solutions and doing the work for him
+
+Making the team better any way I could, like documenting what I learned and improving onboarding for future members, recommending process improvements to my manager–bringing solutions and doing the work for him
+
+These changes laid the groundwork for me to perform well at my level. On top of that, one thing that really helped set me up for promotion early was taking initiative on problems that affected the entire team.
+
+For example, I noticed a very slow part of our process that was frustrating for all the engineers on the team. We’d need to spend at least 10 minutes loading our local dev environment with data to test our changes every time. I remember going to my manager with a Google doc of an idea for speeding up the process to 5 seconds instead of 10 minutes. It was the messiest 1-page Google doc you could imagine but it got the point across.
+
+My manager took that to our PM, got it prioritized, and because I had suggested it, they let me lead the project. It was an amazing opportunity to lead a project on my own, work cross-functionally with other teams, and provide a big productivity boost to our entire team. After completing it, I presented ‌it in our company all-hands which helped me gain visibility across the company. The CTO even came up to me afterward saying it was a great presentation, which was mind-blowing 🤯 for me at the time. The tool proved to have massive value and was used for years.
+
+The lesson here is that I probably wouldn’t have had this opportunity so early on if I wasn’t looking for ways to make the team better. Or if I had only stuck to my assigned work.
+
+Having that experience helped my manager make a promotion case for me that got me to L4 within 1 year.
+
+
+## 2020 - L4 SWE on Financial Products
+
+
+After the promotion the first year, my manager made it clear early on that I shouldn’t expect a promotion so soon again.
+
+This kept my expectations in check but I still was determined to do as best I could.
+
+A primary driver for my growth this year was the way I got feedback from my manager. Every 6 weeks we’d check in on the expectations of the next level. We color-coded the expectations with green, yellow, and red based on my strengths and areas of growth. By doing this, my manager was able to easily find opportunities to help me turn the reds to yellows and yellows to greens. If all the attributes of the next level were green for 3-6 months, then we’d look to make a promotion case.
+
+Following this process, I looked for ways that I could help the team while also lining up with the expectations of the next level. I’d definitely recommend something similar to this process for anyone looking to get clear feedback for growth and having their manager looking for opportunities for you.
+
+Looking back on the promotion to senior, I think there were 3 major contributors:
+
+  - Continuing to excel, ship, and lead team project work successfully with minimal bugs. Overall, I became very reliable.
+
+Continuing to excel, ship, and lead team project work successfully with minimal bugs. Overall, I became very reliable.
+
+  - Becoming a domain expert so that teammates could come for advice and expertise, even those that were leveled above me. I was a GraphQL and frontend subject matter expert familiar with multiple product domain areas.
+
+Becoming a domain expert so that teammates could come for advice and expertise, even those that were leveled above me. I was a GraphQL and frontend subject matter expert familiar with multiple product domain areas.
+
+  - Making the team more effective through proposed initiatives or improved team processes. I led an API re-architecture that was adopted across multiple teams to colocate database ORM queries. Additionally, I tried to make on-call more enjoyable by updating processes around error tracking and fixing root cause issues with persistent annoying error notifications.
+
+Making the team more effective through proposed initiatives or improved team processes. I led an API re-architecture that was adopted across multiple teams to colocate database ORM queries. Additionally, I tried to make on-call more enjoyable by updating processes around error tracking and fixing root cause issues with persistent annoying error notifications.
+
+Becoming a domain expert is one of the top pieces of advice I would give to anyone looking to get to the senior level. It helped me tremendously.
+
+The way it happened was that our mobile team was looking to adopt and try out GraphQL. I saw it as an opportunity to get involved in something new and interesting, so I asked my manager if I could reimburse a GraphQL learning book and a Udemy course, and I began my learning. I read the book overnight and learned a ton about API design using GraphQL.
+
+Reading that book allowed me to be more involved in technical discussions and provide meaningful suggestions. Because of that, my team trusted me to redesign all our APIs using GraphQL. This gave me a new ownership area of the code and made me a subject matter expert in a new technology area we were exploring.
+
+Once you’re a subject matter expert, tons of opportunities will come your way. You’ll be asked for help with adopting new patterns, teaching others through presentations, and get asked to lead exciting projects.
+
+All of the above happened for me. And it made making a case for the second promotion to Senior (L5) much easier. As a senior engineer, you’re expected to have an area of ownership.
+
+The final lesson to share is to be the main driver behind your career growth. The people around you will help, but you should be the one seeking mentorship, getting the answers you need from your manager, and learning from others what your areas of development are. Even though I was scared and unsure if I would get it at the time, the promotion to Senior only came because I sought what was needed and pushed for putting myself up for promotion. Be the main driver behind your growth.
+
+
+## Conclusion
+
+
+That promotion to Senior came about 2 years ago now. I went through a team swap to a more frontend-focused role and left Gusto about a year ago to join Qualified as a frontend specialist. My next goal is to get to Staff Engineer, which I’m hoping I can reach within the next few years.
+
+As you can see, I wasn’t able to keep up the back-to-back promotions but it goes to show that everyone’s career path is different. So I encourage you to take my story, find what resonates and apply what makes sense for you in your situation.
+
+Thank you, Jordan, for sharing this story with us. For more from Jordan, follow him on LinkedIn, and check out his newsletter, High Growth Engineer, a weekly newsletter with actionable advice for software engineers. Have a great weekend 👋
+
+If you find this newsletter valuable, share it with a friend, and consider subscribing if you haven’t already
+
+Subscribe now
+
+Thanks for reading,
+Ryan Peterman

@@ -1,0 +1,53 @@
+Jake Bolam grew from Staff Eng (IC6) to Principal Eng (IC8) at Instagram. He joined Meta as an IC6 and initially struggled. He realized the team wasn’t a good fit and switched to a different team at Instagram that valued his skillset. Ever since his career grew quickly from leading a rewrite of Instagram’s backend that affected hundreds of teams at the company
+
+I recently had the opportunity to interview him about his career growth and what he learned along the way. The full conversation is available wherever you get your podcasts (YouTube, Spotify, Apple Podcasts). Here are a few interesting takeaways from our conversation if you prefer to read:
+
+  - Accepting diffs that break prod - Jake had an interesting perspective on diff review. If your diffs aren’t risky or touching some critical path, he’ll prioritize speed and give you a rudimentary review. Generally, he talked about biasing towards “how can I accept this diff” rather than “how can I reject this diff.” Unless he receives feedback that he’s moving too fast, he constantly tries to push the envelope on project speed.
+
+Accepting diffs that break prod - Jake had an interesting perspective on diff review. If your diffs aren’t risky or touching some critical path, he’ll prioritize speed and give you a rudimentary review. Generally, he talked about biasing towards “how can I accept this diff” rather than “how can I reject this diff.” Unless he receives feedback that he’s moving too fast, he constantly tries to push the envelope on project speed.
+
+  - What led to his promotion to IC8 - Jake was entrusted with a migration that spanned multiple teams. That migration then grew in scope until it involved moving all of Instagram’s backend to the entirely new backend, which affected hundreds of teams. The blast radius of this work and project success despite the risk earned him a promotion to IC8.
+
+What led to his promotion to IC8 - Jake was entrusted with a migration that spanned multiple teams. That migration then grew in scope until it involved moving all of Instagram’s backend to the entirely new backend, which affected hundreds of teams. The blast radius of this work and project success despite the risk earned him a promotion to IC8.
+
+  - Go where you’re valued - This was his advice to his younger self. Part of the reason he didn’t do well when he first onboarded to Meta was he went to a team that didn’t value his frontend skillset. When he moved to an Instagram team that did, his career started to take off.
+
+Go where you’re valued - This was his advice to his younger self. Part of the reason he didn’t do well when he first onboarded to Meta was he went to a team that didn’t value his frontend skillset. When he moved to an Instagram team that did, his career started to take off.
+
+  - Systems for reasonable work-life balance at IC8 - Although he has so much responsibility, he’s able to work 40 hours a week and still do well in his current role due to the systems he’s developed his whole career. These systems involve blocking out focus time and minimizing meetings much more than the average engineer does.
+
+Systems for reasonable work-life balance at IC8 - Although he has so much responsibility, he’s able to work 40 hours a week and still do well in his current role due to the systems he’s developed his whole career. These systems involve blocking out focus time and minimizing meetings much more than the average engineer does.
+
+  - His note-taking system in VS Code - I also thought his note-taking system was interesting. He constantly takes notes in an instance of VS Code, where he hosts a ton of simple text files. He doesn’t organize them at all and just jumps through them based on keywords he knows exist in them. He also links them to each other, almost like his own personal Wikipedia knowledge base.
+
+His note-taking system in VS Code - I also thought his note-taking system was interesting. He constantly takes notes in an instance of VS Code, where he hosts a ton of simple text files. He doesn’t organize them at all and just jumps through them based on keywords he knows exist in them. He also links them to each other, almost like his own personal Wikipedia knowledge base.
+
+If you found anything above interesting, you can hear it in more detail in the podcast. You can listen to it wherever you prefer getting your podcasts:
+
+  - YouTube
+
+YouTube
+
+  - Spotify
+
+Spotify
+
+  - Apple Podcasts
+
+Apple Podcasts
+
+And for more from Jake Bolam, check out his socials here:
+
+  - LinkedIn
+
+LinkedIn
+
+  - Threads
+
+Threads
+
+If you have any questions for me or future guests, feel free to drop them here. I will use these questions to make future content so I can answer the questions you care about most.
+
+Thanks for reading,
+
+Ryan Peterman

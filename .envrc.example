@@ -1,13 +1,10 @@
-# direnv config for local/remote dev. Copy to .envrc (gitignored), then `direnv allow`.
+# direnv config for local/remote dev. Copy to .envrc (gitignored), `direnv allow`.
 #
-# Secrets resolve from 1Password via `op inject` over .env.op (committed pointers).
-# Sign in first: `op signin`. Fallback: gitignored .env.
+# Secrets come from 1Password via fnox (see fnox.toml) — NOT `op inject` anymore.
+# Regenerate the gitignored, fnox-derived .env whenever a secret changes:
+#     fnox export -f env -o .env
+# direnv then loads that derived .env into the shell while you're in this repo.
+# (DATABASE_URL is also shell-global via binutils' secrets-sync, so scripts run
+# from anywhere still find it.)
 
-loaded=0
-if command -v op >/dev/null 2>&1 && [ -f .env.op ]; then
-  if out="$(op inject -i .env.op 2>/dev/null)" && [ -n "$out" ]; then
-    eval "$out"
-    loaded=1
-  fi
-fi
-[ "$loaded" = 0 ] && [ -f .env ] && dotenv .env
+dotenv_if_exists .env

@@ -48,30 +48,16 @@ __all__ = [
 # .env discovery
 # ---------------------------------------------------------------------------
 #
-# Follow the NeonDBResource pattern: walk up the repo to find the shared
-# nextjs-ui/.env that holds DATABASE_URL. Also honour a repo-local .env as an
-# override so you can point at a branch DB without touching the shared file.
+# DATABASE_URL is provided shell-globally (1Password → fnox → ~/.zshenv.local,
+# sourced by ~/.zshenv), so it is normally already in os.environ. A repo-local
+# .env can still supply it (e.g. a branch DB) when the shell var is absent;
+# load_dotenv defaults to override=False, so the shell-global value wins.
 
 
 def _load_env() -> None:
-    here = Path(__file__).resolve().parent
-
-    local_env = here / ".env"
+    local_env = Path(__file__).resolve().parent / ".env"
     if local_env.exists():
         load_dotenv(local_env)
-
-    # `<...>/open_source/summary-of-some-paper-in-cuda/neon_db.py` →
-    # `<...>/open_source/company-scraper/nextjs-ui/.env`, or one level deeper
-    # (e.g. `<...>/open_source/mine/company-scraper/nextjs-ui/.env`).
-    for parent in here.parents:
-        candidates = [
-            parent / "company-scraper" / "nextjs-ui" / ".env",
-            *parent.glob("*/company-scraper/nextjs-ui/.env"),
-        ]
-        for candidate in candidates:
-            if candidate.exists():
-                load_dotenv(candidate, override=False)
-                return
 
 
 _load_env()

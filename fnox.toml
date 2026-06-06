@@ -1,0 +1,28 @@
+# fnox secret config — SAFE TO COMMIT (these are op:// pointers, not secrets).
+#
+# Mirrors ~/binutils/fnox.toml. Resolves from 1Password (Private vault,
+# personal account) via the `op` CLI — biometric `op signin --account
+# my.1password.com`, no service account needed. Replaces the old
+# .env.op + .envrc `op inject` path that this repo used to carry.
+#
+# Materialize into the repo-local (gitignored) .env that neon_db.py / main.py
+# load via python-dotenv. One command, rerun whenever a secret changes:
+#   fnox export -f env -o .env
+#
+# DATABASE_URL is SHARED: it points at the same 1Password field binutils uses
+# (op://Private/binutils-dev/DATABASE_URL), so there is one canonical DB URL
+# reused across every repo — no per-repo divergence. It is also shell-global
+# (binutils' secrets-sync writes it to ~/.zshenv.local), so a repo-local copy
+# is belt-and-suspenders: load_dotenv defaults to override=False, shell wins.
+
+[providers]
+onepass = { type = "1password", vault = "Private", account = "my.1password.com" }
+
+[secrets]
+DATABASE_URL       = { provider = "onepass", value = "op://Private/binutils-dev/DATABASE_URL" }
+OPENAI_API_KEY     = { provider = "onepass", value = "op://Private/cuda-dev/OPENAI_API_KEY" }
+OPENROUTER_API_KEY = { provider = "onepass", value = "op://Private/cuda-dev/OPENROUTER_API_KEY" }
+EXA_API_KEY        = { provider = "onepass", value = "op://Private/cuda-dev/EXA_API_KEY" }
+
+# Non-secret config (literal default, not stored in 1Password):
+OPENAI_BASE_URL    = { default = "https://proxy.shopify.ai/v1" }

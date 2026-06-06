@@ -8,7 +8,6 @@
 # Requires DATABASE_URL (auto-discovered by neon_db.py).
 
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -17,15 +16,8 @@ ROOT = HERE.parent
 REPO_ROOT = ROOT.parent  # …/summary-of-some-paper-in-cuda
 sys.path.insert(0, str(REPO_ROOT))
 
-# Allow either local .env or the shared one
-shared_env = REPO_ROOT.parent.parent / "mine/company-scraper/nextjs-ui/.env"
-if shared_env.exists() and "DATABASE_URL" not in os.environ:
-    for line in shared_env.read_text().splitlines():
-        if line.startswith("DATABASE_URL"):
-            _, val = line.split("=", 1)
-            os.environ["DATABASE_URL"] = val.strip().strip('"').strip("'")
-            break
-
+# DATABASE_URL is shell-global (1Password → fnox → ~/.zshenv.local); importing
+# neon_db also loads a repo-local .env fallback. No cross-dir .env hunting.
 from neon_db import NeonDB  # noqa: E402
 from psycopg.rows import dict_row  # noqa: E402
 

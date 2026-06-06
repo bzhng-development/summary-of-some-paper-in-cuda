@@ -21,8 +21,9 @@ onepass = { type = "1password", vault = "Private", account = "my.1password.com" 
 [secrets]
 DATABASE_URL       = { provider = "onepass", value = "op://Private/binutils-dev/DATABASE_URL" }
 OPENAI_API_KEY     = { provider = "onepass", value = "op://Private/cuda-dev/OPENAI_API_KEY" }
-OPENROUTER_API_KEY = { provider = "onepass", value = "op://Private/cuda-dev/OPENROUTER_API_KEY" }
-EXA_API_KEY        = { provider = "onepass", value = "op://Private/cuda-dev/EXA_API_KEY" }
+# EXA + OPENROUTER are shared canonical fields (binutils-dev), not per-repo copies.
+OPENROUTER_API_KEY = { provider = "onepass", value = "op://Private/binutils-dev/OPENROUTER_API_KEY" }
+EXA_API_KEY        = { provider = "onepass", value = "op://Private/binutils-dev/EXA_API_KEY" }
 
 # Non-secret config (literal default, not stored in 1Password):
 OPENAI_BASE_URL    = { default = "https://proxy.shopify.ai/v1" }

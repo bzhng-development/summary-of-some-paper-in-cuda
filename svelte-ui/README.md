@@ -2,20 +2,20 @@
 
 SvelteKit frontend for the paper scorer. Browse the scored HF daily papers, filter by score/date/tag, mark interested, add papers by URL.
 
-Replaces the old `daily_papers/paper_viewer.py` 58 MB monolithic HTML.
+Replaces an old 58 MB monolithic HTML viewer.
 
 ## Stack
 
 - SvelteKit 2 + Svelte 5 (runes) + TypeScript
 - Vite 7
-- Data comes from `daily_papers/paper_server.py` (FastAPI) via `/api/papers`, `/interested`, `/interested-ids`, `/add-paper`
+- Data comes from `paper-server` (FastAPI, `src/paper_pipeline/ingest/paper_server.py`) via `/api/papers`, `/interested`, `/interested-ids`, `/add-paper`
 - Vite dev server proxies those paths to the backend (default `http://localhost:8787`, override with `PAPER_SERVER_URL`)
 
 ## Run (two processes)
 
 ```bash
 # 1. Start the Python backend (from repo root)
-uv run python daily_papers/paper_server.py --port 8787
+uv run paper-server --port 8787
 
 # 2. Start the Svelte dev server (this directory)
 pnpm install   # first time only

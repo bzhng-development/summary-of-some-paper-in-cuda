@@ -13,13 +13,11 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
-REPO_ROOT = ROOT.parent  # …/summary-of-some-paper-in-cuda
-sys.path.insert(0, str(REPO_ROOT))
 
-# DATABASE_URL is shell-global (1Password → fnox → ~/.zshenv.local); importing
-# neon_db also loads a repo-local .env fallback. No cross-dir .env hunting.
-from neon_db import NeonDB  # noqa: E402
-from psycopg.rows import dict_row  # noqa: E402
+# paper_pipeline is editable-installed in the cuda venv (`uv run` resolves up to
+# ../pyproject.toml). DATABASE_URL is shell-global; neon_db loads a .env fallback.
+from paper_pipeline.core.neon_db import NeonDB
+from psycopg.rows import dict_row
 
 GRAPH = ROOT / "src/lib/graph.generated.json"
 OUT = ROOT / "src/lib/neon-metadata.generated.json"

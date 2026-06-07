@@ -2,9 +2,9 @@
 
 A personal arxiv-paper curation + summarization pipeline. The Python side handles ingest, scoring, tagging, and long-form summary generation; two separate frontends ride on top of the same Neon DB. Live counts: ~20k papers in Neon, ~5.7k marked `interested=1`, ~6.6k with a stored `summary`, multi-tag taxonomy via `tag_categories_v2 TEXT[]`. Some signals live in dedicated files, not the DB:
 
-- **`throwaway_script/`** — one-shot company-scrape pipelines (S2 text-trust, OpenAlex by-institution, Firecrawl arxiv search, playwright over AI-lab publications pages, HuggingFace model-card mining). Outputs land in Neon as new stub rows.
-- **`throwaway_script/substack/`** — a sibling side-project: two-pass DeepSeek-V4-Pro summaries of every Ryan Peterman ("The Peterman Post") podcast/essay. Outputs in `out/bulk/<slug>/summary.md` (160 articles). Synced to the nextjs-ui repo via `scripts/sync-peterman.mjs` over there.
-- **`multi_prompt_pkg/`** — the long-form 7-section paper-summary pipeline; `multi_prompt.py` is the shim. `throwaway_script/offline_regen.py` is the cluster-deployed batch variant (per-section streaming JSONL, resume-safe). Sections 1–4 only when the user wants the abridged version (`--max-section 4 --skip-pitch --skip-cat --skip-assemble`).
+- **`src/paper_pipeline/discovery/`** — one-shot company-scrape pipelines (S2 text-trust, OpenAlex by-institution, Firecrawl arxiv search, playwright over AI-lab publications pages, HuggingFace model-card mining). Outputs land in Neon as new stub rows. (`probes/` holds exploratory one-offs that aren't pipeline steps.)
+- **`src/paper_pipeline/substack/`** — a sibling side-project: two-pass DeepSeek-V4-Pro summaries of every Ryan Peterman ("The Peterman Post") podcast/essay. Outputs in `out/bulk/<slug>/summary.md` (160 articles). Synced to the nextjs-ui repo via `scripts/sync-peterman.mjs` over there.
+- **`src/paper_pipeline/summarize/`** — the long-form 7-section paper-summary pipeline; `src/paper_pipeline/cli/multi_prompt.py` is the shim. `src/paper_pipeline/regen/offline_regen.py` is the cluster-deployed batch variant (per-section streaming JSONL, resume-safe). Sections 1–4 only when the user wants the abridged version (`--max-section 4 --skip-pitch --skip-cat --skip-assemble`).
 - **`local_data/`** is gitignored — all backups + the legacy SQLite snapshot live there.
 - **Three frontends, distinct purposes:**
   - **`svelte-ui/`** — local mark-interested triage tool (SvelteKit, talks to FastAPI `paper_server.py`).
@@ -16,35 +16,27 @@ A personal arxiv-paper curation + summarization pipeline. The Python side handle
 - **`arxiv.py/`** — vendored clone of `lukasschwab/arxiv.py` for arxiv-search experiments. Not on the import path of the live pipeline.
 - **vllm-on-remote workflow** lives in `~/.claude/skills/jsonl-remote-job/` — the resume-safe JSONL+SCP+docker-exec pattern these scripts all use.
 
-# `throwaway_script/` map (this dir got busy — here's what's what)
+# `src/paper_pipeline/` package map
 
-Scrape pipelines (one-shot org/lab discovery, outputs land as Neon stubs):
-- `playwright_org_scrape.py` / `playwright_pub_scrape.py` / `playwright_extra_companies.py` / `playwright_user_specified_orgs.py` / `playwright_crack_failed.py` / `playwright_hf_probe_sweep.py` — playwright-based publication-page scrapers, one per phase of the company sweep.
-- `firecrawl/` — Firecrawl-based scrapers (largely superseded by playwright but kept).
-- `arxiv_org_search.py` — arxiv.org's HTML search via Firecrawl.
-- `openalex_2026_audit.py` — OpenAlex-by-institution sweep with hand-verified institution overrides.
-- `s2_company_scrape.py` — Semantic Scholar text-trust pattern (org-regex against title+abstract+author-names). Closed the pure-LLM-lab gap (OpenAI/Anthropic/DeepSeek etc).
-- `exa_search_missing_papers.py` / `import_exa.py` — Exa search + import.
-- `_probe_*.py` — exploratory probes (DeepMind, Eleuther). Not pipeline steps.
+Installable package — `uv sync` editable-installs it. Run entrypoints via the console scripts declared in `pyproject.toml` `[project.scripts]`: `paper-summarize`, `paper-summarize-single`, `paper-sync`, `paper-server`, `paper-fetch`, `paper-tag`, `paper-import-jsonl`. **No `sys.path` bootstraps anywhere** — imports are package-qualified (`from paper_pipeline.core.neon_db import NeonDB`). Data is co-located with its consuming code; `local_data/` (gitignored) and `docs/` stay at the repo root and are read CWD-relative, so **run console scripts from the repo root**.
 
-Backfill / regeneration:
-- `offline_regen.py` — the cluster-deployed batch summary generator. Flags `--max-section N --skip-pitch --skip-cat --skip-assemble` give the abridged sections-1-to-N variant. Per-section streaming JSONL (`<output>.s1.jsonl`, `.s2.jsonl`, …) with resume-via-dedup.
-- `prepare_interested_input.py` / `prepare_everybody_input.py` / `prepare_company_input.py` / `build_regen_input_from_hf.py` / `export_for_regen.py` — build the input JSONL for `offline_regen.py`. Each scopes a different paper set.
-- `absorb_regen_output.py` — pulls the cluster's JSONL output back into Neon.
-- `add_missing_to_md.py` — backfills `docs/<cat>/*.md` files from Neon summaries.
-- `tag_via_vllm.sh` / `multi_tag_via_vllm.py` — V4-Pro multi-tag (writes `tag_categories_v2 TEXT[]`).
-- `generate_example.py` / `enrich_interested.py` — utility one-offs.
-- `V4_PRO_INFERENCE_RUNBOOK.md` — operational playbook for launching V4-Pro on the cluster.
-
-Substack side-project (independent of the paper pipeline):
-- `substack/` — `bulk_summarize.py` + `retry_failed.py` orchestrate the two-pass Peterman summary pipeline. `prompts.py` carries the iter-4-tuned P1/P2 templates; `example_adrien.md` is the style few-shot. `llm.py` points at the cluster vllm via SSH-tunneled localhost:8000. Output: `out/bulk/<slug>/summary.md` (160 articles).
+- `core/` — `neon_db.py` (Neon layer; CLI via `python -m paper_pipeline.core.neon_db init-schema|migrate`), `external.py`, `import_jsonl.py` (`paper-import-jsonl`), and the co-located `external_papers.db`.
+- `ingest/` — HF/arxiv ingest + scoring + tagging: `hf_daily_papers.py` (`paper-fetch`), `paper_server.py` (`paper-server`, the svelte-ui backend), `tag_papers.py` (`paper-tag`), `papers_by_score.py`, `examples.py` (reading-history loader), `fetch_only.py`. Co-located data: `papers_out/all_scored.json`, `tagged_papers.jsonl`, `papers_to_tag.jsonl`, `arxiv_index.txt`.
+- `summarize/` — the long-form 7-section pipeline (was `multi_prompt_pkg/`): `cli.py` (`paper-summarize`), `summarizer.py`, `pipeline.py`, `prompts.py`, `llm.py`, `storage.py`, `config.py`, `schemas.py`, `pdf.py`. Golden-sample one-shot in `summarize/examples/`.
+- `ocr/` — fill full-text markdown for papers HF can't render: `find_missing.py` (probe `huggingface.co/papers/{id}.md` → bucket `hf_ok`/`html_only`/`ocr_needed`), `chandra_ocr.py` (PEP-723 GPU-box script; OCR via `datalab-to/chandra-ocr-2` on vLLM), `ingest_ocr.py` (upsert OCR'd markdown into Neon's `markdown` column).
+- `cli/` — entrypoints: `main.py` (`paper-summarize-single`, + `main_prompt.txt`), `multi_prompt.py` (the summarize shim), `sync.py` (`paper-sync`, full Neon rebuild).
+- `discovery/` — one-shot org/lab scrapers (land Neon stubs): the `playwright_*` sweep (`playwright_extra_companies.py` imports `playwright_pub_scrape.py` as a sibling), `s2_company_scrape.py` (S2 query normalized to `|`, not the literal `OR`; `--save-neon` default on), `openalex_2026_audit.py` (`--years` range, `--save-neon`), `arxiv_org_search.py`, `exa_search_missing_papers.py`/`import_exa.py`, `enrich_interested.py`, and `firecrawl/`.
+- `probes/` — exploratory, NOT pipeline steps: `probe_deepmind.py`, `probe_eleuther.py`, `probe_linkedin_2026.py`, `probe_all_orgs_2026.py`.
+- `regen/` — summary backfill: `offline_regen.py` (cluster batch generator; `--max-section N --skip-pitch --skip-cat --skip-assemble` for the abridged sections-1-to-N variant; per-section streaming JSONL with resume-via-dedup; `--repo-root` default `.`), the `prepare_*_input.py` / `build_regen_input_from_hf.py` / `export_for_regen.py` builders, `absorb_regen_output.py`, `assemble_s14.py`, `add_missing_to_md.py` / `regen_to_md.py` / `regen_md_v2.py`, `generate_example.py`.
+- `tagging/` — `multi_tag_via_vllm.py` + `tag_via_vllm.sh` (V4-Pro multi-tag → `tag_categories_v2 TEXT[]`); `V4_PRO_INFERENCE_RUNBOOK.md` lives here.
+- `substack/` — independent side-project (no pipeline imports): two-pass Peterman summaries via `bulk_summarize.py` + `retry_failed.py`; `prompts.py` (iter-4 P1/P2 templates), `example_adrien.md` (style few-shot), `llm.py` (SSH-tunneled cluster vllm). Output: `out/bulk/<slug>/summary.md`.
 
 # TL;DR — where the papers live
 
-- **Source of truth:** Neon Postgres, table `"nextjs-ui_paper"` (via `$DATABASE_URL`, see `neon_db.py`).
-- **Legacy SQLite snapshot:** `local_data/papers.db` (~130 MB, **gitignored**, 13,448 rows). Read-only in the live pipeline; only `neon_db.py migrate` reads from it.
-- **Hand-seeded classical papers:** `external_papers.db` (~560 KB, tracked in git). Merged into Neon by `sync_db.py`; read directly by `external.py`.
-- Scored paper feed (JSON cache): `daily_papers/papers_out/all_scored.json` (~41 MB, tracked). Produced by `daily_papers/hf_daily_papers.py`.
+- **Source of truth:** Neon Postgres, table `"nextjs-ui_paper"` (via `$DATABASE_URL`, see `src/paper_pipeline/core/neon_db.py`).
+- **Legacy SQLite snapshot:** `local_data/papers.db` (~130 MB, **gitignored**, 13,448 rows). Read-only in the live pipeline; only `python -m paper_pipeline.core.neon_db migrate` reads from it.
+- **Hand-seeded classical papers:** `src/paper_pipeline/core/external_papers.db` (~560 KB, tracked in git). Merged into Neon by `src/paper_pipeline/cli/sync.py`; read directly by `src/paper_pipeline/core/external.py`.
+- Scored paper feed (JSON cache): `src/paper_pipeline/ingest/papers_out/all_scored.json` (~41 MB, tracked). Produced by `paper-fetch` (`src/paper_pipeline/ingest/hf_daily_papers.py`).
 
 # Paper curation playbook (any time window)
 
@@ -58,12 +50,12 @@ How to pick papers to mark `interested=1` from a given month, week, or arbitrary
 # uv run python - <<'PY'
 import json
 from pathlib import Path
-from neon_db import NeonDB
-from daily_papers.hf_daily_papers import fetch_arxiv_metadata
+from paper_pipeline.core.neon_db import NeonDB
+from paper_pipeline.ingest.hf_daily_papers import fetch_arxiv_metadata
 
 PREFIXES = ("2604.",)  # adjust for window
 db = NeonDB()
-data = json.loads(Path("daily_papers/papers_out/all_scored.json").read_text())
+data = json.loads(Path("src/paper_pipeline/ingest/papers_out/all_scored.json").read_text())
 targets = [e for e in data if e.get("arxiv_id","").startswith(PREFIXES) and e.get("title")]
 
 with db.batch() as b:
@@ -135,7 +127,7 @@ Apply in this order, each one can veto:
 ```python
 # uv run python - <<'PY'
 import json
-from neon_db import NeonDB, TABLE
+from paper_pipeline.core.neon_db import NeonDB, TABLE
 from psycopg.rows import dict_row
 YYMM = "2604"; SCORE = 9; LIMIT = 30
 db = NeonDB()
@@ -158,18 +150,18 @@ PY
 
 ## 6. Why this beats reading everything
 
-The score filter is a real token lever: for a ~360-paper month, running `multi_prompt.py` on everything is ~3.8M tokens of input + 900k output. Running the reranker first (cheap small model, ~500 tokens fresh per paper with cached examples block) + `multi_prompt` on the ~5 survivors is ~800k total — ~5× on tokens, ~15–25× on cost because the reranker uses Gemini 3 Flash while multi_prompt uses the local large model.
+The score filter is a real token lever: for a ~360-paper month, running `src/paper_pipeline/cli/multi_prompt.py` on everything is ~3.8M tokens of input + 900k output. Running the reranker first (cheap small model, ~500 tokens fresh per paper with cached examples block) + `multi_prompt` on the ~5 survivors is ~800k total — ~5× on tokens, ~15–25× on cost because the reranker uses Gemini 3 Flash while multi_prompt uses the local large model.
 
 The whole point: don't delegate the authorship + fundamental-vs-incremental check to the scorer. The scorer is a harsh relevance filter; the taste layer lives in this playbook.
 
 # Paper viewer UI (Svelte)
 
-The browse-and-mark-interested frontend lives in **`svelte-ui/`** — a SvelteKit 2 + Svelte 5 (runes) + TypeScript app. It replaces the old monolithic HTML that `daily_papers/paper_viewer.py` used to `generate_html()` as one 58 MB blob.
+The browse-and-mark-interested frontend lives in **`svelte-ui/`** — a SvelteKit 2 + Svelte 5 (runes) + TypeScript app. It replaces an old monolithic HTML viewer (a removed 58 MB blob).
 
 **Architecture (two-process dev):**
 
 ```
-svelte-ui (Vite :5173)  ──proxy──>  daily_papers/paper_server.py (FastAPI :8787)  ──>  Neon + all_scored.json
+svelte-ui (Vite :5173)  ──proxy──>  paper-server :8787 (ingest/paper_server.py)  ──>  Neon + all_scored.json
 ```
 
 The FastAPI server is the JSON/data backend. The Svelte app is the UI. `svelte-ui/vite.config.ts` proxies `/api/papers`, `/interested`, `/interested-ids`, `/add-paper` to `$PAPER_SERVER_URL` (default `http://localhost:8787`). Override the target with `PAPER_SERVER_URL=... pnpm dev` when paper_server is on another host.
@@ -178,7 +170,7 @@ The FastAPI server is the JSON/data backend. The Svelte app is the UI. `svelte-u
 
 ```bash
 # Terminal 1 — backend
-uv run python daily_papers/paper_server.py --port 8787
+uv run paper-server --port 8787
 
 # Terminal 2 — frontend
 cd svelte-ui && pnpm install && pnpm dev
@@ -190,7 +182,7 @@ cd svelte-ui && pnpm install && pnpm dev
 - `svelte-ui/src/routes/+layout.svelte` — Google Sans / Material Symbols fonts, page shell.
 - `svelte-ui/src/lib/types.ts` — `Paper` type mirroring `all_scored.json` rows.
 - `svelte-ui/vite.config.ts` — the dev-server proxy config.
-- `daily_papers/paper_server.py` — FastAPI. Exposes `GET /api/papers` (scored feed) and the legacy interested/add-paper routes. Still serves the old HTML at `GET /` as a fallback; remove once the Svelte UI feels good.
+- `src/paper_pipeline/ingest/paper_server.py` (run via `paper-server`) — FastAPI. Exposes `GET /api/papers` (scored feed) and the legacy interested/add-paper routes. Still serves the old HTML at `GET /` as a fallback; remove once the Svelte UI feels good.
 
 **Typecheck:** `cd svelte-ui && pnpm check` (uses svelte-check).
 
@@ -210,23 +202,23 @@ Do not use `pip install` or `source .venv/bin/activate`.
 
 # Generating paper summaries (runbook)
 
-Full long-form paper summaries are produced by **`multi_prompt.py`**, NOT `main.py`. `multi_prompt.py` is a thin shim that re-exports the public API from the `multi_prompt_pkg/` package and dispatches the CLI via `multi_prompt_pkg.cli.main`. It fetches an arxiv PDF, extracts text with PyMuPDF, and sends it to a local LLM for the full 7-section teach-through (Executive Summary → Context → Technical Approach → Insights → Experiments → Limitations → Implications). Writes into the Neon Postgres `"nextjs-ui_paper"` table by default.
+Full long-form paper summaries are produced by **`src/paper_pipeline/cli/multi_prompt.py`**, NOT `src/paper_pipeline/cli/main.py`. `src/paper_pipeline/cli/multi_prompt.py` is a thin shim that re-exports the public API from the `src/paper_pipeline/summarize/` package and dispatches the CLI via `paper_pipeline.summarize.cli.main`. It fetches an arxiv PDF, extracts text with PyMuPDF, and sends it to a local LLM for the full 7-section teach-through (Executive Summary → Context → Technical Approach → Insights → Experiments → Limitations → Implications). Writes into the Neon Postgres `"nextjs-ui_paper"` table by default.
 
 ## Prereqs
 
-1. Start a local OpenAI-compatible server at `http://localhost:30000/v1` (defined as `LOCAL_BASE_URL` in `multi_prompt_pkg/config.py`). SGLang, vLLM, llama.cpp server — anything OpenAI-compatible. The script sends `model="default"`; the server serves whatever it loaded.
-2. Have `DATABASE_URL` set to a Neon Postgres connection string. `neon_db.py` auto-loads `.env` from this repo and falls back to `../company-scraper/nextjs-ui/.env` (see `_load_env`).
+1. Start a local OpenAI-compatible server at `http://localhost:30000/v1` (defined as `LOCAL_BASE_URL` in `src/paper_pipeline/summarize/config.py`). SGLang, vLLM, llama.cpp server — anything OpenAI-compatible. The script sends `model="default"`; the server serves whatever it loaded.
+2. Have `DATABASE_URL` set to a Neon Postgres connection string. `src/paper_pipeline/core/neon_db.py` auto-loads `.env` from this repo and falls back to `../company-scraper/nextjs-ui/.env` (see `_load_env`).
 
 ## Single paper
 
 ```bash
-uv run python multi_prompt.py --url https://arxiv.org/abs/2312.07104
+uv run paper-summarize --url https://arxiv.org/abs/2312.07104
 ```
 
 ## Batch
 
 ```bash
-uv run python multi_prompt.py --urls "url1,url2,url3" --concurrency 5
+uv run paper-summarize --urls "url1,url2,url3" --concurrency 5
 ```
 
 ## Dynamic mode (continuous worker)
@@ -234,7 +226,7 @@ uv run python multi_prompt.py --urls "url1,url2,url3" --concurrency 5
 Polls Neon every `--interval` seconds for stub rows missing a summary (`NeonDB.get_stubs_without_summary`) and processes them. Run it in a tmux pane and let it chew through the backlog:
 
 ```bash
-uv run python multi_prompt.py --dyn --concurrency 4096 --interval 30
+uv run paper-summarize --dyn --concurrency 4096 --interval 30
 ```
 
 `--concurrency` here is the semaphore ceiling for concurrent papers; the actual network cap is set by the single shared httpx client inside the script.
@@ -244,7 +236,7 @@ uv run python multi_prompt.py --dyn --concurrency 4096 --interval 30
 Re-summarize every `interested=1` paper currently missing a `summary`:
 
 ```bash
-uv run python multi_prompt.py --backfill --concurrency 8
+uv run paper-summarize --backfill --concurrency 8
 ```
 
 ## Remote runs → JSONL sidecar
@@ -252,14 +244,13 @@ uv run python multi_prompt.py --backfill --concurrency 8
 When running on a remote box that can't reach Neon, write results to JSONL and absorb later:
 
 ```bash
-uv run python multi_prompt.py --dyn --jsonl ./runs/remote.jsonl
+uv run paper-summarize --dyn --jsonl ./runs/remote.jsonl
 ```
 
-Then import the JSONL into Neon via `sync_db.py`'s absorb helpers (`import_jsonl.py` also exists for one-off imports).
+Then import the JSONL into Neon via `src/paper_pipeline/cli/sync.py`'s absorb helpers (`src/paper_pipeline/core/import_jsonl.py` also exists for one-off imports).
 
 ## Model overrides
 
-- `--gemini` — use Gemini 3 Flash via OpenRouter/Google AI Studio free tier (bypasses the local server).
 - `--model <name>` — override the `"default"` model string sent in the chat completion request. Only meaningful if your local server dispatches by name.
 - `--many-pass` — use the old 7-section **sequential** pipeline (one LLM call per section, with prior sections in context). Default is a single big call; `--many-pass` is for smaller models that choke on the full context.
 
@@ -267,22 +258,22 @@ Then import the JSONL into Neon via `sync_db.py`'s absorb helpers (`import_jsonl
 
 - **Default:** `local_data/papers.db`, column `summary`, keyed by arxiv_id. `paper_server.py` and the docs build read from here.
 - **`--jsonl`:** append-only JSONL file; re-imported into the DB later.
-- **`docs/<category>/*.md`:** NOT written by `multi_prompt.py`. Those are hand-curated / one-off exports. Don't expect `multi_prompt.py` to populate them.
+- **`docs/<category>/*.md`:** NOT written by `src/paper_pipeline/cli/multi_prompt.py`. Those are hand-curated / one-off exports. Don't expect `src/paper_pipeline/cli/multi_prompt.py` to populate them.
 
 ## Tuning for port-forwarded servers
 
-If hitting the LLM through VSCode port-forward or SSH -L, high concurrency causes connection resets. Drop `--concurrency` first (try 4–8); if still flaky, the httpx client limits live inside `multi_prompt_pkg/llm.py` — look for the `AsyncOpenAI(...)` construction and cap `max_connections` there. See `daily_papers/hf_daily_papers.py` for the analogous single-client pattern.
+If hitting the LLM through VSCode port-forward or SSH -L, high concurrency causes connection resets. Drop `--concurrency` first (try 4–8); if still flaky, the httpx client limits live inside `src/paper_pipeline/summarize/llm.py` — look for the `AsyncOpenAI(...)` construction and cap `max_connections` there. See `src/paper_pipeline/ingest/hf_daily_papers.py` for the analogous single-client pattern.
 
 # Data paths
 
-The source of truth is the Neon Postgres `"nextjs-ui_paper"` table (see `neon_db.py`). Several committed input files feed it; `local_data/papers.db` is a legacy SQLite snapshot kept around for migration/backup only.
+The source of truth is the Neon Postgres `"nextjs-ui_paper"` table (see `src/paper_pipeline/core/neon_db.py`). Several committed input files feed it; `local_data/papers.db` is a legacy SQLite snapshot kept around for migration/backup only.
 
 ## The Neon DB (source of truth)
 
 - Table: `"nextjs-ui_paper"` in a Neon Postgres database. Connection comes from `DATABASE_URL`.
-- Schema: defined in `neon_db.py` (`NeonDB.init_schema` + the `SCHEMA_COLUMNS` tuple). Includes scoring columns `score`, `similar_paper`, `score_reason`, `tag_category_v2`, `tag_confidence`, `tag_reason`, `score_source`.
+- Schema: defined in `src/paper_pipeline/core/neon_db.py` (`NeonDB.init_schema` + the `SCHEMA_COLUMNS` tuple). Includes scoring columns `score`, `similar_paper`, `score_reason`, `tag_category_v2`, `tag_confidence`, `tag_reason`, `score_source`.
 - `DATABASE_URL` discovery: `neon_db._load_env` reads this repo's `.env` first, then walks up to `../company-scraper/nextjs-ui/.env` as a shared fallback. Export in the shell to override.
-- CLI: `uv run python neon_db.py init-schema` (idempotent) and `uv run python neon_db.py migrate --sqlite local_data/papers.db` (copies the legacy SQLite snapshot into Neon; uses partial upsert so it's safe to re-run).
+- CLI: `uv run python -m paper_pipeline.core.neon_db init-schema` (idempotent) and `uv run python -m paper_pipeline.core.neon_db migrate --sqlite local_data/papers.db` (copies the legacy SQLite snapshot into Neon; uses partial upsert so it's safe to re-run).
 
 ## Legacy SQLite snapshot
 
@@ -291,16 +282,16 @@ The source of truth is the Neon Postgres `"nextjs-ui_paper"` table (see `neon_db
 ## Rebuilding from the committed inputs
 
 ```bash
-uv run python neon_db.py init-schema      # ensure the table exists
-uv run python sync_db.py                  # full pipeline (uses arxiv API)
-uv run python sync_db.py --skip-arxiv     # fast — use committed data only
+uv run python -m paper_pipeline.core.neon_db init-schema      # ensure the table exists
+uv run paper-sync                  # full pipeline (uses arxiv API)
+uv run paper-sync --skip-arxiv     # fast — use committed data only
 ```
 
-Step 5 (`absorb_scored_json`) mirrors **every** column out of `all_scored.json` into Neon — arxiv metadata (`title`, `authors`, `github`, …) **and** scoring columns (`score`, `similar_paper`, `score_reason`, `tag_category_v2`, `tag_confidence`, `tag_reason`, `score_source`). After `sync_db.py` runs, the Neon row for a given `arxiv_id` mirrors the JSON — no separate scoring-import step.
+Step 5 (`absorb_scored_json`) mirrors **every** column out of `all_scored.json` into Neon — arxiv metadata (`title`, `authors`, `github`, …) **and** scoring columns (`score`, `similar_paper`, `score_reason`, `tag_category_v2`, `tag_confidence`, `tag_reason`, `score_source`). After `src/paper_pipeline/cli/sync.py` runs, the Neon row for a given `arxiv_id` mirrors the JSON — no separate scoring-import step.
 
 ### Batched writes (`NeonDB.batch`)
 
-All hot write loops in `sync_db.py` use the shared-connection batch API:
+All hot write loops in `src/paper_pipeline/cli/sync.py` use the shared-connection batch API:
 
 ```python
 with db.batch() as b:
@@ -314,14 +305,14 @@ with db.batch() as b:
 
 | Path | Size | Role |
 |---|---|---|
-| `daily_papers/papers_out/all_scored.json` | 40 M | LLM scoring pass output. 13,739 papers with `score` (1-10), `similar_paper`, `reason`, `tag_category`, `tag_confidence`, `tag_reason`. Produced by `daily_papers/hf_daily_papers.py` against the reading history. This is the source of truth for scores; `sync_db.py` step 5 mirrors it into Neon (incl. the scoring columns). |
-| `tagged_papers.jsonl` | 8.6 M | Tagger output. 13,023 rows: `{arxiv_id, title, category, confidence, reason}`. Consumed by `sync_db.py --import-tags`. |
-| `papers_to_tag.jsonl` | 19 M | Tagger input: 13,025 rows of `{arxiv_id, title, abstract}`. Produced by `sync_db.py --export`, fed into `daily_papers/tag_papers.py`. |
+| `src/paper_pipeline/ingest/papers_out/all_scored.json` | 40 M | LLM scoring pass output. 13,739 papers with `score` (1-10), `similar_paper`, `reason`, `tag_category`, `tag_confidence`, `tag_reason`. Produced by `paper-fetch` (`src/paper_pipeline/ingest/hf_daily_papers.py`) against the reading history. This is the source of truth for scores; `src/paper_pipeline/cli/sync.py` step 5 mirrors it into Neon (incl. the scoring columns). |
+| `src/paper_pipeline/ingest/tagged_papers.jsonl` | 8.6 M | Tagger output. 13,023 rows: `{arxiv_id, title, category, confidence, reason}`. Consumed by `paper-sync --import-tags`. |
+| `src/paper_pipeline/ingest/papers_to_tag.jsonl` | 19 M | Tagger input: 13,025 rows of `{arxiv_id, title, abstract}`. Produced by `paper-sync --export`, fed into `tag_papers.py`. |
 | `results_modal3.jsonl` | small | Older run of LLM-generated long-form summaries (441 rows). Sidecar reference. |
-| `external_papers.db` | 560 K | Hand-seeded classical papers (GANs, Deep Learning, etc.) with non-arxiv IDs. Still a SQLite file — read directly by `external.py` and merged into Neon by `sync_db.py`. |
-| `arxiv_index.txt` | small | Free-form list of arxiv IDs to ensure-exist in Neon as stubs. |
-| `docs/**/*.md` | many | Per-paper summary markdown (organized by category dir). `sync_db.py` parses these to backfill `summary` on stub rows; `daily_papers/examples.py:load_examples_from_repo()` also uses filenames as a reading-history source. |
-| `links.txt`, `arxiv_index.txt` | small | Reading-list text files. |
+| `src/paper_pipeline/core/external_papers.db` | 560 K | Hand-seeded classical papers (GANs, Deep Learning, etc.) with non-arxiv IDs. Still a SQLite file — read directly by `src/paper_pipeline/core/external.py` and merged into Neon by `src/paper_pipeline/cli/sync.py`. |
+| `src/paper_pipeline/ingest/arxiv_index.txt` | small | Free-form list of arxiv IDs to ensure-exist in Neon as stubs. |
+| `docs/**/*.md` | many | Per-paper summary markdown (organized by category dir). `src/paper_pipeline/cli/sync.py` parses these to backfill `summary` on stub rows; `src/paper_pipeline/ingest/examples.py:load_examples()` also uses filenames as a reading-history source. |
+| `links.txt`, `src/paper_pipeline/ingest/arxiv_index.txt` | small | Reading-list text files. |
 
 ## Scratch / backup files (local only — gitignored)
 
@@ -339,10 +330,10 @@ The `*_backup.db` files have `chmod -w` set — treat them as recovery points.
 
 ## Reading-history sources (what `load_examples_from_repo` reads)
 
-`daily_papers/examples.py:load_examples_from_repo()` (shared by `hf_daily_papers.py` and `papers_by_score.py`) unions three sources:
+`src/paper_pipeline/ingest/examples.py:load_examples()` (shared by `hf_daily_papers.py` and `papers_by_score.py`) unions three sources:
 
 1. Neon `"nextjs-ui_paper"` via `NeonDB.get_interested()` — the `interested = 1` rows
-2. `external_papers.db` — `SELECT title, category FROM papers` (still SQLite; read by `external.py`)
+2. `src/paper_pipeline/core/external_papers.db` — `SELECT title, category FROM papers` (still SQLite; read by `src/paper_pipeline/core/external.py`)
 3. `docs/**/*.md` — H1 (`# Title`) of each file, categorized by parent dir
 
 These are merged by title dedup. Keeping Neon populated with `interested=1` rows (via `paper_server.py`'s "mark interested" POST) is what makes the scorer sharper over time.
@@ -363,7 +354,7 @@ tagged_papers.jsonl ◄─── tag_papers.py ◄──┤   papers_to_tag.json
                                           │                              │
                                           ▼                              ▼
                                     ┌──────────────────────────────────────────┐
-                                    │  sync_db.py  (all writes via NeonDB)     │
+                                    │  paper-sync  (all writes via NeonDB)     │
                                     │    1. init_schema (Neon)                 │
                                     │    2. backfill from docs/                │
                                     │    3. absorb arxiv_index.txt             │

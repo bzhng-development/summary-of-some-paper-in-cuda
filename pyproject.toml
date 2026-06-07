@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "paper-summaries"
 version = "0.1.0"
@@ -16,6 +20,7 @@ dependencies = [
     "httpx>=0.28.1",
     "loguru>=0.7.3",
     "lxml>=6.1.1",
+    "markdownify>=1.2.0",
     "numpy>=2.4.0",
     "openai>=2.6.1",
     "openai-agents>=0.4.2",
@@ -33,8 +38,21 @@ dependencies = [
     "tenacity>=9.1.2",
     "tiktoken>=0.12.0",
     "tqdm>=4.67.1",
+    "typer>=0.26.7",
     "uvicorn>=0.38.0",
 ]
+
+[project.scripts]
+paper-summarize = "paper_pipeline.summarize.cli:main"
+paper-summarize-single = "paper_pipeline.cli.main:main"
+paper-sync = "paper_pipeline.cli.sync:main"
+paper-server = "paper_pipeline.ingest.paper_server:main"
+paper-fetch = "paper_pipeline.ingest.hf_daily_papers:main"
+paper-tag = "paper_pipeline.ingest.tag_papers:main"
+paper-import-jsonl = "paper_pipeline.core.import_jsonl:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/paper_pipeline"]
 
 [dependency-groups]
 dev = [
@@ -52,20 +70,21 @@ dev = [
 ]
 
 [tool.pyrefly]
-project_includes = ["."]
-project_excludes = ["**/.[!/.]*", ".venv/**", "__pycache__/**", "throwaway_script/**", "arxiv.py/**", "prompt_iter/**"]
-search_path = ["."]
+project_includes = ["src"]
+project_excludes = ["**/.[!/.]*", ".venv/**", "__pycache__/**", "arxiv.py/**", "prompt_iter/**", "src/paper_pipeline/discovery/**", "src/paper_pipeline/probes/**", "src/paper_pipeline/regen/**", "src/paper_pipeline/tagging/**", "src/paper_pipeline/substack/**"]
+search_path = ["src"]
 python_version = "3.14"
 
 [tool.ty.src]
-exclude = ["throwaway_script", "arxiv.py", "prompt_iter", ".venv", "__pycache__"]
+exclude = ["arxiv.py", "prompt_iter", ".venv", "__pycache__", "src/paper_pipeline/discovery", "src/paper_pipeline/probes", "src/paper_pipeline/regen", "src/paper_pipeline/tagging", "src/paper_pipeline/substack"]
 
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
 pythonVersion = "3.14"
 typeCheckingMode = "basic"
-exclude = [".venv", "**/__pycache__", "local_data", "docs_backup", "throwaway_script", "arxiv.py", "prompt_iter"]
+extraPaths = ["src"]
+exclude = [".venv", "**/__pycache__", "local_data", "docs_backup", "arxiv.py", "prompt_iter", "src/paper_pipeline/discovery", "src/paper_pipeline/probes", "src/paper_pipeline/regen", "src/paper_pipeline/tagging", "src/paper_pipeline/substack"]
 
 [tool.ruff]
 line-length = 120

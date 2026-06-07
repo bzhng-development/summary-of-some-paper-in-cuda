@@ -10,7 +10,7 @@ temp_paper.pdf
 *.log
 
 # Built database lives in local_data/ (100MB+ — exceeds github per-file limit).
-# Rebuild via `uv run python sync_db.py` from the committed jsonls + external_papers.db.
+# Rebuild via `uv run paper-sync` from the committed jsonls + external_papers.db.
 # local_data/ also holds scratch snapshots (papers_unified.db, papers_stash3.db, backups).
 local_data/
 
@@ -22,11 +22,16 @@ papers.db-shm
 # Local mintlify leftovers
 mintlify-ref/
 
-# Per-run build artifacts from daily_papers/hf_daily_papers.py — rebuilt on every run.
+# Per-run build artifacts from paper-fetch (src/paper_pipeline/ingest/hf_daily_papers.py).
 # all_scored.json stays tracked (it's the source of truth for scores); relevant.md is a cache.
-daily_papers/papers_out/relevant.md
-daily_papers/papers_out/by_score/
+src/paper_pipeline/ingest/papers_out/relevant.md
+src/paper_pipeline/ingest/papers_out/by_score/
 __pycache__/
+
+# docs/ is a DERIVED mirror of the canonical paper set in
+# paper-graph-ui/src/content/papers/. Regenerate with
+# `uv run python -m paper_pipeline.regen.reconcile_docs --apply`. Not committed.
+docs/
 
 .vercel
 

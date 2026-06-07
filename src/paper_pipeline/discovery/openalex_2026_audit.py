@@ -30,7 +30,6 @@ import json
 import re
 import sys
 import time
-from contextlib import nullcontext
 from pathlib import Path
 
 
@@ -161,6 +160,31 @@ def normalize_inst_id(s: str) -> str:
     return s.replace("https://openalex.org/", "")
 
 
+def reconstruct_abstract(inverted: dict | None) -> str | None:
+    """Rebuild plain-text abstract from OpenAlex's abstract_inverted_index ({word: [positions]})."""
+    if not inverted:
+        return None
+    positions: list[tuple[int, str]] = []
+    for word, idxs in inverted.items():
+        for i in idxs:
+            positions.append((i, word))
+    if not positions:
+        return None
+    positions.sort()
+    return " ".join(w for _, w in positions)
+
+
+def best_pdf_url(work: dict) -> str | None:
+    """First available PDF/OA url across open_access + locations."""
+    oa = work.get("open_access") or {}
+    if oa.get("oa_url"):
+        return oa["oa_url"]
+    for loc in (work.get("primary_location"), work.get("best_oa_location"), *(work.get("locations") or [])):
+        if loc and loc.get("pdf_url"):
+            return loc["pdf_url"]
+    return None
+
+
 def resolve_institution(label: str, aliases: list[str]) -> tuple[str, str] | None:
     """Return (inst_id_short, display_name) or None."""
     override = INSTITUTION_OVERRIDES.get(label)
@@ -260,7 +284,21 @@ def main() -> int:
         default=True,
         help="Upsert each net-new paper into Neon as a stub (default on). Use --no-save-neon for a dry run.",
     )
+    ap.add_argument(
+        "--exclude",
+        type=str,
+        default="",
+        help="Comma-separated ORG labels to skip (e.g. universities). Match the labels in ORGS.",
+    )
+    ap.add_argument(
+        "--max-pages",
+        type=int,
+        default=250,
+        help="Per-org page cap (×200 works/page). Default 250 = up to 50k works/org before truncating.",
+    )
     args = ap.parse_args()
+    exclude = {s.strip() for s in args.exclude.split(",") if s.strip()}
+    orgs_to_run = [o for o in ORGS if o[0] not in exclude]
 
     if "-" in args.years:
         year_min, year_max = map(int, args.years.split("-"))
@@ -285,20 +323,27 @@ def main() -> int:
 
     per_org: list[tuple[str, int, int, int]] = []  # (org, total, in_neon, missing)
     grand_new = 0
-    batch_cm = db.batch() if args.save_neon else nullcontext(None)
-    with output.open("w", encoding="utf-8") as fh, batch_cm as nb:
-        for label, aliases in ORGS:
+    if exclude:
+        print(f"Excluding {len(exclude)} orgs: {', '.join(sorted(exclude))}\n")
+    print(f"Scraping {len(orgs_to_run)} orgs (max {args.max_pages * 200:,} works/org)\n")
+    # Append (resume-safe): re-running skips already-saved ids via the in_neon set, so a
+    # crash mid-run resumes cleanly. We DON'T hold one DB connection across the whole run —
+    # the slow OpenAlex fetches between saves would let Neon's idle reaper drop it. Instead
+    # each org flushes its net-new rows in a short-lived batch AFTER its fetch completes.
+    with output.open("a", encoding="utf-8") as fh:
+        for label, aliases in orgs_to_run:
             resolved = resolve_institution(label, aliases)
             if not resolved:
                 print(f"  [{label}] couldn't resolve institution — skipping")
                 per_org.append((label, 0, 0, 0))
                 continue
             inst_id, display = resolved
-            works, truncated = fetch_org_works(inst_id, year_min, year_max)
+            works, truncated = fetch_org_works(inst_id, year_min, year_max, max_pages=args.max_pages)
             if truncated:
                 print(f"  ! [{label}] hit page cap — results TRUNCATED, count is a floor")
             org_in_neon = 0
             org_missing = 0
+            org_saves: list[dict] = []  # net-new save kwargs, flushed in a short batch after the loop
             for w in works:
                 aid = extract_arxiv_id(w)
                 if not aid or not aid.startswith(prefixes):
@@ -308,32 +353,65 @@ def main() -> int:
                     org_in_neon += 1
                 else:
                     org_missing += 1
-                authors = [a.get("author", {}).get("display_name") for a in (w.get("authorships") or [])[:5]]
-                authors = [a for a in authors if a]
+                all_authors = [a.get("author", {}).get("display_name") for a in (w.get("authorships") or [])]
+                all_authors = [a for a in all_authors if a]
+                abstract = reconstruct_abstract(w.get("abstract_inverted_index"))
+                cited = w.get("cited_by_count")
+                fwci = w.get("fwci")
+                pdf_url = best_pdf_url(w)
+                topics = [t.get("display_name") for t in (w.get("topics") or []) if t.get("display_name")]
+                # JSONL landing tier: keep EVERYTHING (flattened high-value + the full raw object).
                 rec = {
                     "arxiv_id": aid,
                     "title": (w.get("title") or "").strip(),
                     "org_label": label,
                     "openalex_inst": inst_id,
                     "openalex_inst_display": display,
+                    "openalex_id": w.get("id"),
                     "doi": w.get("doi"),
-                    "authors": authors,
+                    "authors": all_authors,
                     "publication_date": w.get("publication_date"),
+                    "publication_year": w.get("publication_year"),
+                    "cited_by_count": cited,
+                    "fwci": fwci,
+                    "counts_by_year": w.get("counts_by_year"),
+                    "primary_topic": (w.get("primary_topic") or {}).get("display_name"),
+                    "topics": topics,
+                    "keywords": [k.get("display_name") for k in (w.get("keywords") or []) if k.get("display_name")],
+                    "type": w.get("type"),
+                    "language": w.get("language"),
+                    "open_access": w.get("open_access"),
+                    "pdf_url": pdf_url,
+                    "is_retracted": w.get("is_retracted"),
+                    "referenced_works_count": w.get("referenced_works_count"),
+                    "ids": w.get("ids"),
+                    "abstract": abstract,
                     "in_neon": already,
+                    "openalex_raw": w,  # full payload — nothing lost
                 }
-                fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
-                if nb is not None and not already:
-                    nb.save_paper(
-                        aid,
-                        title=(w.get("title") or "").strip() or None,
-                        url=f"https://arxiv.org/abs/{aid}",
-                        organization=label,
-                        doi=w.get("doi") or None,
-                        authors=authors or None,
-                        published=w.get("publication_date") or None,
-                        score_source="openalex_audit",
+                fh.write(json.dumps(rec, ensure_ascii=False, sort_keys=True) + "\n")
+                if args.save_neon and not already:
+                    org_saves.append(
+                        {
+                            "arxiv_id": aid,
+                            "title": (w.get("title") or "").strip() or None,
+                            "url": f"https://arxiv.org/abs/{aid}",
+                            "organization": label,
+                            "doi": w.get("doi") or None,
+                            "authors": all_authors[:8] or None,
+                            "published": w.get("publication_date") or None,
+                            "abstract": abstract or None,
+                            "cited_by_count": cited,
+                            "fwci": fwci,
+                            "score_source": "openalex_audit",
+                        }
                     )
             fh.flush()
+            # Short-lived batch per org: connection only open during this quick save burst.
+            if org_saves:
+                with db.batch() as nb:
+                    for kw in org_saves:
+                        nb.save_paper(kw.pop("arxiv_id"), **kw)
             total = org_in_neon + org_missing
             per_org.append((label, total, org_in_neon, org_missing))
             grand_new += org_missing

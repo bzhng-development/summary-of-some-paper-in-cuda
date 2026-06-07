@@ -329,7 +329,7 @@ async def run_dynamic(
             in_flight.update(new_stubs)
             for aid in new_stubs:
                 tasks.add(asyncio.create_task(_run_one(aid)))
-    except KeyboardInterrupt, asyncio.CancelledError:
+    except (KeyboardInterrupt, asyncio.CancelledError):
         logger.info("\nStopping... waiting for {} in-flight tasks", len(tasks))
         for task in tasks:
             task.cancel()

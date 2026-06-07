@@ -31,9 +31,21 @@ from typing import Any
 
 
 def setup_repo_root(repo_root: str) -> None:
-    p = Path(repo_root).resolve()
-    if not (p / "multi_prompt_pkg").exists():
-        raise SystemExit(f"--repo-root {p} does not contain multi_prompt_pkg/")
+    # The summarize prompts/config/schemas now live in the installable `paper_pipeline`
+    # package (was `multi_prompt_pkg/`). If it's already importable (uv/editable install or
+    # PYTHONPATH), we're done; otherwise add <repo_root>/src to sys.path as a fallback.
+    import importlib.util
+    import sys
+
+    if importlib.util.find_spec("paper_pipeline") is not None:
+        return
+    src = Path(repo_root).resolve() / "src"
+    if (src / "paper_pipeline").exists():
+        sys.path.insert(0, str(src))
+        return
+    raise SystemExit(
+        f"--repo-root {repo_root}: cannot import paper_pipeline (no installed pkg, no {src}/paper_pipeline)"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -593,9 +605,9 @@ def run_online(args) -> None:
     else:
         chat_kwargs = {"chat_template_kwargs": {"thinking": True, "reasoning_effort": args.thinking}}
 
-    sampling_kwargs_section = dict(temperature=1.0, top_p=1.0, extra_body=chat_kwargs)
+    sampling_kwargs_section = dict(temperature=1.0, top_p=1.0, stream=False, extra_body=chat_kwargs)
     sampling_kwargs_structured = dict(
-        temperature=1.0, top_p=1.0, extra_body={"chat_template_kwargs": {"thinking": False}}
+        temperature=1.0, top_p=1.0, stream=False, extra_body={"chat_template_kwargs": {"thinking": False}}
     )
 
     only_cat = getattr(args, "only_cat", False)
@@ -651,7 +663,13 @@ def run_online(args) -> None:
             t0 = time.time()
             try:
                 outs = await online_batch(
-                    client, args.model, messages_batch, sampling_kwargs_section, None, stream_appender=appender
+                    client,
+                    args.model,
+                    messages_batch,
+                    sampling_kwargs_section,
+                    None,
+                    concurrency=args.concurrency,
+                    stream_appender=appender,
                 )
             finally:
                 stream_fh.close()
@@ -682,7 +700,14 @@ def run_online(args) -> None:
                 "type": "json_schema",
                 "json_schema": {"name": "pitch_output", "schema": PitchOutput.model_json_schema()},
             }
-            outs = await online_batch(client, args.model, messages_batch, sampling_kwargs_structured, response_format)
+            outs = await online_batch(
+                client,
+                args.model,
+                messages_batch,
+                sampling_kwargs_structured,
+                response_format,
+                concurrency=args.concurrency,
+            )
             for p, raw in zip(pitch_todo, outs):
                 try:
                     parsed = PitchOutput.model_validate_json(raw)
@@ -710,7 +735,14 @@ def run_online(args) -> None:
                 "type": "json_schema",
                 "json_schema": {"name": "category_output", "schema": CategoryOutput.model_json_schema()},
             }
-            outs = await online_batch(client, args.model, messages_batch, sampling_kwargs_structured, response_format)
+            outs = await online_batch(
+                client,
+                args.model,
+                messages_batch,
+                sampling_kwargs_structured,
+                response_format,
+                concurrency=args.concurrency,
+            )
             for p, raw in zip(cat_todo, outs):
                 try:
                     parsed = CategoryOutput.model_validate_json(raw)
@@ -752,6 +784,12 @@ def main() -> None:
     # Online-mode-only:
     ap.add_argument("--base-url", default="http://localhost:8000/v1")
     ap.add_argument("--model", default="deepseek-ai/DeepSeek-V4-Flash")
+    ap.add_argument(
+        "--concurrency",
+        type=int,
+        default=64,
+        help="Online mode: max in-flight requests (semaphore). Match the server's KV-cache concurrency.",
+    )
     ap.add_argument(
         "--only-cat",
         action="store_true",

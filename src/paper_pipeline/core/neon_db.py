@@ -107,7 +107,10 @@ SCHEMA_COLUMNS: Final[tuple[str, ...]] = (
     "score_source",
     "is_only_important_because_of_company",
     "tag_categories_v2",  # text[] — multi-tag classification (paper can be in N cats)
-    "markdown",  # full-text body: HF-rendered markdown or chandra-ocr-2 output (see paper_pipeline.ocr)
+    "markdown",  # full-text body: HF-rendered markdown or VLM-OCR output (see paper_pipeline.ocr)
+    "markdown_source",  # provenance of `markdown`: e.g. 'glm-ocr-pdf' (OCR'd from the PDF), 'hf', 'arxiv-html'
+    "cited_by_count",  # OpenAlex raw citation count (see paper_pipeline.discovery.openalex)
+    "fwci",  # OpenAlex Field-Weighted Citation Impact (age/field-normalized — recency-robust ranking)
 )
 
 # Columns the caller is allowed to pass to ``save_paper`` as kwargs. ``id`` is
@@ -266,13 +269,19 @@ class NeonDB:
                 score_source      TEXT,
                 is_only_important_because_of_company BOOLEAN NOT NULL DEFAULT FALSE,
                 tag_categories_v2 TEXT[],
-                markdown          TEXT
+                markdown          TEXT,
+                markdown_source   TEXT,
+                cited_by_count    INTEGER,
+                fwci              DOUBLE PRECISION
             )
         """
         with self.get_conn() as conn, conn.cursor() as cur:
             cur.execute(ddl)
-            # Backfill the column on tables created before it existed.
+            # Backfill the columns on tables created before they existed.
             cur.execute(f"ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS markdown TEXT")
+            cur.execute(f"ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS markdown_source TEXT")
+            cur.execute(f"ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS cited_by_count INTEGER")
+            cur.execute(f"ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS fwci DOUBLE PRECISION")
             cur.execute(f'CREATE INDEX IF NOT EXISTS "nextjs-ui_paper_interested_idx" ON {TABLE} (interested)')
             cur.execute(f'CREATE INDEX IF NOT EXISTS "nextjs-ui_paper_score_idx" ON {TABLE} (score)')
         logger.debug("Neon schema ready")

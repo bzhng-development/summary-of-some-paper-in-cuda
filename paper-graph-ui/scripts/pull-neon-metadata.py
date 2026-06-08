@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Pull paper metadata from Neon Postgres for every paper present in
 # src/lib/graph.generated.json and write the merged result back. Keeps the
-# build self-contained — the next `node scripts/build-paper-graph.mjs` will
+# build self-contained — the next `tsx scripts/build-paper-graph.ts` will
 # pick up the enriched JSON.
 #
 # Run: `uv run python scripts/pull-neon-metadata.py`
@@ -54,7 +54,7 @@ FIELDS = [
 
 def main():
     if not GRAPH.exists():
-        print(f"Run `node scripts/build-paper-graph.mjs` first ({GRAPH} missing)")
+        print(f"Run `tsx scripts/build-paper-graph.ts` first ({GRAPH} missing)")
         sys.exit(1)
     graph = json.loads(GRAPH.read_text())
     summary_arxiv_ids = sorted(

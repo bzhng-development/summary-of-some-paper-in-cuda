@@ -12,7 +12,119 @@ const PAPERS_DIR = path.join(ROOT, 'src/content/papers');
 const OUT = path.join(ROOT, 'src/lib/graph.generated.json');
 const NEON = path.join(ROOT, 'src/lib/neon-metadata.generated.json');
 
-function loadNeon() {
+type CategoryMeta = {
+  title: string;
+  icon: string;
+  color: string;
+  blurb: string;
+};
+
+type DomainBridge = [string, string, string];
+
+type Topic = {
+  id: string;
+  label: string;
+  kw: string[];
+};
+
+type MarkdownFile = {
+  full: string;
+  rel: string;
+};
+
+type YearMonth = {
+  year: number;
+  month: number;
+};
+
+type NullableYearMonth = {
+  year: number;
+  month: number | null;
+};
+
+type NeonMetadata = {
+  id?: string;
+  title?: string;
+  abstract?: string;
+  affiliations?: Record<string, unknown> | null;
+  arxiv_comment?: string;
+  authors?: string[];
+  categories?: string[];
+  cited_by_count?: number;
+  doi?: string;
+  fwci?: number;
+  github?: string;
+  github_stars?: number;
+  interested?: number;
+  is_only_important_because_of_company?: boolean;
+  org_fullname?: string;
+  organization?: string;
+  primary_category?: string;
+  published?: string;
+  score?: number;
+  score_reason?: string;
+  similar_paper?: string;
+  tag_categories_v2?: string[];
+  tag_category_v2?: string;
+  tag_confidence?: number;
+  tag_reason?: string;
+  upvotes?: number;
+  _has_summary_file?: boolean;
+  _summaryless_scope?: boolean;
+  [key: string]: unknown;
+};
+
+type NeonMetadataById = Record<string, NeonMetadata>;
+
+type Paper = {
+  id: string;
+  arxivId: string | null;
+  title: string;
+  category: string;
+  slug: string;
+  year: number;
+  month: number | null;
+  isArxiv: boolean;
+  topics: string[];
+  tokens: string[];
+  relativePath: string | null;
+  wordCount: number;
+  readTimeMin: number | null;
+  hasSummary: boolean;
+  score: number | null;
+  similarPaper: string | null;
+  scoreReason: string | null;
+  citedByCount: number | null;
+  fwci: number | null;
+  doi: string | null;
+  published: string | null;
+  abstract: string | null;
+  tagCategoryV2: string | null;
+  authors: string[] | null;
+  organization: string | null;
+  primaryCategory: string | null;
+  upvotes: number | null;
+  github: string | null;
+  githubStars: number | null;
+  arxivComment: string | null;
+  companyOnly: boolean;
+  tagCategories: string[];
+};
+
+type Edge = {
+  source: string;
+  target: string;
+  type: string;
+  weight: number;
+  via?: string;
+  topic?: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function loadNeon(): NeonMetadataById {
   if (!fs.existsSync(NEON)) {
     console.warn(
       'No Neon metadata cache; run `uv run python scripts/pull-neon-metadata.py` for richer data.'
@@ -20,23 +132,24 @@ function loadNeon() {
     return {};
   }
   try {
-    return JSON.parse(fs.readFileSync(NEON, 'utf8'));
+    const parsed: unknown = JSON.parse(fs.readFileSync(NEON, 'utf8'));
+    return isRecord(parsed) ? (parsed as NeonMetadataById) : {};
   } catch (err) {
-    console.warn('Failed to read Neon metadata:', err.message);
+    console.warn('Failed to read Neon metadata:', err instanceof Error ? err.message : String(err));
     return {};
   }
 }
 
 // Loose title equivalence so similar_paper (free-text title) can be matched
 // to a graph node. Drops punctuation, lowercases, collapses whitespace.
-function normalizeTitle(t) {
+function normalizeTitle(t: unknown): string {
   return String(t || '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 }
 
-const CATEGORY_META = {
+const CATEGORY_META: Record<string, CategoryMeta> = {
   agents: {
     title: 'Agents',
     icon: 'sparkle',
@@ -186,7 +299,7 @@ const CATEGORY_META = {
 
 // Domain bridges — which categories are adjacent topically. Used both for
 // the high-level domain graph and for cross-domain edge inference.
-const DOMAIN_BRIDGES = [
+const DOMAIN_BRIDGES: DomainBridge[] = [
   ['agents', 'llm-systems', 'Agent systems'],
   ['agents', 'rl-training', 'RL-driven agents'],
   ['agents', 'prompting', 'Tool prompting'],
@@ -229,7 +342,7 @@ const DOMAIN_BRIDGES = [
 
 // Topic keywords to cluster papers into "topic threads" within / across
 // categories. First match wins for the primary topic; all matches recorded.
-const TOPICS = [
+const TOPICS: Topic[] = [
   {
     id: 'tools',
     label: 'Tool use & function calling',
@@ -447,8 +560,8 @@ const TOPICS = [
   },
 ];
 
-function listMarkdownFiles(dir, base = '') {
-  const out = [];
+function listMarkdownFiles(dir: string, base = ''): MarkdownFile[] {
+  const out: MarkdownFile[] = [];
   const items = fs.readdirSync(dir, { withFileTypes: true });
   for (const item of items) {
     const full = path.join(dir, item.name);
@@ -463,11 +576,11 @@ function listMarkdownFiles(dir, base = '') {
 }
 
 // Strip filename to a slug usable in URLs. Preserves arxiv id prefix if present.
-function makeSlug(filename) {
+function makeSlug(filename: string): string {
   return filename.replace(/\.md$/, '');
 }
 
-function parseArxivId(text, filename) {
+function parseArxivId(text: string, filename: string): string | null {
   // 1) from arxiv.org URL anywhere in body (most reliable)
   const url = text.match(/arxiv\.org\/abs\/(\d{4}\.\d{4,6})/i);
   if (url) return url[1];
@@ -480,7 +593,7 @@ function parseArxivId(text, filename) {
   return null;
 }
 
-function parseTitle(text, filename) {
+function parseTitle(text: string, filename: string): string {
   // first H1
   const m = text.match(/^#\s+(.+?)\s*$/m);
   if (m) return m[1].trim();
@@ -491,7 +604,7 @@ function parseTitle(text, filename) {
     .replace(/-/g, ' ');
 }
 
-function yearFromArxivId(arxivId) {
+function yearFromArxivId(arxivId: string | null): YearMonth | null {
   if (!arxivId) return null;
   const yy = parseInt(arxivId.slice(0, 2), 10);
   const mm = parseInt(arxivId.slice(2, 4), 10);
@@ -503,7 +616,7 @@ function yearFromArxivId(arxivId) {
 }
 
 // Year inference for classical/non-arxiv papers from common titles.
-const CLASSICAL_YEARS = {
+const CLASSICAL_YEARS: Record<string, number> = {
   attentionisallyouneed: 2017,
   bert: 2018,
   gpt2: 2019,
@@ -533,7 +646,7 @@ const CLASSICAL_YEARS = {
   randomsearchforhyperparameter: 2012,
 };
 
-function inferClassicalYear(title) {
+function inferClassicalYear(title: string): number | null {
   const norm = title.toLowerCase().replace(/[^a-z0-9]/g, '');
   for (const [key, year] of Object.entries(CLASSICAL_YEARS)) {
     if (norm.includes(key)) return year;
@@ -541,9 +654,9 @@ function inferClassicalYear(title) {
   return null;
 }
 
-function detectTopics(title) {
+function detectTopics(title: string): string[] {
   const lc = title.toLowerCase();
-  const matches = [];
+  const matches: string[] = [];
   for (const t of TOPICS) {
     if (t.kw.some((k) => lc.includes(k))) matches.push(t.id);
   }
@@ -617,7 +730,7 @@ const STOPWORDS = new Set([
   'simplest',
 ]);
 
-function tokenize(title) {
+function tokenize(title: string): string[] {
   return title
     .toLowerCase()
     .replace(/[^a-z0-9\-\s]/g, ' ')
@@ -625,13 +738,13 @@ function tokenize(title) {
     .filter((w) => w.length > 2 && !STOPWORDS.has(w));
 }
 
-function cleanString(value) {
+function cleanString(value: unknown): string | null {
   if (value == null) return null;
   const text = String(value).trim();
   return text.length > 0 ? text : null;
 }
 
-function normalizeCategorySlug(value) {
+function normalizeCategorySlug(value: unknown): string | null {
   const text = cleanString(value);
   if (!text) return null;
   const slug = text
@@ -641,10 +754,14 @@ function normalizeCategorySlug(value) {
   return slug.length > 0 ? slug : null;
 }
 
-function tagCategoriesFromMeta(meta, fallbackCategory = null, includeFallback = false) {
-  const seen = new Set();
-  const out = [];
-  const add = (value) => {
+function tagCategoriesFromMeta(
+  meta: NeonMetadata | null | undefined,
+  fallbackCategory: string | null = null,
+  includeFallback = false
+): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const add = (value: unknown): void => {
     const slug = normalizeCategorySlug(value);
     if (!slug || seen.has(slug)) return;
     seen.add(slug);
@@ -663,7 +780,7 @@ function tagCategoriesFromMeta(meta, fallbackCategory = null, includeFallback = 
   return out;
 }
 
-function categoryFromMetadata(meta) {
+function categoryFromMetadata(meta: NeonMetadata): string {
   return (
     normalizeCategorySlug(meta?.primary_category) ??
     tagCategoriesFromMeta(meta)[0] ??
@@ -671,14 +788,18 @@ function categoryFromMetadata(meta) {
   );
 }
 
-function slugFromMetadataPaper(arxivId, title) {
+function slugFromMetadataPaper(arxivId: string | null, title: string): string {
   const id = cleanString(arxivId);
   if (id) return id;
   const titleSlug = normalizeCategorySlug(title);
   return titleSlug ?? 'paper';
 }
 
-function yearMonthFromMetadata(meta, arxivId, title) {
+function yearMonthFromMetadata(
+  meta: NeonMetadata,
+  arxivId: string | null,
+  title: string
+): NullableYearMonth {
   if (meta?.published) {
     const date = new Date(meta.published);
     if (!Number.isNaN(date.getTime())) {
@@ -692,15 +813,15 @@ function yearMonthFromMetadata(meta, arxivId, title) {
   };
 }
 
-function main() {
+function main(): void {
   if (!fs.existsSync(PAPERS_DIR)) {
     console.error(`papers dir not found at ${PAPERS_DIR}`);
     process.exit(1);
   }
 
   const files = listMarkdownFiles(PAPERS_DIR);
-  const papers = [];
-  const categoryCounts = new Map();
+  const papers: Paper[] = [];
+  const categoryCounts = new Map<string, number>();
   const neon = loadNeon();
   const neonHits = { found: 0, missing: 0 };
 
@@ -718,14 +839,15 @@ function main() {
     const slug = makeSlug(filename);
     const ymd = yearFromArxivId(arxivId);
 
-    const meta = (arxivId && neon[arxivId]) || null;
+    const meta: NeonMetadata | null = arxivId ? (neon[arxivId] ?? null) : null;
     if (arxivId) {
       if (meta) neonHits.found++;
       else neonHits.missing++;
     }
 
     // Prefer Neon's `published` date when present — it's authoritative.
-    let year, month;
+    let year: number | undefined;
+    let month: number | null | undefined;
     if (meta?.published) {
       const d = new Date(meta.published);
       if (!Number.isNaN(d.getTime())) {
@@ -799,7 +921,7 @@ function main() {
     // multi-tagged paper bumps each of its categories' counts. The home page
     // + the /c/[category] page filters surface papers via tagCategories now,
     // not the filesystem category, so the counts must match.
-    const lastPaper = papers[papers.length - 1];
+    const lastPaper = papers[papers.length - 1]!;
     for (const cat of lastPaper.tagCategories) {
       categoryCounts.set(cat, (categoryCounts.get(cat) ?? 0) + 1);
     }
@@ -816,20 +938,20 @@ function main() {
   // 4) token similarity within category: capture sequel-style relationships
 
   // Sort papers within each category by year then month
-  const byCategory = new Map();
+  const byCategory = new Map<string, Paper[]>();
   for (const p of papers) {
     if (!byCategory.has(p.category)) byCategory.set(p.category, []);
-    byCategory.get(p.category).push(p);
+    byCategory.get(p.category)!.push(p);
   }
   for (const arr of byCategory.values()) {
     arr.sort((a, b) => (a.year !== b.year ? a.year - b.year : (a.month ?? 0) - (b.month ?? 0)));
   }
 
-  const edges = [];
+  const edges: Edge[] = [];
 
   // LLM-judged similar-paper edges: the Neon scorer wrote a free-text title
   // for each paper's nearest neighbor. Resolve by normalized-title match.
-  const titleIndex = new Map();
+  const titleIndex = new Map<string, Paper>();
   for (const p of papers) titleIndex.set(normalizeTitle(p.title), p);
   let similarHits = 0;
   for (const p of papers) {
@@ -868,11 +990,11 @@ function main() {
   }
 
   // Topic threads: group by topic, chain chronologically across categories.
-  const byTopic = new Map();
+  const byTopic = new Map<string, Paper[]>();
   for (const p of papers) {
     for (const t of p.topics) {
       if (!byTopic.has(t)) byTopic.set(t, []);
-      byTopic.get(t).push(p);
+      byTopic.get(t)!.push(p);
     }
   }
   for (const arr of byTopic.values()) {
@@ -894,7 +1016,7 @@ function main() {
   // tokens. Cap each paper at top-3 neighbors to control density.
   for (const arr of byCategory.values()) {
     for (let i = 0; i < arr.length; i++) {
-      const scored = [];
+      const scored: { other: Paper; overlap: number }[] = [];
       for (let j = 0; j < arr.length; j++) {
         if (i === j) continue;
         const setI = new Set(arr[i].tokens);
@@ -913,7 +1035,9 @@ function main() {
     }
   }
 
-  const summaryArxivIds = new Set(papers.map((p) => p.arxivId).filter(Boolean));
+  const summaryArxivIds = new Set(
+    papers.map((p) => p.arxivId).filter((id): id is string => Boolean(id))
+  );
   const paperIds = new Set(papers.map((p) => p.id));
   let summarylessAdded = 0;
 
@@ -947,6 +1071,7 @@ function main() {
       month,
       isArxiv: Boolean(arxivId?.match(/^\d{4}\.\d{4,6}$/)),
       topics: detectTopics(title),
+      tokens: [],
       relativePath: null,
       wordCount: 0,
       readTimeMin: null,
@@ -981,7 +1106,7 @@ function main() {
   if (summarylessAdded > 0) console.log(`  summary-less nodes: ${summarylessAdded}`);
 
   // Build category metadata
-  const categories = {};
+  const categories: Record<string, CategoryMeta & { slug: string; count: number }> = {};
   for (const [slug, count] of categoryCounts.entries()) {
     categories[slug] = {
       slug,
@@ -996,7 +1121,7 @@ function main() {
   }
 
   // Year buckets
-  const yearBuckets = {};
+  const yearBuckets: Record<string, string[]> = {};
   for (const p of papers) {
     const y = String(p.year);
     if (!yearBuckets[y]) yearBuckets[y] = [];

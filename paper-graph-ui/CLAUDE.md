@@ -15,7 +15,7 @@ Those two are accurate on stack + architecture but **stale on scale and on which
 
 ## Multi-tag taxonomy (a paper can live in multiple `/c/[category]` indexes)
 
-`src/lib/neon-metadata.generated.json` carries `tag_categories_v2: string[]` per paper, populated by the V4-Pro multi-tagger in the parent repo. `scripts/build-paper-graph.mjs` reads it as `tagCategories` and emits it into `graph.generated.json`; `/c/[category]` filters surface a paper whenever the category is in that array (falls back to the single-tag `category` field when `tag_categories_v2` is empty).
+`src/lib/neon-metadata.generated.json` carries `tag_categories_v2: string[]` per paper, populated by the V4-Pro multi-tagger in the parent repo. `scripts/build-paper-graph.ts` reads it as `tagCategories` and emits it into `graph.generated.json`; `/c/[category]` filters surface a paper whenever the category is in that array (falls back to the single-tag `category` field when `tag_categories_v2` is empty).
 
 ## All / Merit / Company filter
 
@@ -34,7 +34,7 @@ A recent commit (`8b28067 graph: wire scaling-laws into CATEGORY_META + DOMAIN_B
 ```bash
 # from this dir, paper-graph-ui/
 uv run python scripts/pull-neon-metadata.py     # needs $DATABASE_URL; writes src/lib/neon-metadata.generated.json
-node scripts/build-paper-graph.mjs              # writes src/lib/graph.generated.json (multi-tag aware)
+tsx scripts/build-paper-graph.ts              # writes src/lib/graph.generated.json (multi-tag aware)
 pnpm build                                       # next build pre-renders everything
 vercel --prod --yes                              # deploy
 ```

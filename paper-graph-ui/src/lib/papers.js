@@ -1,5 +1,5 @@
 // Server-only data access layer for paper graph + markdown bodies.
-// graph.generated.json is built by scripts/build-paper-graph.mjs.
+// graph.generated.json is built by scripts/build-paper-graph.ts.
 import 'server-only';
 
 import fs from 'node:fs';

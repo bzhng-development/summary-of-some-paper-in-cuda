@@ -12,7 +12,7 @@ import path from 'node:path';
 const ROOT = process.cwd();
 const SRC = path.join(ROOT, 'src');
 
-const ENTRIES = [
+const ENTRIES: string[] = [
   'src/app/layout.jsx',
   'src/app/page.jsx',
   'src/app/not-found.jsx',
@@ -34,22 +34,46 @@ const ENTRIES = [
   'empty.js',
 ];
 
-const JS_EXTS = ['.jsx', '.tsx', '.js', '.ts', '.mjs', '.cjs'];
-const EXTS_TO_TRY = ['', ...JS_EXTS, '.css', '.svg', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.mp4', '.webm', '.woff', '.woff2', '.ttf', '.json'];
-const INDEX_CANDIDATES = ['index.js', 'index.jsx', 'index.ts', 'index.tsx'];
+const JS_EXTS: string[] = ['.jsx', '.tsx', '.js', '.ts', '.mjs', '.cjs'];
+const EXTS_TO_TRY: string[] = [
+  '',
+  ...JS_EXTS,
+  '.css',
+  '.svg',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.webp',
+  '.gif',
+  '.mp4',
+  '.webm',
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.json',
+];
+const INDEX_CANDIDATES: string[] = ['index.js', 'index.jsx', 'index.ts', 'index.tsx'];
 
-const seen = new Set();
+const seen = new Set<string>();
 
-const existsFile = (p) => {
-  try { return fs.statSync(p).isFile(); } catch { return false; }
+const existsFile = (p: string): boolean => {
+  try {
+    return fs.statSync(p).isFile();
+  } catch {
+    return false;
+  }
 };
-const existsDir = (p) => {
-  try { return fs.statSync(p).isDirectory(); } catch { return false; }
+const existsDir = (p: string): boolean => {
+  try {
+    return fs.statSync(p).isDirectory();
+  } catch {
+    return false;
+  }
 };
 
 // Resolve an import specifier against the containing file.
 // Returns an absolute path (or null for bare packages / unresolvable).
-const resolveSpec = (spec, fromFile) => {
+const resolveSpec = (spec: string, fromFile: string): string | null => {
   if (!spec) return null;
   // bare packages: start with letter or @ and don't look like path/alias
   const isRelative = spec.startsWith('./') || spec.startsWith('../') || spec.startsWith('/');
@@ -68,7 +92,7 @@ const resolveSpec = (spec, fromFile) => {
     spec.startsWith('config/') ||
     spec.startsWith('generated/');
 
-  let base;
+  let base: string;
   if (isRelative) {
     base = path.resolve(path.dirname(fromFile), spec);
   } else if (isAlias) {
@@ -108,20 +132,20 @@ const DYNAMIC_IMPORT_RE = /import\(\s*['"]([^'"]+)['"]\s*\)/g;
 const CSS_IMPORT_RE = /@import\s+['"]([^'"]+)['"]/g;
 const CSS_CONFIG_RE = /@config\s+['"]([^'"]+)['"]/g;
 
-const extractSpecs = (code, isCss) => {
-  const out = new Set();
+const extractSpecs = (code: string, isCss: boolean): string[] => {
+  const out = new Set<string>();
   const patterns = isCss
     ? [CSS_IMPORT_RE, CSS_CONFIG_RE]
     : [IMPORT_RE, REQUIRE_RE, SIDE_IMPORT_RE, DYNAMIC_IMPORT_RE];
   for (const re of patterns) {
     re.lastIndex = 0;
-    let m;
+    let m: RegExpExecArray | null;
     while ((m = re.exec(code)) !== null) out.add(m[1]);
   }
   return [...out];
 };
 
-const visit = (absPath) => {
+const visit = (absPath: string | null): void => {
   if (!absPath || seen.has(absPath)) return;
   if (!existsFile(absPath)) return;
   seen.add(absPath);

@@ -40,7 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Rebuilt by `pnpm run content` (scripts/build-paper-graph.mjs) — never edit
+# Rebuilt by `pnpm run content` (scripts/build-paper-graph.ts) — never edit
 # by hand. Not committed: it's derived from src/content/papers/** plus
 # src/lib/neon-metadata.generated.json, both available at build time.
 /src/lib/graph.generated.json

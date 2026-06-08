@@ -32,7 +32,7 @@ Live: https://paper-graph-ui.vercel.app
 src/content/papers/<category>/<slug>.md          ← copied from ../docs/
                           │
                           ▼
-scripts/build-paper-graph.mjs
+scripts/build-paper-graph.ts
    reads every .md, parses arxiv ID + H1 title,
    classifies topics by title keyword,
    joins src/lib/neon-metadata.generated.json,

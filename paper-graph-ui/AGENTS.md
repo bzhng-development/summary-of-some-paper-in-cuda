@@ -49,7 +49,7 @@ new one:
 
 1. Add an import at the top of the pset reader.
 2. Add it to the `mdxComponents` map.
-3. Run `node scripts/compute-closure.mjs` to verify the transitive import
+3. Run `tsx scripts/compute-closure.ts` to verify the transitive import
    graph stays resolvable (every referenced file must exist on disk).
 4. Restart the dev server; if it errors on `'use client'` missing or a
    missing transitive dep (e.g. `config/foo`), either add a stub or skip the
@@ -69,14 +69,14 @@ new one:
 
 ## Dead-code checker
 
-`node scripts/compute-closure.mjs` prints every file reachable from the app's
+`tsx scripts/compute-closure.ts` prints every file reachable from the app's
 entry points, walking ES import / require / `@import` / `@config`. Useful to
 run after adding or removing a component and before shipping.
 
 Known quirks:
 - Resolves aliases: `components/`, `hooks/`, `utils/`, `lib/`, `constants/`,
   `contexts/`, `icons/`, `images/`, `styles/`, `app/`, `fonts/`, `config/`.
-  Add to the list in `scripts/compute-closure.mjs` if you introduce new
+  Add to the list in `scripts/compute-closure.ts` if you introduce new
   top-level dirs under `src/`.
 - Follows `.jsx`/`.js`/`.ts`/`.tsx`/`.css` files; leaves other file types
   (svg, png, woff2, md) in the closure but doesn't descend into them.

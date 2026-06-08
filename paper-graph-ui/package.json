@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "content": "node scripts/build-paper-graph.mjs",
+    "content": "tsx scripts/build-paper-graph.ts",
     "dev": "pnpm run content && next dev",
     "build": "pnpm run content && next build",
     "start": "next start",
@@ -13,7 +13,7 @@
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "fmt:write": "oxfmt --write",
-    "postinstall": "node scripts/build-paper-graph.mjs",
+    "postinstall": "tsx scripts/build-paper-graph.ts",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -25,7 +25,7 @@
       "oxlint --fix",
       "oxfmt --write"
     ],
-    "scripts/**/*.{js,mjs}": [
+    "scripts/**/*.{js,ts}": [
       "oxlint --fix",
       "oxfmt --write"
     ],
@@ -151,6 +151,7 @@
     "oxlint": "^1.60.0",
     "postcss-nesting": "^14.0.0",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^5"
   }
 }

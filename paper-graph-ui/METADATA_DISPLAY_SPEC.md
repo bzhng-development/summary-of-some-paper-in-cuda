@@ -9,7 +9,7 @@ and **DOIs** across ~13k papers, and many already-present fields (`primary_categ
 **Goal: thread every useful metadata field from Neon → the baked JSON → the paper detail UI.**
 
 **Trust / don't trust:**
-- **DO** edit the data scripts (`scripts/pull-neon-metadata.py`, `scripts/build-paper-graph.mjs`),
+- **DO** edit the data scripts (`scripts/pull-neon-metadata.py`, `scripts/build-paper-graph.ts`),
   the data layer (`src/lib/papers.js`), and app-local UI (`src/app/p/[category]/[slug]/page.jsx`,
   new components under `src/app/_components/`).
 - **DO NOT** touch the Neon-verbatim dirs (`src/components/`, `src/styles/` except `app.css`,
@@ -28,7 +28,7 @@ Neon "nextjs-ui_paper"
   │  scripts/pull-neon-metadata.py   (SELECT FIELDS WHERE id = ANY(...))  ← needs $DATABASE_URL
   ▼
 src/lib/neon-metadata.generated.json
-  │  scripts/build-paper-graph.mjs   (joins .md files + maps Neon meta -> node objects)
+  │  scripts/build-paper-graph.ts   (joins .md files + maps Neon meta -> node objects)
   ▼
 src/lib/graph.generated.json         (~1 MB; one node per paper, ~25 keys today)
   │  src/lib/papers.js               (getPaper(category, slug) -> the node)
@@ -39,7 +39,7 @@ src/app/p/[category]/[slug]/page.jsx (PaperMetaLine renders the chips)
 Refresh sequence (must run in order; `pnpm build` alone won't pick up Neon changes):
 ```bash
 uv run python scripts/pull-neon-metadata.py   # writes src/lib/neon-metadata.generated.json
-node scripts/build-paper-graph.mjs            # writes src/lib/graph.generated.json
+tsx scripts/build-paper-graph.ts            # writes src/lib/graph.generated.json
 pnpm build                                    # next pre-renders every detail page
 ```
 
@@ -50,7 +50,7 @@ companyOnly, github, githubStars, id, isArxiv, month, organization, primaryCateg
 readTimeMin, relativePath, score, scoreReason, similarPaper, slug, tagCategories,
 tagCategoryV2, title, topics, upvotes, wordCount, year.
 
-| Neon column | pulled? (pull-neon-metadata.py) | baked? (build-paper-graph.mjs node) | displayed? | action |
+| Neon column | pulled? (pull-neon-metadata.py) | baked? (build-paper-graph.ts node) | displayed? | action |
 |---|---|---|---|---|
 | `cited_by_count` | ❌ no | ❌ no | ❌ no | **add** to pull + bake (`citedByCount`) + display |
 | `fwci` | ❌ no | ❌ no | ❌ no | **add** to pull + bake (`fwci`) + display |
@@ -70,12 +70,12 @@ tagCategoryV2, title, topics, upvotes, wordCount, year.
 - Deliverable: re-running `pull-neon-metadata.py` writes a `neon-metadata.generated.json`
   whose entries carry `cited_by_count`/`fwci`/`doi` for OpenAlex-enriched papers.
 
-**Step 2 — bake the fields into the node.** In `scripts/build-paper-graph.mjs`, in the node
+**Step 2 — bake the fields into the node.** In `scripts/build-paper-graph.ts`, in the node
 object (the `// enriched from Neon` block, ~line 333), add:
 `citedByCount: meta?.cited_by_count ?? null`, `fwci: meta?.fwci ?? null`,
 `doi: meta?.doi ?? null`, `published: meta?.published ?? null`,
 `abstract: meta?.abstract ?? null`.
-- Deliverable: `node scripts/build-paper-graph.mjs` then
+- Deliverable: `tsx scripts/build-paper-graph.ts` then
   `node -e "const g=require('./src/lib/graph.generated.json'); ..."` shows the new keys on
   nodes that have them.
 
@@ -96,7 +96,7 @@ wholesale (so new keys reach the page). If it picks fields explicitly, add the n
 - Deliverable: a paper with citation data (e.g. a high-cited Google/Meta paper) shows citations,
   fwci, doi, published, primary category, tags, and abstract in the UI.
 
-**Step 5 — validate.** `node scripts/compute-closure.mjs` (import graph resolvable),
+**Step 5 — validate.** `tsx scripts/compute-closure.ts` (import graph resolvable),
 `pnpm build` succeeds, `pnpm dev` and visually confirm a high-cited paper page renders all new
 fields and a sparse paper (no citations/abstract) renders cleanly with no empty chips.
 - Deliverable: clean build + closure; screenshot/ό description of an enriched paper page.
@@ -107,10 +107,10 @@ fields and a sparse paper (no citations/abstract) renders cleanly with no empty 
 - The four pulled-but-unshown fields (`primaryCategory`, `tagCategories`, `similarPaper`,
   `score_reason`) are now visible.
 - `markdown` full-text is NOT baked anywhere.
-- `compute-closure.mjs` clean, `pnpm build` green, no empty/`null` chips on sparse papers.
+- `compute-closure.ts` clean, `pnpm build` green, no empty/`null` chips on sparse papers.
 
 ## References
-- Data scripts: `scripts/pull-neon-metadata.py` (FIELDS list ~line 28), `scripts/build-paper-graph.mjs` (node map ~line 333).
+- Data scripts: `scripts/pull-neon-metadata.py` (FIELDS list ~line 28), `scripts/build-paper-graph.ts` (node map ~line 333).
 - Data layer: `src/lib/papers.js` (`getPaper` ~line 49).
 - UI: `src/app/p/[category]/[slug]/page.jsx` (`PaperMetaLine` ~line 222, chips at ~228-264).
 - Conventions: `AGENTS.md` (Neon-verbatim boundary, Next 16, compute-closure), `CLAUDE.md`
@@ -143,7 +143,7 @@ company + interested + the company backfill. NOT the generic HF feed.
    cited_by_count/fwci/doi). Output the union into `neon-metadata.generated.json`, each row tagged so
    the builder can tell which have summaries.
 
-2. **`scripts/build-paper-graph.mjs`** — after the existing `.md` scan, emit a **summary-less node**
+2. **`scripts/build-paper-graph.ts`** — after the existing `.md` scan, emit a **summary-less node**
    for every scope-set paper that has no `.md`. Each carries: id, arxivId, title, authors,
    organization, citedByCount, fwci, doi, published, year, **abstract (full)**, a category (derive
    from `primary_category`/`tag_categories_v2`, else `uncategorized`), and **`hasSummary: false`**.
@@ -179,4 +179,4 @@ company + interested + the company backfill. NOT the generic HF feed.
 - Toggle OFF (default): UI looks like today. Toggle ON: ~18k company/interested no-summary papers
   appear in timeline/category/list views with metadata, deep-link to a detail page showing full
   abstract + citations, marked "no summary yet".
-- `/graph` SVG unchanged (no summary-less nodes). `pnpm build` green. `compute-closure.mjs` clean.
+- `/graph` SVG unchanged (no summary-less nodes). `pnpm build` green. `compute-closure.ts` clean.

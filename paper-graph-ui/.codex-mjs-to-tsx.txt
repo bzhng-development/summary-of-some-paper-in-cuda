@@ -1,0 +1,17 @@
+This is Claude. Migrate the two Node SCRIPT `.mjs` files in this repo (/Users/vincent.zhong/cuda/paper-graph-ui) to TypeScript (`.ts`) run via `tsx` (already installed as a devDependency). LEAVE `eslint.config.mjs` ALONE — it is the ESLint flat config and must stay `.mjs`. LOCAL TS only; do NOT start the dev server.
+
+Files to convert: `scripts/build-paper-graph.mjs` (~1041 lines — the build-critical graph builder, run at the `content`/`postinstall` npm scripts) and `scripts/compute-closure.mjs` (~144 lines).
+
+For EACH:
+- Rename `<name>.mjs` → `<name>.ts` (same dir), and DELETE the original `.mjs`.
+- Make it valid, well-typed TypeScript but PRESERVE BEHAVIOR EXACTLY. Add type annotations and only the minimal changes TS requires — do NOT refactor logic, rename identifiers, reorder, or change the OUTPUT. This script's output feeds the app build; any behavior change breaks the build.
+- Keep them standalone ESM scripts (top-level `await` is fine — tsx runs ESM). `@types/node` is present. Type JSON/data shapes and external values properly; avoid blanket `any` — use real types or a single `// @ts-expect-error <reason>` where a value is genuinely untyped.
+
+package.json: the `content` and `postinstall` scripts invoke `node scripts/build-paper-graph.mjs` → change to `tsx scripts/build-paper-graph.ts`. Update any other `.mjs` script references too.
+
+VERIFY (pnpm fails on a fetch error in this sandbox — use the local binaries directly):
+- `./node_modules/.bin/tsc --noEmit` passes for the converted scripts (target the two files if the project tsconfig excludes scripts/).
+- `./node_modules/.bin/tsx scripts/build-paper-graph.ts` RUNS end-to-end successfully (it reads local data and writes the graph output file(s)) — this is the real behavior check; it must complete without error and produce the same output as before.
+- `find scripts -name '*.mjs'` returns nothing.
+
+Summarize the files changed and confirm both verifications passed.

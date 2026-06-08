@@ -18,7 +18,7 @@ Output: local_data/playwright_org_papers.jsonl with one row per VERIFIED
 paper (passes affiliation match), so the dataset is high-precision.
 
 Usage:
-    uv run --with playwright python throwaway_script/discovery/playwright_org_scrape.py \\
+    uv run --with playwright python src/paper_pipeline/discovery/playwright_org_scrape.py \\
         --output local_data/playwright_org_papers.jsonl \\
         --pages-per-query 4 \\
         [--orgs LinkedIn,Meta]

@@ -17,7 +17,7 @@ Rate-limit: API key, but S2 caps at 1 req/sec cumulative across all endpoints
 
 Usage:
     DATABASE_URL=... S2_API_KEY=s2k-... uv run python \\
-        throwaway_script/discovery/s2_company_scrape.py --year-range 2025-2026
+        src/paper_pipeline/discovery/s2_company_scrape.py --year-range 2025-2026
 """
 
 import argparse

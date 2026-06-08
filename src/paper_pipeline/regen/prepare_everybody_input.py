@@ -13,7 +13,7 @@ Same cache + resume + threaded PDF fetch as the interested variant.
   - Resume-safe: re-runs append, skipping arxiv_ids already in output
 
 Usage:
-    DATABASE_URL=... uv run python throwaway_script/regen/prepare_everybody_input.py \\
+    DATABASE_URL=... uv run python src/paper_pipeline/regen/prepare_everybody_input.py \\
         --output local_data/regen_input_everybody.jsonl \\
         --workers 24
 """

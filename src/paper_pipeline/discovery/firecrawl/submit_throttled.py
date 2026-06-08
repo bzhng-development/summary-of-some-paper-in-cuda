@@ -10,8 +10,8 @@ rate-limited. This wrapper:
     firecrawl_crawl_urls.py uses.
 
 Usage:
-    FIRECRAWL_API_KEY=... uv run python throwaway_script/discovery/firecrawl/submit_throttled.py \\
-        --input throwaway_script/discovery/firecrawl/company_urls.txt \\
+    FIRECRAWL_API_KEY=... uv run python src/paper_pipeline/discovery/firecrawl/submit_throttled.py \\
+        --input src/paper_pipeline/discovery/firecrawl/company_urls.txt \\
         --out local_data/firecrawl_jobs.jsonl \\
         --limit 200 --max-discovery-depth 2
 """

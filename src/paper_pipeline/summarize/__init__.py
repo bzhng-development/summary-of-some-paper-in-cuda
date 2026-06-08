@@ -55,8 +55,8 @@ from .storage import (
 )
 from .summarizer import MultiPromptSummarizer
 
-# Legacy alias retained so ``from paper_pipeline.cli.multi_prompt import _SYSTEM_PREAMBLE`` in
-# throwaway_script/ keeps working during the migration.
+# Legacy alias retained for helpers that still import
+# ``paper_pipeline.cli.multi_prompt._SYSTEM_PREAMBLE``.
 _SYSTEM_PREAMBLE = SYSTEM_PREAMBLE
 
 __all__ = [

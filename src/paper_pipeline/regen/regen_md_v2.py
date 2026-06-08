@@ -12,7 +12,7 @@ Differs from regen_to_md.py:
     yet on disk) get created.
 
 Usage:
-    uv run python throwaway_script/regen/regen_md_v2.py \\
+    uv run python src/paper_pipeline/regen/regen_md_v2.py \\
         --input local_data/regen_backup_<ts>/regen_output_FULL.jsonl \\
         --content-dir paper-graph-ui/src/content/papers \\
         [--dry-run]

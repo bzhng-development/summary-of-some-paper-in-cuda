@@ -3,7 +3,7 @@
 Used as input for offline regeneration on the B300.
 
 Usage:
-    DATABASE_URL=... uv run python throwaway_script/regen/export_for_regen.py \
+    DATABASE_URL=... uv run python src/paper_pipeline/regen/export_for_regen.py \
         --out /tmp/regen_input.jsonl [--limit 5]
 
 Resumes from last line if --out already exists (skips ids already present).

@@ -20,7 +20,7 @@ Flow:
      `category` column).
 
 Usage:
-    DATABASE_URL=... uv run python throwaway_script/tagging/multi_tag_via_vllm.py \\
+    DATABASE_URL=... uv run python src/paper_pipeline/tagging/multi_tag_via_vllm.py \\
         --base-url http://localhost:8000/v1 \\
         --model deepseek-ai/DeepSeek-V4-Pro \\
         --concurrency 16 \\

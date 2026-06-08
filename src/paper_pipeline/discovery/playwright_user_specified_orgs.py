@@ -49,7 +49,7 @@ Plus a `_completed: true` sentinel per org for resume.
 Usage
 -----
     uv run --with playwright --with loguru --with httpx \\
-        python throwaway_script/discovery/playwright_user_specified_orgs.py
+        python src/paper_pipeline/discovery/playwright_user_specified_orgs.py
 """
 
 from __future__ import annotations

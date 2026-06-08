@@ -13,7 +13,7 @@ Coverage of this script:
   TOTAL: 34 orgs. (YouTube folds into Google Research; Wayfair excluded
   per task brief.)
 
-Strategy — copy-paste of throwaway_script/discovery/playwright_pub_scrape.py with:
+Strategy — copy-paste of src/paper_pipeline/discovery/playwright_pub_scrape.py with:
   * fresh OrgPub list scoped to the gap orgs above
   * separate output JSONL: local_data/playwright_extra_companies.jsonl
   * dedup against BOTH the main 1812-ID dump AND the 58-ID crack file so
@@ -27,7 +27,7 @@ mutate it.
 
 Usage:
     uv run --with playwright --with loguru --with httpx \\
-        python throwaway_script/discovery/playwright_extra_companies.py
+        python src/paper_pipeline/discovery/playwright_extra_companies.py
 """
 
 from __future__ import annotations

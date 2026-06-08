@@ -11,7 +11,7 @@ Resume-safe: skips arxiv_ids already in the existing JSONL outputs.
 
 Usage:
     uv run --with httpx --with loguru python \\
-        throwaway_script/discovery/playwright_hf_probe_sweep.py
+        src/paper_pipeline/discovery/playwright_hf_probe_sweep.py
 """
 
 import argparse

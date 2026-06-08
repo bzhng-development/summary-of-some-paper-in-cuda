@@ -1,7 +1,7 @@
 """Run the 2-prompt DeepSeek V4-Pro summary on ONE Substack post.
 
 Usage:
-    uv run python throwaway_script/substack/summarize_one.py <post_url>
+    uv run python src/paper_pipeline/substack/summarize_one.py <post_url>
 
 Requires an SSH tunnel to brayden@95.133.253.79:8000 → localhost:8000 (the
 shared cluster vllm — same endpoint T45 is using).

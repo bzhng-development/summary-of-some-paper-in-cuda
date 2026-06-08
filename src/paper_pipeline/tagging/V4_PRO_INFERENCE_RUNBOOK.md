@@ -23,7 +23,7 @@ Config reference: `configs/vllm/deepseek-v4-pro.yaml`. Boot takes ~3-5 min (weig
 
 ```bash
 # After vllm is up, on the remote (no port-forwarding needed):
-bash throwaway_script/tagging/tag_via_vllm.sh remote
+bash src/paper_pipeline/tagging/tag_via_vllm.sh remote
 ```
 
 The script:
@@ -31,7 +31,7 @@ The script:
 - Ships it to the container, runs `daily_papers/tag_papers.py` with `OPENROUTER_API_KEY` UNSET so the resolver falls through to `--base-url http://localhost:8000/v1 --model deepseek-ai/DeepSeek-V4-Pro`.
 - Fetches `local_data/tagged_via_vllm.jsonl` back.
 
-Alternative: `bash throwaway_script/tagging/tag_via_vllm.sh local` if you've set up an SSH port-forward (`ssh -L 8000:localhost:8000 …`).
+Alternative: `bash src/paper_pipeline/tagging/tag_via_vllm.sh local` if you've set up an SSH port-forward (`ssh -L 8000:localhost:8000 …`).
 
 ETA: V4-Pro tagging is ~0.5s/paper structured-output, so ~726 / 22 concurrency = ~30s of LLM time, plus network. **Total ~5-10 min on V4-Pro vs ~15 min on OpenRouter Gemini.** No external API cost.
 

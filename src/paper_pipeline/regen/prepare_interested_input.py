@@ -14,7 +14,7 @@ the company flag is just metadata).
   - Resume-safe: re-runs append, skipping arxiv_ids already in output
 
 Usage:
-    DATABASE_URL=... uv run python throwaway_script/regen/prepare_interested_input.py \\
+    DATABASE_URL=... uv run python src/paper_pipeline/regen/prepare_interested_input.py \\
         --output local_data/regen_input_interested.jsonl \\
         --workers 16
 """

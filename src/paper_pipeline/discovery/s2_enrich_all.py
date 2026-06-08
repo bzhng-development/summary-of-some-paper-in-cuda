@@ -16,7 +16,7 @@ Rate-limit: strictly 1.05s between requests (key allows 1 rps).
 
 Usage:
     DATABASE_URL=... S2_API_KEY=s2k-... uv run python \\
-        throwaway_script/discovery/s2_enrich_all.py --year-min 2020
+        src/paper_pipeline/discovery/s2_enrich_all.py --year-min 2020
 """
 
 import argparse

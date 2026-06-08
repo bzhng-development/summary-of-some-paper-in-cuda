@@ -22,7 +22,7 @@ Why this is right (vs the abstract-regex probe):
 
 Usage:
     DATABASE_URL=... uv run --with pyalex python \\
-        throwaway_script/discovery/openalex_2026_audit.py
+        src/paper_pipeline/discovery/openalex_2026_audit.py
 """
 
 import argparse

@@ -4,7 +4,7 @@ Reads {arxiv_id, title, category, pitch, summary, url} rows and updates the
 matching row in the Neon `"nextjs-ui_paper"` table.
 
 Usage:
-    DATABASE_URL=... uv run python throwaway_script/regen/absorb_regen_output.py \
+    DATABASE_URL=... uv run python src/paper_pipeline/regen/absorb_regen_output.py \
         --input /tmp/regen_output_FULL.jsonl [--limit 5] [--dry-run]
 """
 

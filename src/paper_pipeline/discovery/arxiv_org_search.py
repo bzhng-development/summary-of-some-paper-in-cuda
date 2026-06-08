@@ -7,7 +7,7 @@ but the atom feed DOES include affiliations on each author. So:
   - Output passing arxiv_ids + titles for downstream bulk-marking
 
 Usage:
-    uv run --with arxiv python throwaway_script/discovery/arxiv_org_search.py \\
+    uv run --with arxiv python src/paper_pipeline/discovery/arxiv_org_search.py \\
         --output local_data/arxiv_org_papers.jsonl
 
 The arxiv API rate-limits to ~1 req/3s; arxiv.py's Client enforces this

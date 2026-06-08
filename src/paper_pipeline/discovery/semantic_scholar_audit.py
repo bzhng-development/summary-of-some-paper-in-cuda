@@ -16,7 +16,7 @@ Approach (avoiding the name-collision bug from arxiv author-search):
 Rate limit: 1 req/sec without key, 100/sec with key. Sleep 1.1s between calls.
 
 Usage:
-    DATABASE_URL=... uv run python throwaway_script/discovery/semantic_scholar_audit.py
+    DATABASE_URL=... uv run python src/paper_pipeline/discovery/semantic_scholar_audit.py
 """
 
 import argparse

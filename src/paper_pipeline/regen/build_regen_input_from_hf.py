@@ -1,6 +1,6 @@
 """Build a regen_input.jsonl from HF Daily Papers (no Neon, no LLM scoring).
 
-Output schema matches throwaway_script/regen/export_for_regen.py — the input format
+Output schema matches src/paper_pipeline/regen/export_for_regen.py — the input format
 offline_regen.py consumes:
 
     {arxiv_id, title, url, abstract, primary_category, organization,
@@ -8,15 +8,15 @@ offline_regen.py consumes:
 
 Usage:
     # Today's papers
-    uv run python throwaway_script/regen/build_regen_input_from_hf.py \
+    uv run python src/paper_pipeline/regen/build_regen_input_from_hf.py \
         --out /tmp/regen_input_FULL.jsonl
 
     # Date range
-    uv run python throwaway_script/regen/build_regen_input_from_hf.py \
+    uv run python src/paper_pipeline/regen/build_regen_input_from_hf.py \
         --out /tmp/regen_input_FULL.jsonl --from 2026-05-01 --to 2026-05-25
 
     # Specific day
-    uv run python throwaway_script/regen/build_regen_input_from_hf.py \
+    uv run python src/paper_pipeline/regen/build_regen_input_from_hf.py \
         --out /tmp/regen_input_FULL.jsonl --date 2026-05-20
 
 Resumes from --out if it exists (skips arxiv_ids already present).

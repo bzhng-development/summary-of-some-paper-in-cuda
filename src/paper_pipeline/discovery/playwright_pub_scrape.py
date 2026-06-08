@@ -26,7 +26,7 @@ Resume-safe via per-org ``_completed`` sentinel rows in the JSONL.
 
 Usage:
     uv run --with playwright --with loguru --with httpx \\
-        python throwaway_script/discovery/playwright_pub_scrape.py
+        python src/paper_pipeline/discovery/playwright_pub_scrape.py
 """
 
 from __future__ import annotations

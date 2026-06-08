@@ -11,8 +11,8 @@ Rate-limit aware: Firecrawl free tier is ~3 req/min on /v2/scrape too, so we
 sleep ~21s between requests.
 
 Usage:
-    FIRECRAWL_API_KEY=... uv run python throwaway_script/discovery/firecrawl/scrape_arxiv_pages.py \\
-        --input throwaway_script/discovery/firecrawl/arxiv_search_urls.txt \\
+    FIRECRAWL_API_KEY=... uv run python src/paper_pipeline/discovery/firecrawl/scrape_arxiv_pages.py \\
+        --input src/paper_pipeline/discovery/firecrawl/arxiv_search_urls.txt \\
         --out local_data/firecrawl_arxiv_scrapes.jsonl
 """
 

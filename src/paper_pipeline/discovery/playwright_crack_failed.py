@@ -1,6 +1,6 @@
 """Rescue the 5 orgs the main playwright sweep couldn't crack.
 
-Root cause from the main run (throwaway_script/discovery/playwright_pub_scrape.py):
+Root cause from the main run (src/paper_pipeline/discovery/playwright_pub_scrape.py):
   - Alibaba-DAMO had hf_org="" (empty) — the actual HF orgs are Alibaba-NLP
     + iic-ai (the DAMO Academy / Tongyi lab slugs), not "damo".
   - Tsinghua-THUDM used slug THUDM (valid, 100 models) but also has
@@ -20,7 +20,7 @@ ADD net-new coverage. Writes to a separate file for clean review.
 
 Usage:
     uv run --with httpx --with playwright --with loguru python \\
-        throwaway_script/discovery/playwright_crack_failed.py \\
+        src/paper_pipeline/discovery/playwright_crack_failed.py \\
         --main-output local_data/playwright_company_pubs.jsonl \\
         --output local_data/playwright_crack_failed.jsonl
 """

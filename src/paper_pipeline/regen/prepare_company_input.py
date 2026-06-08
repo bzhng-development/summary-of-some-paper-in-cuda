@@ -15,7 +15,7 @@ Output: local_data/regen_input_company.jsonl with schema matching what
 offline_regen.py expects: arxiv_id, title, url, abstract, paper_text.
 
 Usage:
-    DATABASE_URL=... uv run python throwaway_script/regen/prepare_company_input.py \\
+    DATABASE_URL=... uv run python src/paper_pipeline/regen/prepare_company_input.py \\
         --output local_data/regen_input_company.jsonl \\
         --workers 16
 """

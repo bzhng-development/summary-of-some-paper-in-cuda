@@ -15,11 +15,11 @@
 #     ssh -L 8000:localhost:8000 brayden@95.133.253.79 \
 #       -- docker exec vllm-brayden-dsv4-pro tail -f /dev/null
 #   Then:
-#     bash throwaway_script/tagging/tag_via_vllm.sh local
+#     bash src/paper_pipeline/tagging/tag_via_vllm.sh local
 #
 #   REMOTE — ships the input + script to the brayden container and runs there.
 #   No port forwarding needed.
-#     bash throwaway_script/tagging/tag_via_vllm.sh remote
+#     bash src/paper_pipeline/tagging/tag_via_vllm.sh remote
 #
 # Both modes:
 #   1. Build the to-tag JSONL from regen_input_FULL.jsonl, filtering out any

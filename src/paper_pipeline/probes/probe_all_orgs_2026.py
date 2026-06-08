@@ -11,7 +11,7 @@ Designed to be re-runnable. Adds ~7-10 min runtime for ~40 orgs.
 
 Usage:
     DATABASE_URL=... uv run --with playwright python \\
-        throwaway_script/probes/probe_all_orgs_2026.py
+        src/paper_pipeline/probes/probe_all_orgs_2026.py
 """
 
 import asyncio

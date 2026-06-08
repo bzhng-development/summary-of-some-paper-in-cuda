@@ -10,7 +10,7 @@ jsonl:
 Stays under the free-tier rate cap by sleeping between polls.
 
 Usage:
-    FIRECRAWL_API_KEY=... uv run python throwaway_script/discovery/firecrawl/poll_all.py \\
+    FIRECRAWL_API_KEY=... uv run python src/paper_pipeline/discovery/firecrawl/poll_all.py \\
         --jobs local_data/firecrawl_jobs.jsonl \\
         --out local_data/firecrawl_results.jsonl \\
         --poll-interval 8 --max-polls-per-id 30

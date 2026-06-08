@@ -70,48 +70,56 @@ _load_env()
 
 TABLE: Final[str] = '"nextjs-ui_paper"'
 
-# Ordered, authoritative column list. Derived from the live
+
+@dataclass(frozen=True, slots=True)
+class _SchemaColumn:
+    name: str
+    definition: str
+
+
+# Ordered, authoritative column definitions. Derived from the live
 # ``local_data/papers.db`` SQLite schema (13 448 rows as of the refactor).
-# Agents 2-4: if you add a column, add it here AND in ``init_schema`` below.
-SCHEMA_COLUMNS: Final[tuple[str, ...]] = (
-    "id",
-    "title",
-    "category",
-    "pitch",
-    "summary",
-    "url",
-    "full_response",
-    "created_at",
-    "authors",  # JSON array of author names
-    "affiliations",  # JSON dict {name: [affs]}
-    "categories",  # JSON array ["cs.CL", "cs.AI"]
-    "primary_category",
-    "arxiv_comment",
-    "published",  # ISO date string
-    "journal_ref",
-    "doi",
-    "upvotes",
-    "github",
-    "github_stars",
-    "organization",
-    "org_fullname",
-    "abstract",
-    "interested",
-    "legacy_gpt_summary",
-    "score",
-    "similar_paper",
-    "score_reason",
-    "tag_category_v2",
-    "tag_confidence",
-    "tag_reason",
-    "score_source",
-    "is_only_important_because_of_company",
-    "tag_categories_v2",  # text[] — multi-tag classification (paper can be in N cats)
-    "markdown",  # full-text body: HF-rendered markdown or VLM-OCR output (see paper_pipeline.ocr)
-    "markdown_source",  # provenance of `markdown`: e.g. 'glm-ocr-pdf' (OCR'd from the PDF), 'hf', 'arxiv-html'
-    "cited_by_count",  # OpenAlex raw citation count (see paper_pipeline.discovery.openalex)
-    "fwci",  # OpenAlex Field-Weighted Citation Impact (age/field-normalized — recency-robust ranking)
+_SCHEMA_COLUMN_DEFS: Final[tuple[_SchemaColumn, ...]] = (
+    _SchemaColumn("id", "TEXT PRIMARY KEY"),
+    _SchemaColumn("title", "TEXT"),
+    _SchemaColumn("category", "TEXT"),
+    _SchemaColumn("pitch", "TEXT"),
+    _SchemaColumn("summary", "TEXT"),
+    _SchemaColumn("url", "TEXT"),
+    _SchemaColumn("full_response", "TEXT"),
+    _SchemaColumn("created_at", "TIMESTAMPTZ NOT NULL DEFAULT NOW()"),
+    _SchemaColumn("authors", "TEXT"),  # JSON array of author names
+    _SchemaColumn("affiliations", "TEXT"),  # JSON dict {name: [affs]}
+    _SchemaColumn("categories", "TEXT"),  # JSON array ["cs.CL", "cs.AI"]
+    _SchemaColumn("primary_category", "TEXT"),
+    _SchemaColumn("arxiv_comment", "TEXT"),
+    _SchemaColumn("published", "TEXT"),  # ISO date string
+    _SchemaColumn("journal_ref", "TEXT"),
+    _SchemaColumn("doi", "TEXT"),
+    _SchemaColumn("upvotes", "INTEGER"),
+    _SchemaColumn("github", "TEXT"),
+    _SchemaColumn("github_stars", "INTEGER"),
+    _SchemaColumn("organization", "TEXT"),
+    _SchemaColumn("org_fullname", "TEXT"),
+    _SchemaColumn("abstract", "TEXT"),
+    _SchemaColumn("interested", "INTEGER NOT NULL DEFAULT 0"),
+    _SchemaColumn("legacy_gpt_summary", "TEXT"),
+    _SchemaColumn("score", "INTEGER"),
+    _SchemaColumn("similar_paper", "TEXT"),
+    _SchemaColumn("score_reason", "TEXT"),
+    _SchemaColumn("tag_category_v2", "TEXT"),
+    _SchemaColumn("tag_confidence", "DOUBLE PRECISION"),
+    _SchemaColumn("tag_reason", "TEXT"),
+    _SchemaColumn("score_source", "TEXT"),
+    _SchemaColumn("is_only_important_because_of_company", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    _SchemaColumn("tag_categories_v2", "TEXT[]"),  # multi-tag classification (paper can be in N cats)
+    _SchemaColumn("markdown", "TEXT"),  # full-text body: HF-rendered markdown or VLM-OCR output
+    _SchemaColumn("markdown_source", "TEXT"),  # provenance: e.g. 'glm-ocr-pdf', 'hf', 'arxiv-html'
+    _SchemaColumn("cited_by_count", "INTEGER"),  # OpenAlex raw citation count
+    _SchemaColumn("fwci", "DOUBLE PRECISION"),  # OpenAlex Field-Weighted Citation Impact
 )
+
+SCHEMA_COLUMNS: Final[tuple[str, ...]] = tuple(column.name for column in _SCHEMA_COLUMN_DEFS)
 
 # Columns the caller is allowed to pass to ``save_paper`` as kwargs. ``id`` is
 # the positional ``arxiv_id`` and ``created_at`` is DB-managed.
@@ -120,6 +128,14 @@ _WRITABLE_COLUMNS: Final[frozenset[str]] = frozenset(c for c in SCHEMA_COLUMNS i
 # Fields that should be JSON-encoded on the way in if the caller passed a list
 # or dict. Everything else is passed through verbatim.
 _JSON_COLUMNS: Final[frozenset[str]] = frozenset({"authors", "affiliations", "categories"})
+
+
+def _create_table_columns_sql() -> str:
+    return ",\n".join(f"                {column.name:<38} {column.definition}" for column in _SCHEMA_COLUMN_DEFS)
+
+
+def _add_column_sql(column: _SchemaColumn) -> str:
+    return f"ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS {column.name} {column.definition}"
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
@@ -236,52 +252,14 @@ class NeonDB:
         logger.info("Ensuring Neon schema for {}", TABLE)
         ddl = f"""
             CREATE TABLE IF NOT EXISTS {TABLE} (
-                id                TEXT PRIMARY KEY,
-                title             TEXT,
-                category          TEXT,
-                pitch             TEXT,
-                summary           TEXT,
-                url               TEXT,
-                full_response     TEXT,
-                created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                authors           TEXT,
-                affiliations      TEXT,
-                categories        TEXT,
-                primary_category  TEXT,
-                arxiv_comment     TEXT,
-                published         TEXT,
-                journal_ref       TEXT,
-                doi               TEXT,
-                upvotes           INTEGER,
-                github            TEXT,
-                github_stars      INTEGER,
-                organization      TEXT,
-                org_fullname      TEXT,
-                abstract          TEXT,
-                interested        INTEGER NOT NULL DEFAULT 0,
-                legacy_gpt_summary TEXT,
-                score             INTEGER,
-                similar_paper     TEXT,
-                score_reason      TEXT,
-                tag_category_v2   TEXT,
-                tag_confidence    DOUBLE PRECISION,
-                tag_reason        TEXT,
-                score_source      TEXT,
-                is_only_important_because_of_company BOOLEAN NOT NULL DEFAULT FALSE,
-                tag_categories_v2 TEXT[],
-                markdown          TEXT,
-                markdown_source   TEXT,
-                cited_by_count    INTEGER,
-                fwci              DOUBLE PRECISION
+{_create_table_columns_sql()}
             )
         """
         with self.get_conn() as conn, conn.cursor() as cur:
             cur.execute(ddl)
-            # Backfill the columns on tables created before they existed.
-            cur.execute(f"ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS markdown TEXT")
-            cur.execute(f"ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS markdown_source TEXT")
-            cur.execute(f"ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS cited_by_count INTEGER")
-            cur.execute(f"ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS fwci DOUBLE PRECISION")
+            for column in _SCHEMA_COLUMN_DEFS:
+                if column.name != "id":
+                    cur.execute(_add_column_sql(column))
             cur.execute(f'CREATE INDEX IF NOT EXISTS "nextjs-ui_paper_interested_idx" ON {TABLE} (interested)')
             cur.execute(f'CREATE INDEX IF NOT EXISTS "nextjs-ui_paper_score_idx" ON {TABLE} (score)')
         logger.debug("Neon schema ready")

@@ -11,6 +11,7 @@ import Heading from 'components/shared/heading/heading';
 import { GRAPH, getCategory, listPapersInCategory } from 'lib/papers';
 
 import CompletionRing from '../../_components/completion-ring';
+import PaperListMeta from '../../_components/paper-list-meta';
 import ProgressStrip from '../../_components/progress-strip';
 import ReadDot from '../../_components/read-dot';
 
@@ -25,8 +26,19 @@ export async function generateMetadata({ params }) {
 }
 
 const MONTH_NAMES = [
-  '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  '',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 const CategoryPage = async ({ params }) => {
@@ -35,6 +47,7 @@ const CategoryPage = async ({ params }) => {
   if (!cat) notFound();
 
   const papers = listPapersInCategory(category);
+  const summaryPapers = papers.filter((p) => p.hasSummary !== false);
   const yearBuckets = new Map();
   for (const p of papers) {
     const y = p.year;
@@ -57,7 +70,10 @@ const CategoryPage = async ({ params }) => {
         <Breadcrumbs
           className="mb-4"
           baseUrl="/"
-          breadcrumbs={[{ title: 'Domains', slug: '/' }, { title: cat.title, slug: null }]}
+          breadcrumbs={[
+            { title: 'Domains', slug: '/' },
+            { title: cat.title, slug: null },
+          ]}
         />
         <header className="relative mb-6 overflow-hidden rounded-2xl p-6 sm:p-4">
           <GradientBorder />
@@ -77,13 +93,13 @@ const CategoryPage = async ({ params }) => {
                 {cat.title}
               </Heading>
               <CompletionRing
-                paperIds={papers.map((p) => p.id)}
+                paperIds={summaryPapers.map((p) => p.id)}
                 size={32}
                 label={`${cat.title} progress`}
               />
             </div>
             <p className="t-sm max-w-2xl text-gray-new-70">{cat.blurb}</p>
-            <ProgressStrip paperIds={papers.map((p) => p.id)} />
+            <ProgressStrip paperIds={summaryPapers.map((p) => p.id)} />
             {related.length > 0 ? (
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <span className="t-sm font-mono tracking-[0.18em] text-gray-new-50 uppercase">
@@ -101,7 +117,12 @@ const CategoryPage = async ({ params }) => {
 
         <div className="flex flex-col gap-10 sm:gap-8">
           {years.map((y) => (
-            <section key={y}>
+            <section
+              key={y}
+              data-has-summary={
+                yearBuckets.get(y).some((p) => p.hasSummary !== false) ? 'true' : 'false'
+              }
+            >
               <header className="mb-3 flex items-baseline justify-between border-b border-gray-new-15 pb-2">
                 <h2 className="font-sans text-2xl font-medium text-white sm:text-xl">{y}</h2>
                 <span className="t-sm font-mono tracking-[0.2em] text-gray-new-50 uppercase">
@@ -110,7 +131,11 @@ const CategoryPage = async ({ params }) => {
               </header>
               <ul className="flex flex-col gap-1.5">
                 {yearBuckets.get(y).map((p) => (
-                  <li key={p.id} data-company-only={p.companyOnly ? 'true' : 'false'}>
+                  <li
+                    key={p.id}
+                    data-company-only={p.companyOnly ? 'true' : 'false'}
+                    data-has-summary={p.hasSummary === false ? 'false' : 'true'}
+                  >
                     <Link
                       href={`/p/${encodeURIComponent(p.category)}/${encodeURIComponent(p.slug)}`}
                       className="group flex items-baseline gap-3 rounded-lg border border-transparent px-2 py-1.5 transition-colors hover:border-gray-new-15 hover:bg-gray-new-10"
@@ -123,11 +148,7 @@ const CategoryPage = async ({ params }) => {
                           <span className="truncate">{p.title}</span>
                           <ReadDot paperId={p.id} />
                         </span>
-                        {p.arxivId ? (
-                          <span className="t-sm mt-0.5 block font-mono text-xs text-gray-new-50">
-                            {p.arxivId}
-                          </span>
-                        ) : null}
+                        <PaperListMeta paper={p} />
                       </span>
                     </Link>
                   </li>

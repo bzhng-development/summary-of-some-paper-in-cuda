@@ -37,30 +37,150 @@ function normalizeTitle(t) {
 }
 
 const CATEGORY_META = {
-  agents: { title: 'Agents', icon: 'sparkle', color: '#aa99ff', blurb: 'Agentic systems, tool use, and autonomous reasoning.' },
-  alignment: { title: 'Alignment', icon: 'handshake', color: '#00E599', blurb: 'RLHF, DPO, preference learning, and safety tuning.' },
-  architecture: { title: 'Architecture', icon: 'puzzle', color: '#259df4', blurb: 'Transformers, attention variants, and model design.' },
-  code: { title: 'Code', icon: 'code', color: '#f0f075', blurb: 'Code generation and code-LLM systems.' },
-  'context-optimization': { title: 'Context Optimization', icon: 'find-replace', color: '#ffa64c', blurb: 'KV cache compression, long context, and efficient attention.' },
-  data: { title: 'Data', icon: 'data', color: '#f0f075', blurb: 'Data curation and dataset construction.' },
-  diffusion: { title: 'Diffusion', icon: 'sparkle', color: '#ff4c79', blurb: 'Diffusion models and generative processes.' },
-  'distributed-training': { title: 'Distributed Training', icon: 'network', color: '#259df4', blurb: 'Multi-GPU and multi-node training systems.' },
-  evaluation: { title: 'Evaluation', icon: 'metrics', color: '#aa99ff', blurb: 'Benchmarks, leaderboards, and eval methodologies.' },
-  'inference-optimization': { title: 'Inference Optimization', icon: 'autoscaling', color: '#00E599', blurb: 'Speculative decoding, quantization at inference, and runtime tricks.' },
-  'llm-systems': { title: 'LLM Systems', icon: 'gear', color: '#259df4', blurb: 'End-to-end systems for serving and orchestrating LLMs.' },
-  'low-precision': { title: 'Low Precision', icon: 'binary-code', color: '#ffa64c', blurb: 'FP8, FP4, quantization, and mixed-precision training.' },
-  moe: { title: 'Mixture of Experts', icon: 'split-branch', color: '#aa99ff', blurb: 'MoE routing, sparsity, and expert architectures.' },
-  multimodal: { title: 'Multimodal', icon: 'cards', color: '#ff4c79', blurb: 'Vision-language, audio, and multi-modal fusion.' },
-  pretraining: { title: 'Pretraining', icon: 'database', color: '#00E599', blurb: 'Base model pretraining recipes, scaling laws, and corpora.' },
-  prompting: { title: 'Prompting', icon: 'sparkle', color: '#f0f075', blurb: 'Prompt engineering, CoT, in-context learning.' },
-  reasoning: { title: 'Reasoning', icon: 'research', color: '#ffa64c', blurb: 'CoT, chain-of-thought, test-time compute.' },
-  retrieval: { title: 'Retrieval', icon: 'search', color: '#259df4', blurb: 'Embeddings, RAG, and vector retrieval.' },
-  'rl-training': { title: 'RL Training', icon: 'trend-up', color: '#00E599', blurb: 'RLHF, GRPO, RLVR, and reward modeling.' },
-  safety: { title: 'Safety', icon: 'lock-landscape', color: '#ff4c79', blurb: 'Jailbreak resistance, alignment, and red-teaming.' },
-  'scaling-laws': { title: 'Scaling Laws', icon: 'trend-up', color: '#ffa64c', blurb: 'Compute/data/parameter scaling, Chinchilla, and compute-optimal training.' },
-  serving: { title: 'Serving', icon: 'globe', color: '#259df4', blurb: 'vLLM, SGLang, TensorRT-LLM, and inference servers.' },
-  'training-methods': { title: 'Training Methods', icon: 'gear', color: '#aa99ff', blurb: 'Optimizers, schedulers, and training infrastructure.' },
-  uncategorized: { title: 'Uncategorized', icon: 'cards', color: '#94979E', blurb: 'Papers awaiting categorization.' },
+  agents: {
+    title: 'Agents',
+    icon: 'sparkle',
+    color: '#aa99ff',
+    blurb: 'Agentic systems, tool use, and autonomous reasoning.',
+  },
+  alignment: {
+    title: 'Alignment',
+    icon: 'handshake',
+    color: '#00E599',
+    blurb: 'RLHF, DPO, preference learning, and safety tuning.',
+  },
+  architecture: {
+    title: 'Architecture',
+    icon: 'puzzle',
+    color: '#259df4',
+    blurb: 'Transformers, attention variants, and model design.',
+  },
+  code: {
+    title: 'Code',
+    icon: 'code',
+    color: '#f0f075',
+    blurb: 'Code generation and code-LLM systems.',
+  },
+  'context-optimization': {
+    title: 'Context Optimization',
+    icon: 'find-replace',
+    color: '#ffa64c',
+    blurb: 'KV cache compression, long context, and efficient attention.',
+  },
+  data: {
+    title: 'Data',
+    icon: 'data',
+    color: '#f0f075',
+    blurb: 'Data curation and dataset construction.',
+  },
+  diffusion: {
+    title: 'Diffusion',
+    icon: 'sparkle',
+    color: '#ff4c79',
+    blurb: 'Diffusion models and generative processes.',
+  },
+  'distributed-training': {
+    title: 'Distributed Training',
+    icon: 'network',
+    color: '#259df4',
+    blurb: 'Multi-GPU and multi-node training systems.',
+  },
+  evaluation: {
+    title: 'Evaluation',
+    icon: 'metrics',
+    color: '#aa99ff',
+    blurb: 'Benchmarks, leaderboards, and eval methodologies.',
+  },
+  'inference-optimization': {
+    title: 'Inference Optimization',
+    icon: 'autoscaling',
+    color: '#00E599',
+    blurb: 'Speculative decoding, quantization at inference, and runtime tricks.',
+  },
+  'llm-systems': {
+    title: 'LLM Systems',
+    icon: 'gear',
+    color: '#259df4',
+    blurb: 'End-to-end systems for serving and orchestrating LLMs.',
+  },
+  'low-precision': {
+    title: 'Low Precision',
+    icon: 'binary-code',
+    color: '#ffa64c',
+    blurb: 'FP8, FP4, quantization, and mixed-precision training.',
+  },
+  moe: {
+    title: 'Mixture of Experts',
+    icon: 'split-branch',
+    color: '#aa99ff',
+    blurb: 'MoE routing, sparsity, and expert architectures.',
+  },
+  multimodal: {
+    title: 'Multimodal',
+    icon: 'cards',
+    color: '#ff4c79',
+    blurb: 'Vision-language, audio, and multi-modal fusion.',
+  },
+  pretraining: {
+    title: 'Pretraining',
+    icon: 'database',
+    color: '#00E599',
+    blurb: 'Base model pretraining recipes, scaling laws, and corpora.',
+  },
+  prompting: {
+    title: 'Prompting',
+    icon: 'sparkle',
+    color: '#f0f075',
+    blurb: 'Prompt engineering, CoT, in-context learning.',
+  },
+  reasoning: {
+    title: 'Reasoning',
+    icon: 'research',
+    color: '#ffa64c',
+    blurb: 'CoT, chain-of-thought, test-time compute.',
+  },
+  retrieval: {
+    title: 'Retrieval',
+    icon: 'search',
+    color: '#259df4',
+    blurb: 'Embeddings, RAG, and vector retrieval.',
+  },
+  'rl-training': {
+    title: 'RL Training',
+    icon: 'trend-up',
+    color: '#00E599',
+    blurb: 'RLHF, GRPO, RLVR, and reward modeling.',
+  },
+  safety: {
+    title: 'Safety',
+    icon: 'lock-landscape',
+    color: '#ff4c79',
+    blurb: 'Jailbreak resistance, alignment, and red-teaming.',
+  },
+  'scaling-laws': {
+    title: 'Scaling Laws',
+    icon: 'trend-up',
+    color: '#ffa64c',
+    blurb: 'Compute/data/parameter scaling, Chinchilla, and compute-optimal training.',
+  },
+  serving: {
+    title: 'Serving',
+    icon: 'globe',
+    color: '#259df4',
+    blurb: 'vLLM, SGLang, TensorRT-LLM, and inference servers.',
+  },
+  'training-methods': {
+    title: 'Training Methods',
+    icon: 'gear',
+    color: '#aa99ff',
+    blurb: 'Optimizers, schedulers, and training infrastructure.',
+  },
+  uncategorized: {
+    title: 'Uncategorized',
+    icon: 'cards',
+    color: '#94979E',
+    blurb: 'Papers awaiting categorization.',
+  },
   vision: { title: 'Vision', icon: 'screen', color: '#ff4c79', blurb: 'Computer vision and ViT.' },
 };
 
@@ -110,29 +230,221 @@ const DOMAIN_BRIDGES = [
 // Topic keywords to cluster papers into "topic threads" within / across
 // categories. First match wins for the primary topic; all matches recorded.
 const TOPICS = [
-  { id: 'tools', label: 'Tool use & function calling', kw: ['toolformer', 'gorilla', 'function call', 'tool use', 'tool-use', 'function-calling', 'mcp', 'agentbench'] },
-  { id: 'cot', label: 'Chain-of-thought reasoning', kw: ['chain-of-thought', 'chain of thought', 'cot ', 'self-consistency', 'tree of thought', 'tot '] },
-  { id: 'rlhf', label: 'RLHF / preference learning', kw: ['rlhf', 'preference', 'dpo', 'ppo for', 'reward model', 'human feedback'] },
-  { id: 'grpo', label: 'GRPO / RLVR group methods', kw: ['grpo', 'rlvr', 'group relative', 'group reward', 'verifiable reward'] },
-  { id: 'spec-decoding', label: 'Speculative decoding', kw: ['speculative decoding', 'eagle', 'medusa', 'draft model', 'self-speculative', 'mtp'] },
-  { id: 'kv-cache', label: 'KV cache / paged attention', kw: ['kv cache', 'kv-cache', 'paged attention', 'pagedattention', 'radix cache', 'prefix cache', 'hicache'] },
-  { id: 'moe', label: 'Mixture of Experts', kw: ['mixture of experts', 'moe', 'mixture-of-experts', 'expert routing', 'sparse expert', 'deepseekmoe'] },
-  { id: 'mamba', label: 'State-space / Mamba / linear attention', kw: ['mamba', 'state space', 'state-space', 'ssm ', 'linear attention', 'rwkv', 'retnet'] },
-  { id: 'long-context', label: 'Long context', kw: ['long context', 'long-context', 'longbench', '1m context', 'context extension', 'rope scaling', 'yarn'] },
-  { id: 'fp8', label: 'FP8 / low-precision', kw: ['fp8', 'fp4', 'int8', 'int4', 'quantization', 'mxfp', 'nvfp', 'gptq', 'awq'] },
-  { id: 'flash', label: 'Flash attention', kw: ['flashattention', 'flash attention', 'flash-attention', 'flashinfer'] },
-  { id: 'scaling-laws', label: 'Scaling laws', kw: ['scaling law', 'chinchilla', 'compute-optimal', 'kaplan'] },
-  { id: 'agents-coding', label: 'Coding agents', kw: ['swe-bench', 'swe bench', 'codeact', 'opendevin', 'devin', 'cursor agent', 'code agent'] },
-  { id: 'distillation', label: 'Distillation', kw: ['distillation', 'distill ', 'minitron', 'student model'] },
-  { id: 'transformer-core', label: 'Transformer foundations', kw: ['attention is all you need', 'transformer-xl', 'bert', 'gpt-2', 'gpt-3', 'gpt-4', 'roberta', 'electra'] },
-  { id: 'pretrain-recipe', label: 'Pretraining recipes', kw: ['olmo', 'llama', 'qwen', 'mistral', 'mixtral', 'gemma', 'phi-', 'deepseek-v', 'deepseek v', 'minicpm', 'pythia', 'palm'] },
-  { id: 'rag', label: 'Retrieval-augmented generation', kw: ['retrieval-augmented', 'retrieval augmented', 'rag ', 'colbert', 'rerank'] },
-  { id: 'vision-lm', label: 'Vision-language models', kw: ['llava', 'visual instruction', 'molmo', 'clip ', 'vit ', 'vit-', 'qwen2-vl', 'qwen2.5-vl', 'gemini'] },
-  { id: 'reasoning-rl', label: 'Reasoning via RL', kw: ['deepseek-r1', 'r1 ', 'o1 ', 'o3 ', 'reasoning model', 'rstar', 'mathstral', 'reasoning rl'] },
-  { id: 'serving-systems', label: 'Serving systems', kw: ['vllm', 'sglang', 'tensorrt-llm', 'sarathi', 'llumnix', 'distserve', 'splitwise', 'mooncake', 'nanoflow', 'punica', 's-lora'] },
-  { id: 'self-improve', label: 'Self-improvement & synthetic data', kw: ['self-instruct', 'self-improve', 'self-reward', 'self-play', 'self-training', 'synthetic data', 'self-rewarding'] },
-  { id: 'world-models', label: 'World models', kw: ['world model', 'world-model', 'dreamer', 'genie'] },
-  { id: 'multimodal-gen', label: 'Multimodal generation / diffusion', kw: ['stable diffusion', 'dall-e', 'dall e', 'sora', 'flow matching', 'rectified flow'] },
+  {
+    id: 'tools',
+    label: 'Tool use & function calling',
+    kw: [
+      'toolformer',
+      'gorilla',
+      'function call',
+      'tool use',
+      'tool-use',
+      'function-calling',
+      'mcp',
+      'agentbench',
+    ],
+  },
+  {
+    id: 'cot',
+    label: 'Chain-of-thought reasoning',
+    kw: [
+      'chain-of-thought',
+      'chain of thought',
+      'cot ',
+      'self-consistency',
+      'tree of thought',
+      'tot ',
+    ],
+  },
+  {
+    id: 'rlhf',
+    label: 'RLHF / preference learning',
+    kw: ['rlhf', 'preference', 'dpo', 'ppo for', 'reward model', 'human feedback'],
+  },
+  {
+    id: 'grpo',
+    label: 'GRPO / RLVR group methods',
+    kw: ['grpo', 'rlvr', 'group relative', 'group reward', 'verifiable reward'],
+  },
+  {
+    id: 'spec-decoding',
+    label: 'Speculative decoding',
+    kw: ['speculative decoding', 'eagle', 'medusa', 'draft model', 'self-speculative', 'mtp'],
+  },
+  {
+    id: 'kv-cache',
+    label: 'KV cache / paged attention',
+    kw: [
+      'kv cache',
+      'kv-cache',
+      'paged attention',
+      'pagedattention',
+      'radix cache',
+      'prefix cache',
+      'hicache',
+    ],
+  },
+  {
+    id: 'moe',
+    label: 'Mixture of Experts',
+    kw: [
+      'mixture of experts',
+      'moe',
+      'mixture-of-experts',
+      'expert routing',
+      'sparse expert',
+      'deepseekmoe',
+    ],
+  },
+  {
+    id: 'mamba',
+    label: 'State-space / Mamba / linear attention',
+    kw: ['mamba', 'state space', 'state-space', 'ssm ', 'linear attention', 'rwkv', 'retnet'],
+  },
+  {
+    id: 'long-context',
+    label: 'Long context',
+    kw: [
+      'long context',
+      'long-context',
+      'longbench',
+      '1m context',
+      'context extension',
+      'rope scaling',
+      'yarn',
+    ],
+  },
+  {
+    id: 'fp8',
+    label: 'FP8 / low-precision',
+    kw: ['fp8', 'fp4', 'int8', 'int4', 'quantization', 'mxfp', 'nvfp', 'gptq', 'awq'],
+  },
+  {
+    id: 'flash',
+    label: 'Flash attention',
+    kw: ['flashattention', 'flash attention', 'flash-attention', 'flashinfer'],
+  },
+  {
+    id: 'scaling-laws',
+    label: 'Scaling laws',
+    kw: ['scaling law', 'chinchilla', 'compute-optimal', 'kaplan'],
+  },
+  {
+    id: 'agents-coding',
+    label: 'Coding agents',
+    kw: ['swe-bench', 'swe bench', 'codeact', 'opendevin', 'devin', 'cursor agent', 'code agent'],
+  },
+  {
+    id: 'distillation',
+    label: 'Distillation',
+    kw: ['distillation', 'distill ', 'minitron', 'student model'],
+  },
+  {
+    id: 'transformer-core',
+    label: 'Transformer foundations',
+    kw: [
+      'attention is all you need',
+      'transformer-xl',
+      'bert',
+      'gpt-2',
+      'gpt-3',
+      'gpt-4',
+      'roberta',
+      'electra',
+    ],
+  },
+  {
+    id: 'pretrain-recipe',
+    label: 'Pretraining recipes',
+    kw: [
+      'olmo',
+      'llama',
+      'qwen',
+      'mistral',
+      'mixtral',
+      'gemma',
+      'phi-',
+      'deepseek-v',
+      'deepseek v',
+      'minicpm',
+      'pythia',
+      'palm',
+    ],
+  },
+  {
+    id: 'rag',
+    label: 'Retrieval-augmented generation',
+    kw: ['retrieval-augmented', 'retrieval augmented', 'rag ', 'colbert', 'rerank'],
+  },
+  {
+    id: 'vision-lm',
+    label: 'Vision-language models',
+    kw: [
+      'llava',
+      'visual instruction',
+      'molmo',
+      'clip ',
+      'vit ',
+      'vit-',
+      'qwen2-vl',
+      'qwen2.5-vl',
+      'gemini',
+    ],
+  },
+  {
+    id: 'reasoning-rl',
+    label: 'Reasoning via RL',
+    kw: [
+      'deepseek-r1',
+      'r1 ',
+      'o1 ',
+      'o3 ',
+      'reasoning model',
+      'rstar',
+      'mathstral',
+      'reasoning rl',
+    ],
+  },
+  {
+    id: 'serving-systems',
+    label: 'Serving systems',
+    kw: [
+      'vllm',
+      'sglang',
+      'tensorrt-llm',
+      'sarathi',
+      'llumnix',
+      'distserve',
+      'splitwise',
+      'mooncake',
+      'nanoflow',
+      'punica',
+      's-lora',
+    ],
+  },
+  {
+    id: 'self-improve',
+    label: 'Self-improvement & synthetic data',
+    kw: [
+      'self-instruct',
+      'self-improve',
+      'self-reward',
+      'self-play',
+      'self-training',
+      'synthetic data',
+      'self-rewarding',
+    ],
+  },
+  {
+    id: 'world-models',
+    label: 'World models',
+    kw: ['world model', 'world-model', 'dreamer', 'genie'],
+  },
+  {
+    id: 'multimodal-gen',
+    label: 'Multimodal generation / diffusion',
+    kw: ['stable diffusion', 'dall-e', 'dall e', 'sora', 'flow matching', 'rectified flow'],
+  },
 ];
 
 function listMarkdownFiles(dir, base = '') {
@@ -240,13 +552,69 @@ function detectTopics(title) {
 
 // Extract significant words from a title for cross-paper similarity.
 const STOPWORDS = new Set([
-  'a', 'an', 'the', 'of', 'for', 'and', 'or', 'in', 'on', 'with', 'to', 'from',
-  'is', 'are', 'be', 'by', 'as', 'at', 'this', 'that', 'these', 'those', 'we',
-  'our', 'their', 'its', 'it', 'into', 'via', 'using', 'using', 'use', 'a',
-  'using', 'using', 'data', 'model', 'models', 'language', 'paper', 'study',
-  'an', 'approach', 'method', 'methods', 'system', 'systems', 'large', 'small',
-  'efficient', 'efficiently', 'scaling', 'scaled', 'new', 'novel', 'better',
-  'best', 'fast', 'faster', 'fastest', 'simple', 'simpler', 'simplest',
+  'a',
+  'an',
+  'the',
+  'of',
+  'for',
+  'and',
+  'or',
+  'in',
+  'on',
+  'with',
+  'to',
+  'from',
+  'is',
+  'are',
+  'be',
+  'by',
+  'as',
+  'at',
+  'this',
+  'that',
+  'these',
+  'those',
+  'we',
+  'our',
+  'their',
+  'its',
+  'it',
+  'into',
+  'via',
+  'using',
+  'using',
+  'use',
+  'a',
+  'using',
+  'using',
+  'data',
+  'model',
+  'models',
+  'language',
+  'paper',
+  'study',
+  'an',
+  'approach',
+  'method',
+  'methods',
+  'system',
+  'systems',
+  'large',
+  'small',
+  'efficient',
+  'efficiently',
+  'scaling',
+  'scaled',
+  'new',
+  'novel',
+  'better',
+  'best',
+  'fast',
+  'faster',
+  'fastest',
+  'simple',
+  'simpler',
+  'simplest',
 ]);
 
 function tokenize(title) {
@@ -255,6 +623,73 @@ function tokenize(title) {
     .replace(/[^a-z0-9\-\s]/g, ' ')
     .split(/\s+/)
     .filter((w) => w.length > 2 && !STOPWORDS.has(w));
+}
+
+function cleanString(value) {
+  if (value == null) return null;
+  const text = String(value).trim();
+  return text.length > 0 ? text : null;
+}
+
+function normalizeCategorySlug(value) {
+  const text = cleanString(value);
+  if (!text) return null;
+  const slug = text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug.length > 0 ? slug : null;
+}
+
+function tagCategoriesFromMeta(meta, fallbackCategory = null, includeFallback = false) {
+  const seen = new Set();
+  const out = [];
+  const add = (value) => {
+    const slug = normalizeCategorySlug(value);
+    if (!slug || seen.has(slug)) return;
+    seen.add(slug);
+    out.push(slug);
+  };
+
+  if (includeFallback) add(fallbackCategory);
+
+  const raw = meta?.tag_categories_v2;
+  if (Array.isArray(raw)) {
+    for (const category of raw) add(category);
+  }
+  add(meta?.tag_category_v2);
+
+  if (out.length === 0) add(fallbackCategory);
+  return out;
+}
+
+function categoryFromMetadata(meta) {
+  return (
+    normalizeCategorySlug(meta?.primary_category) ??
+    tagCategoriesFromMeta(meta)[0] ??
+    'uncategorized'
+  );
+}
+
+function slugFromMetadataPaper(arxivId, title) {
+  const id = cleanString(arxivId);
+  if (id) return id;
+  const titleSlug = normalizeCategorySlug(title);
+  return titleSlug ?? 'paper';
+}
+
+function yearMonthFromMetadata(meta, arxivId, title) {
+  if (meta?.published) {
+    const date = new Date(meta.published);
+    if (!Number.isNaN(date.getTime())) {
+      return { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1 };
+    }
+  }
+  const ymd = yearFromArxivId(arxivId);
+  return {
+    year: ymd?.year ?? inferClassicalYear(title) ?? 2000,
+    month: ymd?.month ?? null,
+  };
 }
 
 function main() {
@@ -312,7 +747,10 @@ function main() {
 
     // Per-paper read-time estimate from word count of the body. 200 wpm
     // covers technical reading on a phone.
-    const wordCount = text.replace(/[`{}$]/g, ' ').split(/\s+/).filter(Boolean).length;
+    const wordCount = text
+      .replace(/[`{}$]/g, ' ')
+      .split(/\s+/)
+      .filter(Boolean).length;
     const readTimeMin = Math.max(1, Math.round(wordCount / 200));
 
     papers.push({
@@ -329,10 +767,16 @@ function main() {
       relativePath: rel,
       wordCount,
       readTimeMin,
+      hasSummary: true,
       // enriched from Neon (all optional; ui must handle nulls)
       score: meta?.score ?? null,
       similarPaper: meta?.similar_paper ?? null,
       scoreReason: meta?.score_reason ?? null,
+      citedByCount: meta?.cited_by_count ?? null,
+      fwci: meta?.fwci ?? null,
+      doi: meta?.doi ?? null,
+      published: meta?.published ?? null,
+      abstract: meta?.abstract ?? null,
       tagCategoryV2: meta?.tag_category_v2 ?? null,
       authors: meta?.authors ?? null,
       organization: meta?.org_fullname || meta?.organization || null,
@@ -349,20 +793,7 @@ function main() {
       // multi-tagged this paper yet, fall back to its filesystem category.
       // Routes that "list papers in category X" filter where X is IN
       // tagCategories, so a paper can show up in multiple category indexes.
-      tagCategories: (() => {
-        const raw = meta?.tag_categories_v2;
-        if (Array.isArray(raw) && raw.length > 0) {
-          // Dedup + normalise, drop empties.
-          const seen = new Set();
-          const out = [];
-          for (const c of raw) {
-            const s = String(c || '').trim().toLowerCase();
-            if (s && !seen.has(s)) { seen.add(s); out.push(s); }
-          }
-          if (out.length > 0) return out;
-        }
-        return [category];
-      })(),
+      tagCategories: tagCategoriesFromMeta(meta, category),
     });
     // categoryCounts is incremented once per (paper, category) pair — so a
     // multi-tagged paper bumps each of its categories' counts. The home page
@@ -375,9 +806,7 @@ function main() {
   }
 
   if (Object.keys(neon).length > 0) {
-    console.log(
-      `  Neon metadata: ${neonHits.found} matched, ${neonHits.missing} missing`
-    );
+    console.log(`  Neon metadata: ${neonHits.found} matched, ${neonHits.missing} missing`);
   }
 
   // Build edges:
@@ -393,9 +822,7 @@ function main() {
     byCategory.get(p.category).push(p);
   }
   for (const arr of byCategory.values()) {
-    arr.sort((a, b) =>
-      a.year !== b.year ? a.year - b.year : (a.month ?? 0) - (b.month ?? 0)
-    );
+    arr.sort((a, b) => (a.year !== b.year ? a.year - b.year : (a.month ?? 0) - (b.month ?? 0)));
   }
 
   const edges = [];
@@ -411,10 +838,11 @@ function main() {
     if (!match || match.id === p.id) continue;
     // Direction: similar paper → this paper (the older one usually predates
     // the newer one; orient by year so the dep tree walks backward in time).
-    const [older, newer] =
-      (match.year !== p.year ? match.year < p.year : (match.month ?? 0) < (p.month ?? 0))
-        ? [match, p]
-        : [p, match];
+    const [older, newer] = (
+      match.year !== p.year ? match.year < p.year : (match.month ?? 0) < (p.month ?? 0)
+    )
+      ? [match, p]
+      : [p, match];
     edges.push({
       source: older.id,
       target: newer.id,
@@ -448,9 +876,7 @@ function main() {
     }
   }
   for (const arr of byTopic.values()) {
-    arr.sort((a, b) =>
-      a.year !== b.year ? a.year - b.year : (a.month ?? 0) - (b.month ?? 0)
-    );
+    arr.sort((a, b) => (a.year !== b.year ? a.year - b.year : (a.month ?? 0) - (b.month ?? 0)));
     for (let i = 1; i < arr.length; i++) {
       // Skip if same-category (already in backbone)
       if (arr[i - 1].category === arr[i].category) continue;
@@ -487,6 +913,73 @@ function main() {
     }
   }
 
+  const summaryArxivIds = new Set(papers.map((p) => p.arxivId).filter(Boolean));
+  const paperIds = new Set(papers.map((p) => p.id));
+  let summarylessAdded = 0;
+
+  for (const [metadataId, meta] of Object.entries(neon)) {
+    if (meta?._summaryless_scope !== true) continue;
+    const arxivId = cleanString(meta.id) ?? cleanString(metadataId);
+    if (arxivId && summaryArxivIds.has(arxivId)) continue;
+
+    const title = cleanString(meta.title) ?? arxivId ?? 'Untitled paper';
+    const category = categoryFromMetadata(meta);
+    const baseSlug = slugFromMetadataPaper(arxivId, title);
+    let slug = baseSlug;
+    let id = `${category}/${slug}`;
+    let suffix = 2;
+    while (paperIds.has(id)) {
+      slug = `${baseSlug}-${suffix}`;
+      id = `${category}/${slug}`;
+      suffix += 1;
+    }
+
+    const { year, month } = yearMonthFromMetadata(meta, arxivId, title);
+    const tagCategories = tagCategoriesFromMeta(meta, category, true);
+
+    papers.push({
+      id,
+      arxivId,
+      title,
+      category,
+      slug,
+      year,
+      month,
+      isArxiv: Boolean(arxivId?.match(/^\d{4}\.\d{4,6}$/)),
+      topics: detectTopics(title),
+      relativePath: null,
+      wordCount: 0,
+      readTimeMin: null,
+      hasSummary: false,
+      score: meta?.score ?? null,
+      similarPaper: meta?.similar_paper ?? null,
+      scoreReason: meta?.score_reason ?? null,
+      citedByCount: meta?.cited_by_count ?? null,
+      fwci: meta?.fwci ?? null,
+      doi: meta?.doi ?? null,
+      published: meta?.published ?? null,
+      abstract: meta?.abstract ?? null,
+      tagCategoryV2: meta?.tag_category_v2 ?? null,
+      authors: meta?.authors ?? null,
+      organization: meta?.org_fullname || meta?.organization || null,
+      primaryCategory: meta?.primary_category ?? null,
+      upvotes: meta?.upvotes ?? null,
+      github: meta?.github ?? null,
+      githubStars: meta?.github_stars ?? null,
+      arxivComment: meta?.arxiv_comment ?? null,
+      companyOnly: Boolean(meta?.is_only_important_because_of_company),
+      tagCategories,
+    });
+
+    paperIds.add(id);
+    if (arxivId) summaryArxivIds.add(arxivId);
+    for (const cat of tagCategories) {
+      categoryCounts.set(cat, (categoryCounts.get(cat) ?? 0) + 1);
+    }
+    summarylessAdded++;
+  }
+  if (summarylessAdded > 0) console.log(`  summary-less nodes: ${summarylessAdded}`);
+
   // Build category metadata
   const categories = {};
   for (const [slug, count] of categoryCounts.entries()) {
@@ -512,11 +1005,15 @@ function main() {
 
   // Strip tokens off the wire — we only needed them locally to build edges.
   const wirePapers = papers.map(({ tokens: _, ...rest }) => rest);
+  const summaryCount = papers.filter((p) => p.hasSummary !== false).length;
+  const summarylessCount = papers.length - summaryCount;
 
   const out = {
     generatedAt: new Date().toISOString(),
     counts: {
       papers: papers.length,
+      summaries: summaryCount,
+      summarylessPapers: summarylessCount,
       categories: Object.keys(categories).length,
       edges: edges.length,
     },
@@ -533,6 +1030,8 @@ function main() {
 
   console.log(`Wrote ${OUT}`);
   console.log(`  papers: ${papers.length}`);
+  console.log(`  summaries: ${summaryCount}`);
+  console.log(`  summary-less: ${summarylessCount}`);
   console.log(`  categories: ${Object.keys(categories).length}`);
   console.log(`  edges: ${edges.length}`);
   const years = Object.keys(yearBuckets).sort();

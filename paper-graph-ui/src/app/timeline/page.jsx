@@ -5,6 +5,7 @@ import Heading from 'components/shared/heading/heading';
 
 import { yearTimeline, listCategories } from 'lib/papers';
 
+import PaperListMeta from '../_components/paper-list-meta';
 import ReadDot from '../_components/read-dot';
 
 export const metadata = {
@@ -12,8 +13,19 @@ export const metadata = {
 };
 
 const MONTH_NAMES = [
-  '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  '',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 const TimelinePage = () => {
@@ -28,8 +40,8 @@ const TimelinePage = () => {
             Timeline
           </Heading>
           <p className="t-sm max-w-2xl text-gray-new-70">
-            Every paper grouped by publication year. Tap a row to open the
-            summary; the bullet dot lights up once you mark it read.
+            Every paper grouped by publication year. Tap a row to open the summary; the bullet dot
+            lights up once you mark it read.
           </p>
         </header>
 
@@ -61,7 +73,11 @@ const TimelinePage = () => {
 };
 
 const YearBlock = ({ row, catBySlug }) => (
-  <section id={String(row.year)} className="scroll-mt-20">
+  <section
+    id={String(row.year)}
+    className="scroll-mt-20"
+    data-has-summary={row.papers.some((p) => p.hasSummary !== false) ? 'true' : 'false'}
+  >
     <header className="mb-4 flex items-baseline justify-between gap-3 border-b border-gray-new-15 pb-2">
       <h2 className="font-sans text-3xl font-medium tracking-tight text-white sm:text-2xl">
         {row.year}
@@ -75,7 +91,11 @@ const YearBlock = ({ row, catBySlug }) => (
         const cat = catBySlug.get(p.category);
         const color = cat?.color ?? '#94979E';
         return (
-          <li key={p.id} data-company-only={p.companyOnly ? 'true' : 'false'}>
+          <li
+            key={p.id}
+            data-company-only={p.companyOnly ? 'true' : 'false'}
+            data-has-summary={p.hasSummary === false ? 'false' : 'true'}
+          >
             <Link
               href={`/p/${encodeURIComponent(p.category)}/${encodeURIComponent(p.slug)}`}
               className="group flex items-baseline gap-3 rounded-lg border border-transparent px-2 py-1.5 transition-colors hover:border-gray-new-15 hover:bg-gray-new-10"
@@ -93,15 +113,7 @@ const YearBlock = ({ row, catBySlug }) => (
                   <span className="truncate">{p.title}</span>
                   <ReadDot paperId={p.id} />
                 </span>
-                <span className="t-sm mt-0.5 flex items-center gap-x-2 truncate font-mono text-xs text-gray-new-50">
-                  <span className="truncate">{cat?.title ?? p.category}</span>
-                  {p.score != null ? (
-                    <span className="shrink-0">· s{p.score}</span>
-                  ) : null}
-                  {p.organization ? (
-                    <span className="shrink-0 truncate">· {p.organization}</span>
-                  ) : null}
-                </span>
+                <PaperListMeta paper={p} categoryTitle={cat?.title ?? p.category} />
               </span>
             </Link>
           </li>

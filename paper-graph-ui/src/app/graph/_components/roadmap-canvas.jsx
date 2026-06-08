@@ -13,8 +13,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 // deterministic layout that beats spring relaxation on a small screen.
 
 const LANE_HEIGHT = 28;
-const YEAR_WIDTH_MIN = 60;   // narrow column for sparse years
-const YEAR_WIDTH_MAX = 220;  // wider for dense ones
+const YEAR_WIDTH_MIN = 60; // narrow column for sparse years
+const YEAR_WIDTH_MAX = 220; // wider for dense ones
 const PAPER_RADIUS = 5;
 const LANE_PADDING_X = 12;
 const HEADER_HEIGHT = 28;
@@ -82,14 +82,15 @@ const RoadmapCanvas = ({ papers, edges, categories }) => {
   const [minScore, setMinScore] = useState(0);
   const [showEdges, setShowEdges] = useState(true);
   const scrollRef = useRef(null);
+  const graphPapers = useMemo(() => papers.filter((p) => p.hasSummary !== false), [papers]);
 
   const visiblePapers = useMemo(() => {
-    return papers.filter(
+    return graphPapers.filter(
       (p) =>
         (filterCats == null || filterCats.has(p.category)) &&
         (minScore === 0 || (p.score ?? 0) >= minScore)
     );
-  }, [papers, filterCats, minScore]);
+  }, [graphPapers, filterCats, minScore]);
 
   const years = useMemo(() => {
     const set = new Set(visiblePapers.map((p) => p.year));
@@ -126,20 +127,14 @@ const RoadmapCanvas = ({ papers, edges, categories }) => {
   }, [edges, positions]);
 
   const visibleEdges = useMemo(
-    () =>
-      edges.filter(
-        (e) => positions.has(e.source) && positions.has(e.target)
-      ),
+    () => edges.filter((e) => positions.has(e.source) && positions.has(e.target)),
     [edges, positions]
   );
 
   const width = total + 20;
   const height = HEADER_HEIGHT + lanes.length * LANE_HEIGHT + 20;
 
-  const catBySlug = useMemo(
-    () => new Map(categories.map((c) => [c.slug, c])),
-    [categories]
-  );
+  const catBySlug = useMemo(() => new Map(categories.map((c) => [c.slug, c])), [categories]);
 
   // After mount, scroll the lineage right so newest papers are visible by
   // default. The chart is wide and starts at 2014 on the left.
@@ -206,13 +201,7 @@ const RoadmapCanvas = ({ papers, edges, categories }) => {
             const w = widths.get(y);
             return (
               <g key={`yr-${y}`}>
-                <rect
-                  x={x}
-                  y={0}
-                  width={w}
-                  height={HEADER_HEIGHT}
-                  fill="#0c0d0d"
-                />
+                <rect x={x} y={0} width={w} height={HEADER_HEIGHT} fill="#0c0d0d" />
                 <text
                   x={x + w / 2}
                   y={HEADER_HEIGHT - 9}
@@ -224,13 +213,7 @@ const RoadmapCanvas = ({ papers, edges, categories }) => {
                   {y}
                 </text>
                 {/* faint year gridline */}
-                <line
-                  x1={x}
-                  x2={x}
-                  y1={0}
-                  y2={height}
-                  stroke="rgba(255,255,255,0.04)"
-                />
+                <line x1={x} x2={x} y1={0} y2={height} stroke="rgba(255,255,255,0.04)" />
               </g>
             );
           })}
@@ -241,13 +224,7 @@ const RoadmapCanvas = ({ papers, edges, categories }) => {
             const ly = HEADER_HEIGHT + i * LANE_HEIGHT;
             return (
               <g key={`lane-${c.slug}`}>
-                <rect
-                  x={0}
-                  y={ly}
-                  width={LABEL_WIDTH}
-                  height={LANE_HEIGHT}
-                  fill="#0c0d0d"
-                />
+                <rect x={0} y={ly} width={LABEL_WIDTH} height={LANE_HEIGHT} fill="#0c0d0d" />
                 <rect
                   x={LABEL_WIDTH - 3}
                   y={ly + 6}
@@ -296,8 +273,8 @@ const RoadmapCanvas = ({ papers, edges, categories }) => {
                       ? 'rgba(0,229,153,0.85)'
                       : 'rgba(0,229,153,0.30)'
                     : isHover
-                    ? 'rgba(170,153,255,0.65)'
-                    : 'rgba(140,140,160,0.10)';
+                      ? 'rgba(170,153,255,0.65)'
+                      : 'rgba(140,140,160,0.10)';
                 return (
                   <path
                     key={i}
@@ -317,8 +294,7 @@ const RoadmapCanvas = ({ papers, edges, categories }) => {
           {[...positions.values()].map(({ x, y, paper }) => {
             const cat = catBySlug.get(paper.category);
             const isHover = hoverId === paper.id;
-            const dim =
-              connectedToHover != null && !connectedToHover.has(paper.id);
+            const dim = connectedToHover != null && !connectedToHover.has(paper.id);
             const href = `/p/${encodeURIComponent(paper.category)}/${encodeURIComponent(paper.slug)}`;
             return (
               <a
@@ -369,11 +345,7 @@ const RoadmapCanvas = ({ papers, edges, categories }) => {
 
       {/* Hover detail readout — gives keyboard users a stable spot to see the
           paper title without relying on the native <title> tooltip alone. */}
-      <HoverDetail
-        positions={positions}
-        hoverId={hoverId}
-        catBySlug={catBySlug}
-      />
+      <HoverDetail positions={positions} hoverId={hoverId} catBySlug={catBySlug} />
 
       <Legend />
     </div>
@@ -526,7 +498,15 @@ const Legend = () => (
     <span className="flex items-center gap-1.5">
       <svg width="14" height="14">
         <circle cx="7" cy="7" r="3.5" fill="#00E599" />
-        <circle cx="7" cy="7" r="6" fill="none" stroke="#00E599" strokeOpacity="0.55" strokeWidth="0.8" />
+        <circle
+          cx="7"
+          cy="7"
+          r="6"
+          fill="none"
+          stroke="#00E599"
+          strokeOpacity="0.55"
+          strokeWidth="0.8"
+        />
       </svg>
       Score ≥ 9
     </span>

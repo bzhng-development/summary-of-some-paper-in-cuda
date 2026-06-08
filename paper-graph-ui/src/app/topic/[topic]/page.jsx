@@ -9,6 +9,7 @@ import Heading from 'components/shared/heading/heading';
 
 import { GRAPH, listCategories } from 'lib/papers';
 
+import PaperListMeta from '../../_components/paper-list-meta';
 import ProgressStrip from '../../_components/progress-strip';
 import ReadDot from '../../_components/read-dot';
 
@@ -28,9 +29,8 @@ const TopicPage = async ({ params }) => {
   if (!meta) notFound();
   const papers = GRAPH.papers
     .filter((p) => p.topics.includes(topic))
-    .sort((a, b) =>
-      a.year !== b.year ? b.year - a.year : (b.month ?? 0) - (a.month ?? 0)
-    );
+    .sort((a, b) => (a.year !== b.year ? b.year - a.year : (b.month ?? 0) - (a.month ?? 0)));
+  const summaryPapers = papers.filter((p) => p.hasSummary !== false);
   const cats = new Map(listCategories().map((c) => [c.slug, c]));
 
   return (
@@ -47,18 +47,14 @@ const TopicPage = async ({ params }) => {
         <header className="relative mb-6 overflow-hidden rounded-2xl p-6 sm:p-4">
           <GradientBorder />
           <div className="relative flex flex-col gap-3">
-            <Heading
-              tag="h1"
-              size="md-new"
-              theme="white"
-              className="tracking-tight sm:!text-3xl"
-            >
+            <Heading tag="h1" size="md-new" theme="white" className="tracking-tight sm:!text-3xl">
               {meta.label}
             </Heading>
             <p className="t-sm text-gray-new-70">
-              {papers.length} papers in this thread, across {new Set(papers.map((p) => p.category)).size} domains.
+              {papers.length} papers in this thread, across{' '}
+              {new Set(papers.map((p) => p.category)).size} domains.
             </p>
-            <ProgressStrip paperIds={papers.map((p) => p.id)} />
+            <ProgressStrip paperIds={summaryPapers.map((p) => p.id)} />
           </div>
         </header>
 
@@ -66,7 +62,11 @@ const TopicPage = async ({ params }) => {
           {papers.map((p) => {
             const cat = cats.get(p.category);
             return (
-              <li key={p.id} data-company-only={p.companyOnly ? 'true' : 'false'}>
+              <li
+                key={p.id}
+                data-company-only={p.companyOnly ? 'true' : 'false'}
+                data-has-summary={p.hasSummary === false ? 'false' : 'true'}
+              >
                 <Link
                   href={`/p/${encodeURIComponent(p.category)}/${encodeURIComponent(p.slug)}`}
                   className="group flex items-baseline gap-3 rounded-lg border border-transparent px-2 py-1.5 transition-colors hover:border-gray-new-15 hover:bg-gray-new-10"
@@ -84,9 +84,7 @@ const TopicPage = async ({ params }) => {
                       <span className="truncate">{p.title}</span>
                       <ReadDot paperId={p.id} />
                     </span>
-                    <span className="t-sm mt-0.5 block truncate font-mono text-xs text-gray-new-50">
-                      {cat?.title ?? p.category}
-                    </span>
+                    <PaperListMeta paper={p} categoryTitle={cat?.title ?? p.category} />
                   </span>
                   <Tag label={cat?.title ?? p.category} size="sm" />
                 </Link>

@@ -58,3 +58,10 @@ body {
 .pg-company-only [data-company-only="false"] {
   display: none !important;
 }
+
+/* Summary-less metadata rows are opt-in. The client toggle adds
+   `pg-show-summaryless` to <body>; without it, rows marked
+   `data-has-summary="false"` are hidden before hydration. */
+body:not(.pg-show-summaryless) [data-has-summary="false"] {
+  display: none !important;
+}

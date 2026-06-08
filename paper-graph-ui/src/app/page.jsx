@@ -12,7 +12,7 @@ import HintText from 'components/shared/hint-text/hint-text';
 import MegaLink from 'components/shared/mega-link/mega-link';
 import Tooltip from 'components/shared/tooltip/tooltip';
 
-import { GRAPH, listCategories, listPapers, yearTimeline } from 'lib/papers';
+import { GRAPH, hasGeneratedSummary, listCategories, listPapers, yearTimeline } from 'lib/papers';
 
 import DomainProgress from './_components/domain-progress';
 import RecentReads from './_components/recent-reads';
@@ -28,12 +28,16 @@ export const metadata = {
 const Home = () => {
   const categories = listCategories();
   const timeline = yearTimeline();
-  const yearsCovered = timeline.length;
-  const newestPaper = timeline[0]?.papers[0];
   const papers = listPapers();
+  const summaryPapers = papers.filter(hasGeneratedSummary);
+  const summaryTimeline = timeline
+    .map((row) => ({ ...row, papers: row.papers.filter(hasGeneratedSummary) }))
+    .filter((row) => row.papers.length > 0);
+  const yearsCovered = summaryTimeline.length;
+  const newestPaper = summaryTimeline[0]?.papers[0];
 
   // Compact paper shape for the client islands (SurpriseMe, WhatsNext).
-  const clientPapers = papers.map((p) => ({
+  const clientPapers = summaryPapers.map((p) => ({
     id: p.id,
     category: p.category,
     slug: p.slug,
@@ -51,12 +55,16 @@ const Home = () => {
       slug: c.slug,
       title: c.title,
       color: c.color,
-      paperIds: papers.filter((p) => p.category === c.slug).map((p) => p.id),
+      paperIds: summaryPapers.filter((p) => p.category === c.slug).map((p) => p.id),
     }))
     .sort((a, b) => b.paperIds.length - a.paperIds.length);
 
   const tiles = [
-    { id: 'tile-papers', value: GRAPH.counts.papers, label: 'papers' },
+    {
+      id: 'tile-papers',
+      value: GRAPH.counts.summaries ?? summaryPapers.length,
+      label: 'summaries',
+    },
     { id: 'tile-cats', value: GRAPH.counts.categories, label: 'domains' },
     { id: 'tile-years', value: yearsCovered, label: 'years' },
   ];
@@ -69,7 +77,7 @@ const Home = () => {
           <div className="relative grid grid-cols-[1fr_auto] items-end gap-10 lt:grid-cols-1 lt:items-start lt:gap-6">
             <div className="flex flex-col gap-5 sm:gap-3">
               <GradientLabel theme="green" className="self-start">
-                {GRAPH.counts.papers} summaries
+                {GRAPH.counts.summaries ?? summaryPapers.length} summaries
               </GradientLabel>
               <Heading
                 tag="h1"
@@ -122,10 +130,9 @@ const Home = () => {
         ) : null}
 
         <Callout title="How to use this">
-          The <strong>Timeline</strong> is the fastest way to scan what landed
-          recently. The <strong>Roadmap</strong> shows lineage between papers;
-          tap any dot to open its summary. Everything is mobile-first — swipe
-          left/right on a paper page to walk in-domain.
+          The <strong>Timeline</strong> is the fastest way to scan what landed recently. The{' '}
+          <strong>Roadmap</strong> shows lineage between papers; tap any dot to open its summary.
+          Everything is mobile-first — swipe left/right on a paper page to walk in-domain.
         </Callout>
 
         <WhatsNext papers={clientPapers} />
@@ -137,8 +144,8 @@ const Home = () => {
             Browse by domain
           </h2>
           <p className="t-sm mb-4 max-w-2xl text-gray-new-70">
-            Each domain is a sub-collection of papers, sorted newest first. Tap
-            a card to open the timeline for that domain.
+            Each domain is a sub-collection of papers, sorted newest first. Tap a card to open the
+            timeline for that domain.
           </p>
           <DetailIconCards compact>
             {categories.map((c) => (
@@ -162,7 +169,7 @@ const Home = () => {
           </h2>
           <GradientCard className="p-5 sm:p-4">
             <div className="flex flex-wrap gap-2">
-              {timeline.map((row) => (
+              {summaryTimeline.map((row) => (
                 <Link
                   key={row.year}
                   href={`/timeline#${row.year}`}
@@ -171,9 +178,7 @@ const Home = () => {
                   <span className="font-mono text-xs tracking-wide text-gray-new-60 group-hover:text-primary-1">
                     {row.year}
                   </span>
-                  <span className="text-lg font-medium text-white">
-                    {row.papers.length}
-                  </span>
+                  <span className="text-lg font-medium text-white">{row.papers.length}</span>
                 </Link>
               ))}
             </div>
@@ -185,8 +190,8 @@ const Home = () => {
             Topic threads
           </h2>
           <p className="t-sm mb-4 max-w-2xl text-gray-new-70">
-            Cross-domain threads of papers that share a topic — RLHF, MoE, KV
-            caches, agents, and more.
+            Cross-domain threads of papers that share a topic — RLHF, MoE, KV caches, agents, and
+            more.
           </p>
           <div className="flex flex-wrap gap-2">
             {GRAPH.topics.map((t) => (

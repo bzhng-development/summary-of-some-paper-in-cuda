@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Container from 'components/shared/container/container';
 
 import MeritOnlyToggle from './merit-only-toggle';
+import NoSummaryToggle from './no-summary-toggle';
 import StreakCounter from './streak-counter';
 
 const SiteHeader = () => (
@@ -18,6 +19,7 @@ const SiteHeader = () => (
       <nav className="t-sm flex items-center gap-x-4 text-gray-new-70 sm:gap-x-3">
         <StreakCounter />
         <MeritOnlyToggle />
+        <NoSummaryToggle />
         <Link href="/timeline" className="transition-colors hover:text-white">
           Timeline
         </Link>

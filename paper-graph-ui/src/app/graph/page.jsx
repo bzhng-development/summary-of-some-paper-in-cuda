@@ -13,12 +13,14 @@ export const metadata = { title: 'Roadmap — Paper Graph' };
 // props to the client roadmap. The client never imports lib/papers (which
 // is server-only).
 const GraphPage = () => {
-  const categories = listCategories();
+  const graphPapers = GRAPH.papers.filter((p) => p.hasSummary !== false);
+  const graphPaperIds = new Set(graphPapers.map((p) => p.id));
+  const categories = listCategories().filter((c) => graphPapers.some((p) => p.category === c.slug));
 
   // Compact each paper down to only the fields the canvas needs. This
   // keeps the wire payload small (the full graph.json is ~1 MB; this is
   // closer to ~120 KB).
-  const papers = GRAPH.papers.map((p) => ({
+  const papers = graphPapers.map((p) => ({
     id: p.id,
     category: p.category,
     slug: p.slug,
@@ -29,12 +31,18 @@ const GraphPage = () => {
     organization: p.organization ?? null,
     readTimeMin: p.readTimeMin ?? null,
     arxivId: p.arxivId ?? null,
+    hasSummary: p.hasSummary ?? true,
   }));
 
   // Only the LLM-similar + category-chronology edges form the lineage
   // backbone. Topic + token-similarity edges are too noisy at paper-level.
   const edges = GRAPH.edges
-    .filter((e) => e.type === 'llm-similar' || e.type === 'category-chronology')
+    .filter(
+      (e) =>
+        (e.type === 'llm-similar' || e.type === 'category-chronology') &&
+        graphPaperIds.has(e.source) &&
+        graphPaperIds.has(e.target)
+    )
     .map((e) => ({ source: e.source, target: e.target, type: e.type }));
 
   const cats = categories.map((c) => ({
@@ -57,10 +65,9 @@ const GraphPage = () => {
               Lineage Roadmap
             </Heading>
             <p className="t-sm max-w-2xl text-gray-new-70">
-              Every paper plotted by year (←→) and domain (↑↓). Curves connect
-              papers in the same lineage — direct LLM-judged similarity in
-              green, chronological in-domain succession in grey. Tap a dot to
-              open that paper.
+              Every paper plotted by year (←→) and domain (↑↓). Curves connect papers in the same
+              lineage — direct LLM-judged similarity in green, chronological in-domain succession in
+              grey. Tap a dot to open that paper.
             </p>
           </div>
         </header>

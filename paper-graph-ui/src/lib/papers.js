@@ -24,6 +24,8 @@ export const GRAPH = graphData;
 
 export const listPapers = cache(() => GRAPH.papers);
 
+export const hasGeneratedSummary = (paper) => paper?.hasSummary !== false;
+
 export const listCategories = cache(() =>
   Object.values(GRAPH.categories).sort((a, b) => b.count - a.count)
 );
@@ -75,9 +77,12 @@ export const getPaperEdges = cache((id) => {
 // tree rooted at the given paper. Each node visited at most once. Depth cap
 // prevents runaway traversal across topic threads.
 export function buildDependencyTree(rootId, maxDepth = 4) {
-  const paperById = new Map(GRAPH.papers.map((p) => [p.id, p]));
+  const paperById = new Map(
+    GRAPH.papers.filter(hasGeneratedSummary).map((p) => [p.id, p])
+  );
   const incomingByTarget = new Map();
   for (const e of GRAPH.edges) {
+    if (!paperById.has(e.source) || !paperById.has(e.target)) continue;
     if (!incomingByTarget.has(e.target)) incomingByTarget.set(e.target, []);
     incomingByTarget.get(e.target).push(e);
   }
@@ -120,9 +125,12 @@ export function buildDependencyTree(rootId, maxDepth = 4) {
 // Forward-walk: papers that this one influenced (descendants by category /
 // topic chain).
 export function buildInfluenceTree(rootId, maxDepth = 4) {
-  const paperById = new Map(GRAPH.papers.map((p) => [p.id, p]));
+  const paperById = new Map(
+    GRAPH.papers.filter(hasGeneratedSummary).map((p) => [p.id, p])
+  );
   const outgoingBySource = new Map();
   for (const e of GRAPH.edges) {
+    if (!paperById.has(e.source) || !paperById.has(e.target)) continue;
     if (!outgoingBySource.has(e.source)) outgoingBySource.set(e.source, []);
     outgoingBySource.get(e.source).push(e);
   }

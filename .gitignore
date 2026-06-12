@@ -43,3 +43,8 @@ docs/
 
 # Vendored clone of the arxiv.py library (has its own .git) — kept local, install via uv instead
 arxiv.py/
+
+# Throwaway working dir: one-off scripts, launch helpers, A/B exports, modal run
+# outputs. Disposable by convention; large data here belongs in the HF bucket
+# (scripts/data_bucket.py), not git. Was accidentally committed — now untracked.
+scratch/

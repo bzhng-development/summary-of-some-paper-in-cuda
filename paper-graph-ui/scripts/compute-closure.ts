@@ -35,7 +35,7 @@ const ENTRIES: string[] = [
 ];
 
 const JS_EXTS: string[] = ['.jsx', '.tsx', '.js', '.ts', '.mjs', '.cjs'];
-const EXTS_TO_TRY: string[] = [
+const _EXTS_TO_TRY: string[] = [
   '',
   ...JS_EXTS,
   '.css',

@@ -21,18 +21,9 @@ import QueueButton from './queue-button';
 
 const NOW = new Date().getUTCFullYear();
 
-function topicsOf(paper, papersById) {
-  // The trimmed shape includes `topics` because we pass them explicitly.
-  return new Set(paper.topics ?? []);
-}
-
 const WhatsNext = ({ papers }) => {
   const { set: readSet, hydrated: readHydrated } = useReadSet();
-  const [recent, , recentHydrated] = useStorageState(
-    STORAGE_KEYS.recent,
-    [],
-    null
-  );
+  const [recent, , recentHydrated] = useStorageState(STORAGE_KEYS.recent, [], null);
 
   const ranked = useMemo(() => {
     if (!papers || papers.length === 0) return [];
@@ -76,8 +67,8 @@ const WhatsNext = ({ papers }) => {
         What's next
       </h2>
       <p className="t-sm mb-3 max-w-2xl text-gray-new-70">
-        Picked from unread papers that share topics with what you've read
-        recently, weighted by score and recency.
+        Picked from unread papers that share topics with what you've read recently, weighted by
+        score and recency.
       </p>
       <ul className="flex flex-col gap-2">
         {ranked.map((p) => (

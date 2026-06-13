@@ -22,12 +22,12 @@ const PaperBody = ({ markdown }) => (
       // The H1 in the body is the paper title; we render it in the page
       // header, so collapse it here to avoid duplication.
       h1: () => null,
-      table: ({ node, ...props }) => (
+      table: ({ node: _node, ...props }) => (
         <OverflowFade className="table-wrapper">
           <table {...props} />
         </OverflowFade>
       ),
-      pre: ({ node, ...props }) => (
+      pre: ({ node: _node, ...props }) => (
         <OverflowFade>
           <pre
             className="my-4 overflow-x-auto rounded-md border border-gray-new-15 bg-black-fog p-3 font-mono text-[12px] leading-snug text-gray-new-80"
@@ -35,7 +35,7 @@ const PaperBody = ({ markdown }) => (
           />
         </OverflowFade>
       ),
-      code: ({ inline, className, children, ...props }) => {
+      code: ({ inline: _inline, className, children, ...props }) => {
         if (className?.startsWith('language-')) {
           return (
             <code className={`${className} block`} {...props}>
@@ -52,7 +52,7 @@ const PaperBody = ({ markdown }) => (
           </code>
         );
       },
-      a: ({ node, href, children, ...props }) => {
+      a: ({ node: _node, href, children, ...props }) => {
         const isExternal = typeof href === 'string' && /^https?:\/\//.test(href);
         return (
           <a

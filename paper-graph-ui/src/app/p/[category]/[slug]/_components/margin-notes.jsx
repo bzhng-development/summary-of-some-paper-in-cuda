@@ -83,7 +83,7 @@ const MarginNotes = ({ paperId, containerRef }) => {
   const save = useCallback(() => {
     if (!editing) return;
     const all = readAll();
-    const pmap = { ...(all[paperId] ?? {}) };
+    const pmap = { ...all[paperId] };
     const draft = editing.draft.trim();
     if (draft.length === 0) {
       delete pmap[editing.slug];
@@ -104,7 +104,7 @@ const MarginNotes = ({ paperId, containerRef }) => {
   const handleRemove = useCallback(
     (slug) => {
       const all = readAll();
-      const pmap = { ...(all[paperId] ?? {}) };
+      const pmap = { ...all[paperId] };
       delete pmap[slug];
       if (Object.keys(pmap).length === 0) delete all[paperId];
       else all[paperId] = pmap;

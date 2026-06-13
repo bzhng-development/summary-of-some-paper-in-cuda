@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 
 import { STORAGE_EVENTS, STORAGE_KEYS } from 'lib/storage-keys';
 
@@ -44,8 +44,7 @@ function findRange(root, snippet, before, after) {
   if (!snippet) return null;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode: (node) =>
-      node.parentNode &&
-      !node.parentNode.closest('mark[data-pg-hl]')
+      node.parentNode && !node.parentNode.closest('mark[data-pg-hl]')
         ? NodeFilter.FILTER_ACCEPT
         : NodeFilter.FILTER_REJECT,
   });
@@ -278,9 +277,7 @@ const Highlights = ({ paperId, containerRef }) => {
           </button>
         </div>
       ) : null}
-      {list.length > 0 ? (
-        <SavedHighlights items={list} onRemove={handleRemove} />
-      ) : null}
+      {list.length > 0 ? <SavedHighlights items={list} onRemove={handleRemove} /> : null}
     </>
   );
 };

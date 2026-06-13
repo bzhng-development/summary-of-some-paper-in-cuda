@@ -47,6 +47,8 @@ _SKIP_DIR_PARTS = {
     ".pytest_cache",
     ".mypy_cache",
     ".git",
+    ".sl",
+    ".husky",
     ".pnpm-store",
     ".firefox-profile",
     ".scraper-profile",
@@ -117,6 +119,7 @@ _SKIP_DIR_PARTS = {
 # Junk filenames (suffix check misses dotfiles like .DS_Store, whose Path.suffix == "").
 _SKIP_NAMES = {".DS_Store", "Thumbs.db", ".localized", "expo-env.d.ts"}
 _SKIP_SUFFIXES = {
+    ".log",
     ".pyc",
     ".pyo",
     ".pth",
@@ -155,9 +158,16 @@ def _is_junk(rel: str) -> bool:
     p = Path(rel)
     if set(p.parts) & _SKIP_DIR_PARTS:
         return True
+    # transient dagster dev-home scratch — name carries a random suffix
+    # (.tmp_dagster_home_<rand>/…), so match by part prefix, not the skip set.
+    if any(part.startswith(".tmp_dagster_home") for part in p.parts):
+        return True
     # dotenv files are secrets/config, never data — keep them out of a shared bucket
     # (covers .env, .env.local, .env.production, .envrc, …).
     if p.name.startswith(".env"):
+        return True
+    # sqlite sidecar/transient files (WAL / rollback journal / shared-memory) — runtime-regenerated.
+    if p.name.endswith(("-journal", "-wal", "-shm")):
         return True
     if p.name in _SKIP_NAMES:
         return True

@@ -176,7 +176,9 @@ def _is_junk(rel: str) -> bool:
 
 def _data_files(root: Path) -> list[str]:
     """Gitignored files that are data, not software junk — sorted, repo-relative POSIX."""
-    out = _run(["git", "ls-files", "--others", "--ignored", "--exclude-standard"], cwd=root).stdout.splitlines()
+    out = _run(
+        ["git", "ls-files", "--others", "--ignored", "--exclude-standard"], cwd=root
+    ).stdout.splitlines()
     return sorted(f for f in out if f and not _is_junk(f) and (root / f).is_file())
 
 
@@ -228,18 +230,26 @@ app = typer.Typer(add_completion=False, help=__doc__)
 @app.command()
 def push(
     bucket: Annotated[str, typer.Option(help="HF bucket id, e.g. vincentzed-hf/data")],
-    prefix: Annotated[str, typer.Option(help="Path prefix inside the bucket (repo namespace)")] = "",
+    prefix: Annotated[
+        str, typer.Option(help="Path prefix inside the bucket (repo namespace)")
+    ] = "",
     delete: Annotated[
         bool,
-        typer.Option(help="Mirror: prune bucket files no longer present locally (e.g. de-bucketed dirs)"),
+        typer.Option(
+            help="Mirror: prune bucket files no longer present locally (e.g. de-bucketed dirs)"
+        ),
     ] = False,
-    dry_run: Annotated[bool, typer.Option(help="Plan only; don't upload or write manifest")] = False,
+    dry_run: Annotated[
+        bool, typer.Option(help="Plan only; don't upload or write manifest")
+    ] = False,
 ) -> None:
     """Upload gitignored data to the bucket (upstream sync) and (re)write the manifest."""
     root = _repo_root()
     files = _data_files(root)
     total = sum((root / f).stat().st_size for f in files)
-    console.print(f"[bold]{len(files)}[/] data files, {total / 1e9:.2f} GB -> {_bucket_root(bucket, prefix)}")
+    console.print(
+        f"[bold]{len(files)}[/] data files, {total / 1e9:.2f} GB -> {_bucket_root(bucket, prefix)}"
+    )
     if dry_run:
         for f in files[:20]:
             console.print(f"  {f}")
@@ -276,7 +286,9 @@ def push(
 @app.command()
 def manifest(
     bucket: Annotated[str, typer.Option(help="HF bucket id, e.g. vincentzed-hf/data")],
-    prefix: Annotated[str, typer.Option(help="Path prefix inside the bucket (repo namespace)")] = "",
+    prefix: Annotated[
+        str, typer.Option(help="Path prefix inside the bucket (repo namespace)")
+    ] = "",
 ) -> None:
     """(Re)write the manifest from local data files WITHOUT uploading (data already in bucket)."""
     root = _repo_root()
@@ -302,7 +314,9 @@ def _load_manifest(root: Path) -> list[ManifestEntry]:
     if not mf.exists():
         err.print(f"[red]no {MANIFEST_NAME} found in {root}[/]")
         raise typer.Exit(1)
-    return _ENTRIES.validate_python([json.loads(ln) for ln in mf.read_text().splitlines() if ln.strip()])
+    return _ENTRIES.validate_python(
+        [json.loads(ln) for ln in mf.read_text().splitlines() if ln.strip()]
+    )
 
 
 @app.command()
@@ -311,16 +325,34 @@ def pull(
 ) -> None:
     """Restore bucket data (downstream sync) into the repo, placing files at their paths.
 
-    One batched `hf buckets sync` of the bucket root into the repo root: the prefix tree
-    mirrors repo-relative paths, so each file lands where it belongs — no per-file copy.
-    `--no-delete` is implicit (sync never removes), and `--ignore-times` skips files already
-    present by size, so re-running is cheap and only fetches what's missing or changed.
+    Syncs each top-level segment of the manifest SEPARATELY — never the whole bucket
+    root. This repo's data may sit at the bucket *root* prefix, which is shared with
+    other repos' prefixes (cuda/, nextjs-ui/, …); a single root-level sync would haul
+    all of them into this tree. Scoping to our own segments avoids that. `--no-delete`
+    is implicit (sync never removes), so git-tracked source is untouched; the default
+    size+mtime skip makes re-runs cheap while still catching bucket-side updates.
     """
     root = _repo_root()
     entries = [e for e in _load_manifest(root) if include in e.path]
+    if not entries:
+        console.print("[yellow]nothing in manifest to pull[/]")
+        return
+    root_uri = _manifest_root(entries)
+    top_dirs = sorted({e.path.split("/", 1)[0] for e in entries if "/" in e.path})
+    top_files = sorted({e.path for e in entries if "/" not in e.path})
     missing = sum(1 for e in entries if not (root / e.path).exists())
-    console.print(f"syncing {len(entries)} manifest files ({missing} missing locally)…")
-    _hf_sync(_manifest_root(entries), str(root), include=include)
+    console.print(
+        f"syncing {len(entries)} manifest files ({missing} missing) across "
+        f"{len(top_dirs)} dir(s) + {len(top_files)} file(s)…"
+    )
+    for top in top_dirs:
+        dst = root / top
+        dst.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["hf", "buckets", "sync", f"{root_uri}/{top}", str(dst)], check=True)
+    for rel in top_files:
+        dst = root / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["hf", "buckets", "cp", f"{root_uri}/{rel}", str(dst)], check=True)
     still = [e.path for e in entries if not (root / e.path).exists()]
     if still:
         err.print(f"[yellow]{len(still)} files still missing after sync (first: {still[0]})[/]")

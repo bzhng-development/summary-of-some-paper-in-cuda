@@ -22,7 +22,6 @@ import sys
 from dataclasses import dataclass, fields
 from pathlib import Path
 
-
 ARXIV_FN_RE = re.compile(r"^(\d{4}\.\d{4,5})")
 ARXIV_BODY_RE = re.compile(r"\*\*ArXiv:\*\*\s*\[?(\d{4}\.\d{4,5})")
 SECTION_HEAD_RE = re.compile(r"^##\s+(\d+)\.\s", re.MULTILINE)
@@ -119,9 +118,7 @@ def assemble_new_md(
     line between them, matching the existing on-disk format.
     """
     parts: list[str] = [header.rstrip()]
-    for n in range(1, 7):
-        if text := (new_sections.get(n) or old_sections.get(n)):
-            parts.append(text.rstrip())
+    parts.extend(text.rstrip() for n in range(1, 7) if (text := (new_sections.get(n) or old_sections.get(n))))
     if s7 := (new_sections.get(7) or old_sections.get(7)):
         parts.append(s7.rstrip())
     return "\n\n".join(parts) + "\n"

@@ -31,13 +31,11 @@ from loguru import logger
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
-
+from paper_pipeline.core.neon_db import NeonDB
 from paper_pipeline.ingest.examples import (
     build_examples_block,
     load_examples,
 )
-from paper_pipeline.core.neon_db import NeonDB  # noqa: E402
-
 
 # ============================================================================
 # Config
@@ -331,15 +329,17 @@ def fetch_papers_range(start: date, end: date, enrich_batch: int = 1000) -> list
 
     # Concurrent HF API fetches with shared client (connection pooling)
     day_results: dict[date, list[Paper]] = {}
-    with httpx.Client(limits=httpx.Limits(max_connections=32, max_keepalive_connections=10)) as hf_client:
-        with ThreadPoolExecutor(max_workers=32) as pool:
-            futures = {pool.submit(_fetch_papers_raw, d, hf_client): d for d in days}
-            for fut in as_completed(futures):
-                d = futures[fut]
-                try:
-                    day_results[d] = fut.result()
-                except Exception as e:
-                    logger.warning(f"Failed to fetch {d}: {e}")
+    with (
+        httpx.Client(limits=httpx.Limits(max_connections=32, max_keepalive_connections=10)) as hf_client,
+        ThreadPoolExecutor(max_workers=32) as pool,
+    ):
+        futures = {pool.submit(_fetch_papers_raw, d, hf_client): d for d in days}
+        for fut in as_completed(futures):
+            d = futures[fut]
+            try:
+                day_results[d] = fut.result()
+            except Exception as e:
+                logger.warning(f"Failed to fetch {d}: {e}")
 
     # Dedupe across days
     seen: set[str] = set()
@@ -749,7 +749,7 @@ async def async_main():
                 if aid:
                     on_disk[aid] = entry
 
-        for s in list(scored):
+        for s in scored:
             on_disk[s.paper.arxiv_id] = _scored_to_dict(s)
 
         all_results = list(on_disk.values())

@@ -104,7 +104,7 @@ async def _ocr_page(
                     temperature=0.0,
                 )
             return (resp.choices[0].message.content or ""), False
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             if attempt == max_retries:
                 console.print(f"[red]page failed after {max_retries} retries: {exc}[/]")
                 return "", True
@@ -216,7 +216,7 @@ async def _run(
                     record = await _ocr_paper(
                         client, arxiv_id, pdf_path, render_pool, sem, max_pages, image_dpi, max_tokens, max_retries
                     )
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     record = OcrRecord(
                         arxiv_id=arxiv_id,
                         paper_url=ARXIV_ABS_URL.format(id=arxiv_id),

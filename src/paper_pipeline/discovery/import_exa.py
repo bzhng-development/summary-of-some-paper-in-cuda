@@ -3,9 +3,8 @@
 
 import json
 
-
-from paper_pipeline.ingest.hf_daily_papers import fetch_arxiv_metadata
 from paper_pipeline.core.neon_db import NeonDB
+from paper_pipeline.ingest.hf_daily_papers import fetch_arxiv_metadata
 
 JSONL = "docs_new/missing-classic-papers-2012-2024.exa.jsonl"
 
@@ -21,12 +20,13 @@ def main():
 
     # 3) Parse Exa JSONL
     entries = []
-    for line in open(JSONL):
-        r = json.loads(line.strip())
-        aid = r.get("arxiv_id")
-        if not aid:
-            continue
-        entries.append(r)
+    with open(JSONL) as fh:
+        for line in fh:
+            r = json.loads(line.strip())
+            aid = r.get("arxiv_id")
+            if not aid:
+                continue
+            entries.append(r)
 
     print(f"Loaded {len(entries)} entries from Exa JSONL")
 

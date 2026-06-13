@@ -27,8 +27,7 @@ from pathlib import Path
 
 from loguru import logger
 
-
-from paper_pipeline.ingest.hf_daily_papers import Paper, fetch_papers_range  # noqa: E402
+from paper_pipeline.ingest.hf_daily_papers import Paper, fetch_papers_range
 
 
 def _unscored_to_dict(p: Paper) -> dict:

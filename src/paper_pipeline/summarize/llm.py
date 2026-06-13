@@ -5,8 +5,9 @@ from __future__ import annotations
 import asyncio
 import re
 import resource
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, TypeVar
+from typing import Any, TypeVar
 
 from loguru import logger
 from openai import AsyncOpenAI
@@ -136,7 +137,7 @@ def parse_retry_delay(exc: BaseException) -> float | None:
     return None
 
 
-async def retry_async(
+async def retry_async[T](
     fn: Callable[[], Awaitable[T]],
     *,
     max_attempts: int = 10,

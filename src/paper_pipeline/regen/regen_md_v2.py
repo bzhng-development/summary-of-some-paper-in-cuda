@@ -25,7 +25,6 @@ import sys
 from dataclasses import dataclass, field, fields
 from pathlib import Path
 
-
 ARXIV_FN_RE = re.compile(r"^(\d{4}\.\d{4,5})")
 ARXIV_BODY_RE = re.compile(r"\*\*ArXiv:\*\*\s*\[?(\d{4}\.\d{4,5})")
 FILE_ID_BODY_RE = re.compile(r"\*\*ArXiv:\*\*\s*\[?(\d{4}\.\d{4,5})|\*\*URL:\*\*\s*\[([^\]]+)\]")
@@ -89,9 +88,8 @@ def index_existing_files(content_dir: Path) -> dict[str, Path]:
         aid: str | None = None
         if m := ARXIV_FN_RE.match(p.stem):
             aid = m.group(1)
-        if aid is None:
-            if m := ARXIV_BODY_RE.search(text[:2000]):
-                aid = m.group(1)
+        if aid is None and (m := ARXIV_BODY_RE.search(text[:2000])):
+            aid = m.group(1)
         if aid is None:
             # ext: papers — try matching the URL line
             # filename like "doi-10.1038-nature14539-Deep-learning.md"

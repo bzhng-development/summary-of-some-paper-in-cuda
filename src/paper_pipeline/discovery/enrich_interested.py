@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Enrich interested papers that are missing arXiv metadata."""
 
-from paper_pipeline.ingest.hf_daily_papers import fetch_arxiv_metadata
 from paper_pipeline.core.neon_db import NeonDB
+from paper_pipeline.ingest.hf_daily_papers import fetch_arxiv_metadata
 
 db = NeonDB()
 

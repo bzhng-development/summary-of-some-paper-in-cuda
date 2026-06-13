@@ -46,9 +46,7 @@ def read_jobs(path: Path) -> list[tuple[str, str]]:
         if cid:
             out.append((r["url"], cid))
     # Deduplicate (the file may have stale 429 rows + later success rows).
-    seen: dict[str, str] = {}
-    for src, cid in out:
-        seen[cid] = src
+    seen: dict[str, str] = {cid: src for src, cid in out}
     return [(src, cid) for cid, src in seen.items()]
 
 

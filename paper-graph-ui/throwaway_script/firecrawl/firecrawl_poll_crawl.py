@@ -5,11 +5,9 @@ import argparse
 import json
 import sys
 import time
-from typing import Any, Dict, Optional, Set, Tuple
+from typing import Any
 
 import requests
-from loguru import logger
-
 from firecrawl_common import (
     API_BASE,
     append_jsonl,
@@ -17,17 +15,18 @@ from firecrawl_common import (
     require_api_key,
     setup_logger,
 )
+from loguru import logger
 
 TERMINAL_STATUSES = {"completed", "failed"}
 
 
-def _build_url(crawl_id: str, next_url: Optional[str]) -> str:
+def _build_url(crawl_id: str, next_url: str | None) -> str:
     if next_url:
         return next_url
     return f"{API_BASE}/{crawl_id}"
 
 
-def _record_key(record: Dict[str, Any]) -> Tuple[Any, ...]:
+def _record_key(record: dict[str, Any]) -> tuple[Any, ...]:
     crawl_id = record.get("crawl_id")
     status_code = record.get("status_code")
     response = record.get("response") or {}
@@ -43,10 +42,10 @@ def _record_key(record: Dict[str, Any]) -> Tuple[Any, ...]:
     )
 
 
-def _load_existing_keys(out_path: str) -> Set[Tuple[Any, ...]]:
-    existing: Set[Tuple[Any, ...]] = set()
+def _load_existing_keys(out_path: str) -> set[tuple[Any, ...]]:
+    existing: set[tuple[Any, ...]] = set()
     try:
-        with open(out_path, "r", encoding="ascii") as out_f:
+        with open(out_path, encoding="ascii") as out_f:
             for line in out_f:
                 if not line.strip():
                     continue
@@ -103,8 +102,8 @@ def main() -> int:
         logger.info("Loaded {} existing records from {}", len(existing_keys), args.out)
 
     polls = 0
-    next_url: Optional[str] = None
-    last_url: Optional[str] = None
+    next_url: str | None = None
+    last_url: str | None = None
     stalled = 0
     logger.info("Starting poll for crawl_id={} output={}", args.crawl_id, args.out)
     try:
@@ -128,7 +127,7 @@ def main() -> int:
                 polls += 1
                 continue
 
-            record: Dict[str, Any] = {
+            record: dict[str, Any] = {
                 "crawl_id": args.crawl_id,
                 "status_code": resp.status_code,
                 "response": None,

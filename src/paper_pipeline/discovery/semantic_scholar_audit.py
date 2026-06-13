@@ -30,9 +30,7 @@ from pathlib import Path
 import httpx
 from loguru import logger
 
-
-from paper_pipeline.core.neon_db import NeonDB, TABLE
-
+from paper_pipeline.core.neon_db import TABLE, NeonDB
 
 S2_BASE = "https://api.semanticscholar.org/graph/v1"
 HEADERS = {"x-api-key": os.environ.get("S2_API_KEY")} if os.environ.get("S2_API_KEY") else {}

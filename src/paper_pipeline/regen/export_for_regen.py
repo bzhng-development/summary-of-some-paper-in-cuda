@@ -10,17 +10,16 @@ Resumes from last line if --out already exists (skips ids already present).
 """
 
 from __future__ import annotations
+
 import argparse
 import json
 import time
 from pathlib import Path
 
-
 from loguru import logger
 from psycopg.rows import dict_row
 
-
-from paper_pipeline.core.neon_db import NeonDB, TABLE
+from paper_pipeline.core.neon_db import TABLE, NeonDB
 from paper_pipeline.summarize.pdf import (
     arxiv_url_to_pdf_url,
     download_and_extract_text,

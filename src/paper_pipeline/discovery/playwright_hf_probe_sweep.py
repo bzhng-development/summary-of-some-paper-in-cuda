@@ -24,7 +24,6 @@ from pathlib import Path
 import httpx
 from loguru import logger
 
-
 ARXIV_RE = re.compile(r"arxiv\.org/abs/(\d{4}\.\d{4,5})")
 ARXIV_TAG_RE = re.compile(r"arxiv:(\d{4}\.\d{4,5})")
 

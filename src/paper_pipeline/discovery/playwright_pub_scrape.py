@@ -33,21 +33,22 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import json
 import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 import httpx
 from loguru import logger
 from playwright.async_api import (
     Page,
-    TimeoutError as PWTimeoutError,
     async_playwright,
 )
-
+from playwright.async_api import (
+    TimeoutError as PWTimeoutError,
+)
 
 # arxiv IDs: YYMM.NNNNN (4-5 digit suffix).
 ARXIV_ID_RE = re.compile(r"(?<![\w.])(\d{4}\.\d{4,5})(?:v\d+)?(?![\w.])")
@@ -68,23 +69,23 @@ def _valid_arxiv_id(aid: str) -> bool:
 @dataclass
 class OrgPub:
     label: str
-    primary_url: Optional[str] = None
+    primary_url: str | None = None
     hf_orgs: tuple[str, ...] = ()
     # primary-page mode: "simple" | "paginated" | "sitemap" | "none"
     mode: str = "simple"
-    wait_selector: Optional[str] = "body"
+    wait_selector: str | None = "body"
     max_scrolls: int = 60
     scroll_dwell_ms: int = 800
     load_more_selectors: tuple[str, ...] = field(default_factory=tuple)
     # paginated:
-    page_url_template: Optional[str] = None
+    page_url_template: str | None = None
     max_page: int = 1
     # paginated/sitemap/simple: follow per-paper detail links to mine arxiv.
     follow_paper_links: bool = False
     # CSS selector for per-paper links on the list page.
-    paper_link_selector: Optional[str] = None
+    paper_link_selector: str | None = None
     # href substring filter for per-paper links.
-    paper_link_must_contain: Optional[str] = None
+    paper_link_must_contain: str | None = None
     # href substring filter to exclude (e.g. exclude "/research/team/").
     paper_link_must_not_contain: tuple[str, ...] = field(default_factory=tuple)
     max_paper_links: int = 400
@@ -544,7 +545,7 @@ async def harvest_arxiv_from_page(page: Page) -> dict[str, str]:
     return out
 
 
-async def page_title_h1(page: Page) -> Optional[str]:
+async def page_title_h1(page: Page) -> str | None:
     try:
         return await page.evaluate(
             "() => { const h = document.querySelector('h1'); return h ? h.innerText.trim() : null; }"
@@ -609,7 +610,7 @@ async def dismiss_cookies(page: Page) -> None:
 
 
 async def collect_paper_links(
-    page: Page, selector: str, must_contain: Optional[str], must_not_contain: tuple[str, ...] = ()
+    page: Page, selector: str, must_contain: str | None, must_not_contain: tuple[str, ...] = ()
 ) -> list[str]:
     try:
         hrefs = await page.eval_on_selector_all(selector, "nodes => nodes.map(n => n.href)")
@@ -623,7 +624,7 @@ async def collect_paper_links(
             continue
         if any(banned in h for banned in must_not_contain):
             continue
-        if h.startswith("mailto:") or h.startswith("javascript:"):
+        if h.startswith(("mailto:", "javascript:")):
             continue
         # Trim fragments + queries
         h_clean = h.split("#")[0].split("?")[0]
@@ -669,10 +670,8 @@ async def scrape_simple(page: Page, org: OrgPub) -> dict[str, str]:
     if not await goto_safe(page, org.primary_url, timeout=60_000):
         return {}
     if org.wait_selector:
-        try:
+        with contextlib.suppress(PWTimeoutError):
             await page.wait_for_selector(org.wait_selector, timeout=10_000)
-        except PWTimeoutError:
-            pass
     await dismiss_cookies(page)
     iters = await autoscroll(
         page,
@@ -711,10 +710,8 @@ async def scrape_paginated(page: Page, org: OrgPub) -> dict[str, str]:
                 break
             continue
         if org.wait_selector:
-            try:
+            with contextlib.suppress(PWTimeoutError):
                 await page.wait_for_selector(org.wait_selector, timeout=10_000)
-            except PWTimeoutError:
-                pass
         await page.wait_for_timeout(1000)
         await autoscroll(page, max_scrolls=20, dwell_ms=600, load_more_selectors=org.load_more_selectors)
         ids = await harvest_arxiv_from_page(page)
@@ -737,9 +734,7 @@ async def scrape_paginated(page: Page, org: OrgPub) -> dict[str, str]:
     return all_ids
 
 
-async def fetch_sitemap_urls(
-    client: httpx.AsyncClient, sitemap_urls: list[str], must_contain: Optional[str]
-) -> list[str]:
+async def fetch_sitemap_urls(client: httpx.AsyncClient, sitemap_urls: list[str], must_contain: str | None) -> list[str]:
     """Fetch each sitemap.xml via httpx and extract <loc>...</loc> URLs.
 
     Playwright's page.content() returns empty for some XML responses
@@ -843,9 +838,7 @@ async def hf_list_models(
             return out
         if not isinstance(data, list):
             return out
-        for m in data:
-            if isinstance(m, dict) and "id" in m:
-                out.append(m["id"])
+        out.extend(m["id"] for m in data if isinstance(m, dict) and "id" in m)
         return out
     return out
 
@@ -1123,10 +1116,8 @@ async def run(args: argparse.Namespace) -> int:
                 out_fh.flush()
                 await asyncio.sleep(args.sleep_between_orgs)
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 await browser.close()
-            except Exception:
-                pass
 
     await http_client.aclose()
     out_fh.close()

@@ -15,6 +15,7 @@ internally with default delay_seconds=3.0.
 """
 
 import argparse
+import contextlib
 import json
 import re
 import sys
@@ -23,7 +24,6 @@ from pathlib import Path
 
 import arxiv
 from loguru import logger
-
 
 # (label, abstract-query OR'd terms, affiliation regex)
 # The query nets a superset; the affiliation regex (case-insensitive) filters
@@ -95,10 +95,8 @@ def main() -> int:
         for line in args.output.read_text(encoding="utf-8").splitlines():
             if not line.strip():
                 continue
-            try:
+            with contextlib.suppress(json.JSONDecodeError, KeyError):
                 already_seen.add(json.loads(line)["arxiv_id"])
-            except json.JSONDecodeError, KeyError:
-                pass
         logger.info("resume: {} arxiv_ids already in output", len(already_seen))
 
     totals: dict[str, dict[str, int]] = {}

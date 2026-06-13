@@ -21,9 +21,9 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
-
-from paper_pipeline.core.neon_db import NeonDB, TABLE
 from playwright.async_api import async_playwright
+
+from paper_pipeline.core.neon_db import TABLE, NeonDB
 
 
 @dataclass(frozen=True)
@@ -35,7 +35,7 @@ class OrgProbe:
     patterns: tuple[re.Pattern, ...]
 
     @classmethod
-    def make(cls, label: str, queries: list[str], patterns: list[str]) -> "OrgProbe":
+    def make(cls, label: str, queries: list[str], patterns: list[str]) -> OrgProbe:
         return cls(
             label=label,
             queries=tuple(queries),
@@ -44,7 +44,7 @@ class OrgProbe:
 
 
 # Affiliation pattern templates — reusable across many orgs:
-def name_patterns(name: str, aliases: list[str] = None) -> list[str]:
+def name_patterns(name: str, aliases: list[str] | None = None) -> list[str]:
     """Build first-person affiliation regexes for a single company name."""
     names = [re.escape(name)] + [re.escape(a) for a in (aliases or [])]
     name_re = "(?:" + "|".join(names) + ")"

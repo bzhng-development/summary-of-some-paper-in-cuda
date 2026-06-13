@@ -94,7 +94,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.apply:
         logger.warning("DRY RUN — nothing written. Re-run with --apply to mirror.")
-        for s, d in new_copies[:5]:
+        for _s, d in new_copies[:5]:
             logger.debug("would add: {}", d.relative_to(_REPO_ROOT))
         for p in to_remove[:5]:
             logger.debug("would remove: {}", p.relative_to(_REPO_ROOT))

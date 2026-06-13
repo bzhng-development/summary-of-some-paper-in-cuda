@@ -29,9 +29,7 @@ from pathlib import Path
 import httpx
 from loguru import logger
 
-
-from paper_pipeline.core.neon_db import NeonDB, TABLE
-
+from paper_pipeline.core.neon_db import TABLE, NeonDB
 
 S2_BASE = "https://api.semanticscholar.org/graph/v1"
 API_KEY = os.environ.get("S2_API_KEY")
@@ -55,33 +53,7 @@ def _throttle() -> None:
 # Comprehensive field set — user wants "as much as possible" stored for
 # downstream reuse. Skipped: citations/references (could be hundreds each per
 # paper), embedding (768 floats), citationStyles (large formatted bibtex).
-FIELDS = ",".join(
-    [
-        "paperId",
-        "corpusId",
-        "externalIds",  # DOI, ARXIV, MAG, ACL, PMID, etc.
-        "url",
-        "title",
-        "abstract",
-        "venue",
-        "publicationVenue",  # structured venue object
-        "year",
-        "publicationDate",
-        "publicationTypes",
-        "journal",
-        "fieldsOfStudy",
-        "s2FieldsOfStudy",
-        "isOpenAccess",
-        "openAccessPdf",
-        "referenceCount",
-        "citationCount",
-        "influentialCitationCount",
-        "authors.authorId",
-        "authors.name",
-        "authors.affiliations",
-        "tldr",  # S2's auto-generated short summary
-    ]
-)
+FIELDS = "paperId,corpusId,externalIds,url,title,abstract,venue,publicationVenue,year,publicationDate,publicationTypes,journal,fieldsOfStudy,s2FieldsOfStudy,isOpenAccess,openAccessPdf,referenceCount,citationCount,influentialCitationCount,authors.authorId,authors.name,authors.affiliations,tldr"
 
 
 def post_batch(ids: list[str]) -> list[dict | None]:
@@ -211,7 +183,7 @@ def main() -> int:
                 continue
             assert len(results) == len(chunk), f"got {len(results)} results for {len(chunk)} ids"
             chunk_hits = 0
-            for aid, body in zip(chunk, results):
+            for aid, body in zip(chunk, results, strict=False):
                 rec = {"_arxiv_id": aid, "_s2_response": body}
                 fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
                 if body:

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from bs4 import BeautifulSoup, NavigableString, Tag
 
-
 _DROP_TAG_NAMES = {
     "script",
     "style",
@@ -60,9 +59,8 @@ def _block_text(tag: Tag) -> str:
     for node in tag.descendants:
         if isinstance(node, NavigableString):
             parts.append(str(node))
-        elif isinstance(node, Tag):
-            if node.name == "br":
-                parts.append("\n")
+        elif isinstance(node, Tag) and node.name == "br":
+            parts.append("\n")
     return "".join(parts).strip()
 
 

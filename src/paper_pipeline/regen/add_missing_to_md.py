@@ -29,12 +29,9 @@ import sys
 from dataclasses import dataclass, field, fields
 from pathlib import Path
 
-
 from psycopg.rows import dict_row
 
-
-from paper_pipeline.core.neon_db import NeonDB, TABLE
-
+from paper_pipeline.core.neon_db import TABLE, NeonDB
 
 ARXIV_FN_RE = re.compile(r"^(\d{4}\.\d{4,5})")
 ARXIV_BODY_RE = re.compile(r"\*\*ArXiv:\*\*\s*\[?(\d{4}\.\d{4,5})")
@@ -162,9 +159,7 @@ def build_md(
     parts.append("## 🎯 Pitch")
     parts.append(pitch.strip())
     parts.append("---")
-    for n in SECTION_RANGE:
-        if text := sections.get(n):
-            parts.append(text.rstrip())
+    parts.extend(text.rstrip() for n in SECTION_RANGE if (text := sections.get(n)))
     return "\n\n".join(parts) + "\n"
 
 

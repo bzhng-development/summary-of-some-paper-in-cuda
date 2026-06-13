@@ -24,7 +24,6 @@ import time
 from pathlib import Path
 from typing import Any
 
-
 # ---------------------------------------------------------------------------
 # Repo root setup (needed before importing multi_prompt_pkg)
 # ---------------------------------------------------------------------------
@@ -139,7 +138,7 @@ def load_pitch_ckpts_into(papers: list[dict[str, Any]], out_path: Path) -> int:
     loaded = 0
     parent = out_path.parent
     stem = out_path.stem
-    files = [out_path.with_suffix(".pitch.jsonl")] + list(parent.glob(f"{stem}.pitch.rank*.jsonl"))
+    files = [out_path.with_suffix(".pitch.jsonl"), *list(parent.glob(f"{stem}.pitch.rank*.jsonl"))]
     for path in files:
         if not path.exists():
             continue
@@ -164,7 +163,7 @@ def load_cat_ckpts_into(papers: list[dict[str, Any]], out_path: Path) -> int:
     loaded = 0
     parent = out_path.parent
     stem = out_path.stem
-    files = [out_path.with_suffix(".cat.jsonl")] + list(parent.glob(f"{stem}.cat.rank*.jsonl"))
+    files = [out_path.with_suffix(".cat.jsonl"), *list(parent.glob(f"{stem}.cat.rank*.jsonl"))]
     for path in files:
         if not path.exists():
             continue
@@ -288,18 +287,16 @@ def assemble_and_write(papers: list[dict[str, Any]], out_path: Path) -> None:
 def run_offline_worker(args, rank: int | None) -> None:
     """Run one offline worker. rank=None means single-process; rank=int means DP worker."""
     setup_repo_root(args.repo_root)
-    from paper_pipeline.summarize.prompts import SECTION_SPECS, SYSTEM_PREAMBLE
-    from paper_pipeline.summarize.config import CATEGORIES, FALLBACK_CATEGORY
-    from paper_pipeline.summarize.schemas import CategoryOutput, PitchOutput
     from vllm import LLM, SamplingParams
     from vllm.sampling_params import StructuredOutputsParams
 
+    from paper_pipeline.summarize.config import CATEGORIES, FALLBACK_CATEGORY
+    from paper_pipeline.summarize.prompts import SECTION_SPECS, SYSTEM_PREAMBLE
+    from paper_pipeline.summarize.schemas import CategoryOutput, PitchOutput
+
     out_path = Path(args.output)
     all_papers = load_papers(Path(args.input), limit=args.limit)
-    if rank is None:
-        papers = all_papers
-    else:
-        papers = slice_for_rank(all_papers, rank, args.dp_size)
+    papers = all_papers if rank is None else slice_for_rank(all_papers, rank, args.dp_size)
     print(f"[load rank={rank}] {len(papers)}/{len(all_papers)} papers")
 
     # ---- Resume scan ----
@@ -344,21 +341,21 @@ def run_offline_worker(args, rank: int | None) -> None:
     print(
         f"[init rank={rank}] loading DeepSeek-V4-Pro (tp={args.tp_size}, dp={args.dp_size}, max_len={args.max_model_len})"
     )
-    llm_kwargs: dict[str, Any] = dict(
-        model="deepseek-ai/DeepSeek-V4-Pro",
-        trust_remote_code=True,
-        tokenizer_mode="deepseek_v4",
-        tensor_parallel_size=args.tp_size,
-        kv_cache_dtype="fp8",
-        block_size=256,
-        max_model_len=args.max_model_len,
-        compilation_config={
+    llm_kwargs: dict[str, Any] = {
+        "model": "deepseek-ai/DeepSeek-V4-Pro",
+        "trust_remote_code": True,
+        "tokenizer_mode": "deepseek_v4",
+        "tensor_parallel_size": args.tp_size,
+        "kv_cache_dtype": "fp8",
+        "block_size": 256,
+        "max_model_len": args.max_model_len,
+        "compilation_config": {
             "cudagraph_mode": "FULL_AND_PIECEWISE",
             "custom_ops": ["all"],
         },
-        attention_config={"use_fp4_indexer_cache": True},
-        enable_expert_parallel=True,
-    )
+        "attention_config": {"use_fp4_indexer_cache": True},
+        "enable_expert_parallel": True,
+    }
     if args.dp_size > 1:
         llm_kwargs["data_parallel_size"] = args.dp_size
         # Tell vllm we're under an external multiprocess launcher (our spawn).
@@ -392,7 +389,7 @@ def run_offline_worker(args, rank: int | None) -> None:
         t0 = time.time()
         outputs = llm.chat(messages=messages_batch, sampling_params=sp, chat_template_kwargs=chat_kwargs)
         dt = time.time() - t0
-        for p, out in zip(todo, outputs):
+        for p, out in zip(todo, outputs, strict=False):
             p["sections"][n] = strip_think(out.outputs[0].text)
         path = write_section_ckpt(papers, out_path, n, rank)
         print(
@@ -429,7 +426,7 @@ def run_offline_worker(args, rank: int | None) -> None:
         t0 = time.time()
         outputs = llm.chat(messages=messages_batch, sampling_params=sp_pitch, chat_template_kwargs=no_think)
         dt = time.time() - t0
-        for p, out in zip(pitch_todo, outputs):
+        for p, out in zip(pitch_todo, outputs, strict=False):
             raw = strip_think(out.outputs[0].text)
             try:
                 parsed = PitchOutput.model_validate_json(raw)
@@ -471,7 +468,7 @@ def run_offline_worker(args, rank: int | None) -> None:
         t0 = time.time()
         outputs = llm.chat(messages=messages_batch, sampling_params=sp_cat, chat_template_kwargs=no_think)
         dt = time.time() - t0
-        for p, out in zip(cat_todo, outputs):
+        for p, out in zip(cat_todo, outputs, strict=False):
             raw = strip_think(out.outputs[0].text)
             try:
                 parsed = CategoryOutput.model_validate_json(raw)
@@ -579,8 +576,9 @@ async def online_batch(
 def run_online(args) -> None:
     setup_repo_root(args.repo_root)
     from openai import AsyncOpenAI
-    from paper_pipeline.summarize.prompts import SECTION_SPECS, SYSTEM_PREAMBLE
+
     from paper_pipeline.summarize.config import CATEGORIES, FALLBACK_CATEGORY
+    from paper_pipeline.summarize.prompts import SECTION_SPECS, SYSTEM_PREAMBLE
     from paper_pipeline.summarize.schemas import CategoryOutput, PitchOutput
 
     out_path = Path(args.output)
@@ -605,10 +603,13 @@ def run_online(args) -> None:
     else:
         chat_kwargs = {"chat_template_kwargs": {"thinking": True, "reasoning_effort": args.thinking}}
 
-    sampling_kwargs_section = dict(temperature=1.0, top_p=1.0, stream=False, extra_body=chat_kwargs)
-    sampling_kwargs_structured = dict(
-        temperature=1.0, top_p=1.0, stream=False, extra_body={"chat_template_kwargs": {"thinking": False}}
-    )
+    sampling_kwargs_section = {"temperature": 1.0, "top_p": 1.0, "stream": False, "extra_body": chat_kwargs}
+    sampling_kwargs_structured = {
+        "temperature": 1.0,
+        "top_p": 1.0,
+        "stream": False,
+        "extra_body": {"chat_template_kwargs": {"thinking": False}},
+    }
 
     only_cat = getattr(args, "only_cat", False)
     max_section = getattr(args, "max_section", 0)
@@ -674,7 +675,7 @@ def run_online(args) -> None:
             finally:
                 stream_fh.close()
             dt = time.time() - t0
-            for p, o in zip(todo, outs):
+            for p, o in zip(todo, outs, strict=False):
                 p["sections"][n] = o
             path = write_section_ckpt(papers, out_path, n, None)
             print(f"[online section {n}] {len(todo)} in {dt:.1f}s -> {path.name}")
@@ -708,7 +709,7 @@ def run_online(args) -> None:
                 response_format,
                 concurrency=args.concurrency,
             )
-            for p, raw in zip(pitch_todo, outs):
+            for p, raw in zip(pitch_todo, outs, strict=False):
                 try:
                     parsed = PitchOutput.model_validate_json(raw)
                     p["_title"] = parsed.title
@@ -743,7 +744,7 @@ def run_online(args) -> None:
                 response_format,
                 concurrency=args.concurrency,
             )
-            for p, raw in zip(cat_todo, outs):
+            for p, raw in zip(cat_todo, outs, strict=False):
                 try:
                     parsed = CategoryOutput.model_validate_json(raw)
                     cat = parsed.category.strip().lower()

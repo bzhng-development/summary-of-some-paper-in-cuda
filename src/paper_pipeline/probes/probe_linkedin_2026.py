@@ -16,7 +16,6 @@ from pathlib import Path
 
 from playwright.async_api import async_playwright
 
-
 QUERIES = [
     "LinkedIn",
     "LinkedIn AI",
@@ -96,7 +95,7 @@ async def main():
     print(f"\ncandidates with arxiv_id starting '26' (2026): {len(candidates)}")
 
     verified = []
-    for aid, row in candidates.items():
+    for row in candidates.values():
         hits = linkedin_match(row.get("abstract") or "")
         if hits or "linkedin" in (row.get("authors_text") or "").lower():
             verified.append({**row, "affiliation_hits": hits})

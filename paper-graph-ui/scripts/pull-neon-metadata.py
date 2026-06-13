@@ -11,10 +11,11 @@ import json
 import sys
 from pathlib import Path
 
+from psycopg.rows import dict_row
+
 # paper_pipeline is editable-installed in the cuda venv (`uv run` resolves up to
 # ../pyproject.toml). DATABASE_URL is shell-global; neon_db loads a .env fallback.
 from paper_pipeline.core.neon_db import NeonDB
-from psycopg.rows import dict_row
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent

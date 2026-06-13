@@ -10,7 +10,6 @@ import httpx
 import pymupdf
 from loguru import logger
 
-
 _ARXIV_ID_RE = re.compile(r"^\d{4}\.\d{4,5}$")
 
 

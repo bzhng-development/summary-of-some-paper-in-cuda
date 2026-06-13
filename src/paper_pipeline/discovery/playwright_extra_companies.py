@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import json
 import re
 import sys
@@ -50,10 +51,9 @@ from paper_pipeline.discovery.playwright_pub_scrape import (  # type: ignore
     DEFAULT_LOAD_MORE,
     OrgPub,
     _valid_arxiv_id,
-    scrape_primary,
     scrape_hf_org,
+    scrape_primary,
 )
-
 
 # ---------------------------------------------------------------- ORG LIST (30)
 EXTRA_ORGS: tuple[OrgPub, ...] = (
@@ -747,10 +747,8 @@ async def run(args: argparse.Namespace) -> int:
                 out_fh.flush()
                 await asyncio.sleep(args.sleep_between_orgs)
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 await browser.close()
-            except Exception:
-                pass
 
     await http_client.aclose()
     out_fh.close()

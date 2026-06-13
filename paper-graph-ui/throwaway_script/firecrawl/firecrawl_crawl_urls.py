@@ -3,11 +3,9 @@
 
 import argparse
 import os
-from typing import Any, Dict, List
+from typing import Any
 
 import requests
-from loguru import logger
-
 from firecrawl_common import (
     API_BASE,
     append_jsonl,
@@ -16,14 +14,15 @@ from firecrawl_common import (
     setup_logger,
     split_csv,
 )
+from loguru import logger
 
 API_URL = API_BASE
 
 
-def _read_urls(path: str) -> List[str]:
-    urls: List[str] = []
+def _read_urls(path: str) -> list[str]:
+    urls: list[str] = []
     if os.path.isfile(path):
-        with open(path, "r", encoding="ascii") as f:
+        with open(path, encoding="ascii") as f:
             for raw in f:
                 line = raw.strip()
                 if not line or line.startswith("#"):
@@ -31,7 +30,7 @@ def _read_urls(path: str) -> List[str]:
                 urls.append(line)
         return urls
 
-    if path.startswith("http://") or path.startswith("https://"):
+    if path.startswith(("http://", "https://")):
         return [path]
 
     raise ValueError(
@@ -40,8 +39,8 @@ def _read_urls(path: str) -> List[str]:
     )
 
 
-def _build_payload(args: argparse.Namespace, url: str) -> Dict[str, Any]:
-    payload: Dict[str, Any] = {
+def _build_payload(args: argparse.Namespace, url: str) -> dict[str, Any]:
+    payload: dict[str, Any] = {
         "url": url,
     }
 
@@ -73,7 +72,7 @@ def _build_payload(args: argparse.Namespace, url: str) -> Dict[str, Any]:
     if args.exclude_paths:
         payload["excludePaths"] = args.exclude_paths
 
-    scrape_options: Dict[str, Any] = {}
+    scrape_options: dict[str, Any] = {}
     if args.formats:
         scrape_options["formats"] = args.formats
     if args.only_main_content:

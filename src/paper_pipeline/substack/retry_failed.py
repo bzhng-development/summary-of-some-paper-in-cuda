@@ -14,11 +14,12 @@ import time
 import traceback
 from pathlib import Path
 
-from paper_pipeline.substack.html_to_text import html_to_text
-from paper_pipeline.substack.llm import call as llm_call, make_client
-from paper_pipeline.substack.prompts import P1_SYSTEM, P2_SYSTEM, p1_user, p2_user
-
 from substack_api import Post
+
+from paper_pipeline.substack.html_to_text import html_to_text
+from paper_pipeline.substack.llm import call as llm_call
+from paper_pipeline.substack.llm import make_client
+from paper_pipeline.substack.prompts import P1_SYSTEM, P2_SYSTEM, p1_user, p2_user
 
 URLS_PATH = Path(__file__).resolve().parent / "all_posts.json"
 BULK_DIR = Path(__file__).resolve().parent / "out" / "bulk"

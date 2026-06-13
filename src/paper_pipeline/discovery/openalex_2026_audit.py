@@ -32,11 +32,10 @@ import sys
 import time
 from pathlib import Path
 
-
-from paper_pipeline.core.neon_db import NeonDB, TABLE
-from pyalex import Institutions, Works
 import pyalex
+from pyalex import Institutions, Works
 
+from paper_pipeline.core.neon_db import TABLE, NeonDB
 
 ARXIV_RE = re.compile(r"(?:arxiv\.org/abs/|arxiv\.org/pdf/)(\d{4}\.\d{4,5})")
 ARXIV_DOI_RE = re.compile(r"10\.48550/arXiv\.(\d{4}\.\d{4,5})", re.IGNORECASE)
@@ -164,10 +163,7 @@ def reconstruct_abstract(inverted: dict | None) -> str | None:
     """Rebuild plain-text abstract from OpenAlex's abstract_inverted_index ({word: [positions]})."""
     if not inverted:
         return None
-    positions: list[tuple[int, str]] = []
-    for word, idxs in inverted.items():
-        for i in idxs:
-            positions.append((i, word))
+    positions: list[tuple[int, str]] = [(i, word) for word, idxs in inverted.items() for i in idxs]
     if not positions:
         return None
     positions.sort()

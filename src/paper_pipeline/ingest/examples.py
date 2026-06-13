@@ -29,11 +29,10 @@ from loguru import logger
 
 from paper_pipeline.core.neon_db import NeonDB
 
-
 __all__ = [
     "ExamplePaper",
-    "load_examples",
     "build_examples_block",
+    "load_examples",
 ]
 
 
@@ -166,6 +165,5 @@ def build_examples_block(
     lines: list[str] = [f"{top}\n"]
     for cat in sorted(by_cat):
         lines.append(f"[{cat}]")
-        for title in by_cat[cat]:
-            lines.append(f"  - {title}")
+        lines.extend(f"  - {title}" for title in by_cat[cat])
     return "\n".join(lines)

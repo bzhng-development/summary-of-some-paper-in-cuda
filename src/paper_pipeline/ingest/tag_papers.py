@@ -29,7 +29,6 @@ from loguru import logger
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
-
 # =============================================================================
 # Env: remote endpoint routing
 # =============================================================================

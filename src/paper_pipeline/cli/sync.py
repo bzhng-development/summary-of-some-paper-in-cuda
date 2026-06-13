@@ -40,9 +40,8 @@ from typing import Any, Final
 
 from loguru import logger
 
-from paper_pipeline.ingest.hf_daily_papers import fetch_arxiv_metadata
 from paper_pipeline.core.neon_db import TABLE, NeonDB
-
+from paper_pipeline.ingest.hf_daily_papers import fetch_arxiv_metadata
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -348,8 +347,10 @@ def enrich_from_arxiv(db: NeonDB) -> int:
     malformed id in a bulk batch returns 400 for the whole batch, so we
     filter them out instead of letting the retry loop burn 6 attempts.
     """
-    import httpx
     import xml.etree.ElementTree as ET
+
+    import httpx
+
     from paper_pipeline.ingest.hf_daily_papers import (
         ARXIV_API,
         ARXIV_NS,

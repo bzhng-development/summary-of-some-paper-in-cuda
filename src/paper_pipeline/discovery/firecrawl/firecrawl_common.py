@@ -3,7 +3,7 @@
 import json
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from loguru import logger
 from rich.logging import RichHandler
@@ -39,19 +39,19 @@ def setup_logger(level: str = "INFO") -> None:
     logger.add(_sink, level=level)
 
 
-def build_headers(api_key: str, *, content_type: bool = False) -> Dict[str, str]:
+def build_headers(api_key: str, *, content_type: bool = False) -> dict[str, str]:
     headers = {"Authorization": f"Bearer {api_key}"}
     if content_type:
         headers["Content-Type"] = "application/json"
     return headers
 
 
-def append_jsonl(path: str, record: Dict[str, Any]) -> None:
+def append_jsonl(path: str, record: dict[str, Any]) -> None:
     with open(path, "a", encoding="utf-8") as out_f:
         out_f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
-def split_csv(value: Optional[str]) -> List[str]:
+def split_csv(value: str | None) -> list[str]:
     if not value:
         return []
     return [part.strip() for part in value.split(",") if part.strip()]

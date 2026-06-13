@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from openai import OpenAI
 
-
 CLUSTER_BASE_URL = "http://localhost:8000/v1"
 DEFAULT_MODEL = "deepseek-ai/DeepSeek-V4-Pro"
 DEFAULT_MAX_TOKENS = 32000  # generous; outputs are long-form summaries

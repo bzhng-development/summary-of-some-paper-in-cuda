@@ -15,7 +15,6 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-
 YEAR_HEADER_RE = re.compile(r"^(?:\*\*(.+?)\*\*|##\s+(.+))$")
 YEAR_VALUE_RE = re.compile(r"^(\d{4})$")
 BULLET_RE = re.compile(r"^\s*-\s+")
@@ -227,7 +226,7 @@ def process_entry(
             "type": "URLError",
             "reason": str(exc.reason),
         }
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         record["error"] = {
             "type": type(exc).__name__,
             "reason": str(exc),

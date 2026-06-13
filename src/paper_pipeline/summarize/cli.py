@@ -20,7 +20,6 @@ from .pipeline import (
 from .prompts import SECTION_SPECS, SECTION_SPECS_2PASS, SectionSpec
 from .summarizer import MultiPromptSummarizer
 
-
 # ---------------------------------------------------------------------------
 # Parsed CLI args
 # ---------------------------------------------------------------------------

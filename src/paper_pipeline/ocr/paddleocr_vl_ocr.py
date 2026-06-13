@@ -89,7 +89,7 @@ def _ocr_one(pdf_path_str: str) -> dict:
             "markdown": markdown,
             "error_message": None,
         }
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {
             "arxiv_id": arxiv_id,
             "paper_url": ARXIV_ABS_URL.format(id=arxiv_id),

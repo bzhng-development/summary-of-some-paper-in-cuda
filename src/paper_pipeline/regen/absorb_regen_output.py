@@ -14,9 +14,7 @@ import argparse
 import json
 from pathlib import Path
 
-
 from loguru import logger
-
 
 from paper_pipeline.core.neon_db import NeonDB
 

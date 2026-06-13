@@ -26,6 +26,7 @@ Usage:
 """
 
 import argparse
+import contextlib
 import json
 import re
 import sys
@@ -34,7 +35,6 @@ from pathlib import Path
 
 import httpx
 from loguru import logger
-
 
 ARXIV_RE = re.compile(r"arxiv\.org/abs/(\d{4}\.\d{4,5})")
 ARXIV_TAG_RE = re.compile(r"arxiv:(\d{4}\.\d{4,5})")
@@ -147,10 +147,8 @@ def load_seen(main_output: Path) -> set:
         for line in main_output.read_text(encoding="utf-8").splitlines():
             if not line.strip():
                 continue
-            try:
+            with contextlib.suppress(json.JSONDecodeError, KeyError):
                 seen.add(json.loads(line)["arxiv_id"])
-            except json.JSONDecodeError, KeyError:
-                pass
     return seen
 
 

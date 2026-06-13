@@ -16,7 +16,6 @@ guardrails warn against repeating its content, names, or framing.
 
 from pathlib import Path
 
-
 _EXAMPLE_PATH = Path(__file__).parent / "example_adrien.md"
 
 

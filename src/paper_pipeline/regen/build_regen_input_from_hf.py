@@ -30,9 +30,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime
 from pathlib import Path
 
-
 from loguru import logger
-
 
 from paper_pipeline.ingest.hf_daily_papers import (
     Paper,

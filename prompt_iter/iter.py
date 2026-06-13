@@ -5,9 +5,14 @@ Usage:
         --prompt-file prompt_iter/prompts/s1_v1.txt \
         [--prior s1=v3,s2=v2]
 """
+
 from __future__ import annotations
-import argparse, json, time
+
+import argparse
+import json
+import time
 from pathlib import Path
+
 from openai import OpenAI
 
 ROOT = Path(__file__).resolve().parent
@@ -108,7 +113,9 @@ def build_context_block(prior_specs: list[str], gen_dir: Path) -> str:
     )
 
 
-def generate(section: int, version: str, prompt_text: str, prior: list[str], thinking: str, paper_txt: Path, gen_dir: Path) -> str:
+def generate(
+    section: int, version: str, prompt_text: str, prior: list[str], thinking: str, paper_txt: Path, gen_dir: Path
+) -> str:
     paper_text = paper_txt.read_text()
     system = build_system_preamble()
     user = f"<paper>\n{paper_text}\n</paper>\n\n{build_context_block(prior, gen_dir)}{prompt_text}"
@@ -156,7 +163,9 @@ def generate(section: int, version: str, prompt_text: str, prior: list[str], thi
     meta_path.write_text(json.dumps(meta, indent=2))
 
     print(f"\n=== s{section}_{version} ===")
-    print(f"  duration: {dt:.1f}s  prompt: {meta['input_tokens']}tok  out: {meta['output_tokens']}tok  reasoning: {meta['reasoning_tokens']}tok")
+    print(
+        f"  duration: {dt:.1f}s  prompt: {meta['input_tokens']}tok  out: {meta['output_tokens']}tok  reasoning: {meta['reasoning_tokens']}tok"
+    )
     print(f"  saved: {out_path}")
     return out
 

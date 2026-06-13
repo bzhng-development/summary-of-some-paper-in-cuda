@@ -404,6 +404,7 @@ async def _generate_pitch_from_pdf_input(
 ) -> tuple[Any, dict[str, Any]]:
     """Run the pitch agent directly on an existing ``pdf_input`` item."""
     from main import ModelName, build_service_tier_args, serialize_response
+
     from paper_pipeline.cli.multi_prompt import PitchOutput
 
     pitch_settings = ModelSettings(

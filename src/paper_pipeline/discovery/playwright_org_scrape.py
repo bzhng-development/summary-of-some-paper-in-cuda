@@ -88,7 +88,7 @@ async def fetch_search_page(page, keyword: str, page_idx: int, size: int = 200) 
     await page.wait_for_selector("li.arxiv-result", timeout=30_000)
     # Expand all "more" abstracts so the full text is in the DOM.
     await page.evaluate("""() => document.querySelectorAll('a.abstract-full').forEach(a => a.click())""")
-    results = await page.eval_on_selector_all(
+    return await page.eval_on_selector_all(
         "li.arxiv-result",
         """nodes => nodes.map(n => {
             const idAnchor = n.querySelector('p.list-title a');
@@ -104,7 +104,6 @@ async def fetch_search_page(page, keyword: str, page_idx: int, size: int = 200) 
             };
         }).filter(p => p.arxiv_id)""",
     )
-    return results
 
 
 # Regexes that detect first-person org affiliation in the abstract.
@@ -147,10 +146,7 @@ FIRST_PERSON_AFFIL_PATTERNS = {
 
 def first_person_org_match(abstract: str, label: str) -> list[str]:
     """Return list of matching pattern fragments — non-empty if affiliation is strong."""
-    hits: list[str] = []
-    for pat in FIRST_PERSON_AFFIL_PATTERNS.get(label, []):
-        for m in pat.finditer(abstract):
-            hits.append(m.group(0))
+    hits: list[str] = [m.group(0) for pat in FIRST_PERSON_AFFIL_PATTERNS.get(label, []) for m in pat.finditer(abstract)]
     return hits
 
 
@@ -185,8 +181,7 @@ async def fetch_abs_authors(page, arxiv_id: str) -> list[dict]:
         out.append({"name": name, "affiliation": aff})
     # If there are MORE insts than names (uncommon), tack the extras on as
     # affiliation-only rows so the regex check still sees them.
-    for j in range(len(names), len(insts)):
-        out.append({"name": None, "affiliation": insts[j]})
+    out.extend({"name": None, "affiliation": insts[j]} for j in range(len(names), len(insts)))
     return out
 
 

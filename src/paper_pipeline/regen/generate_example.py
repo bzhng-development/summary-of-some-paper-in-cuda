@@ -27,8 +27,8 @@ from openai import OpenAI
 load_dotenv()
 
 
-from paper_pipeline.cli.multi_prompt import SECTION_SPECS, _SYSTEM_PREAMBLE  # noqa: E402
-from paper_pipeline.core.neon_db import NeonDB  # noqa: E402
+from paper_pipeline.cli.multi_prompt import _SYSTEM_PREAMBLE, SECTION_SPECS
+from paper_pipeline.core.neon_db import NeonDB
 
 EXAMPLES_DIR = Path(__file__).parent / "examples"
 
@@ -55,9 +55,9 @@ def generate_section(
         text_content += f"<prior_sections>\n{prior_sections}\n</prior_sections>\n\n"
     text_content += section_prompt
 
-    kwargs: dict[str, Any] = dict(
-        model=model,
-        messages=[
+    kwargs: dict[str, Any] = {
+        "model": model,
+        "messages": [
             {"role": "system", "content": _SYSTEM_PREAMBLE},
             {
                 "role": "user",
@@ -73,7 +73,7 @@ def generate_section(
                 ],
             },
         ],
-    )
+    }
     if extra_body:
         kwargs["extra_body"] = extra_body
 

@@ -18,9 +18,10 @@ from __future__ import annotations
 import argparse
 import json
 import re
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator
+from typing import Any
 
 import uvicorn
 from fastapi import FastAPI
@@ -28,10 +29,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 from pydantic import BaseModel
 
-
-from paper_pipeline.ingest.hf_daily_papers import fetch_arxiv_metadata  # noqa: E402
-from paper_pipeline.core.neon_db import NeonDB  # noqa: E402
-
+from paper_pipeline.core.neon_db import NeonDB
+from paper_pipeline.ingest.hf_daily_papers import fetch_arxiv_metadata
 
 # ---------------------------------------------------------------------------
 # Module-level state

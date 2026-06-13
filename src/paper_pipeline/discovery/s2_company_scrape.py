@@ -32,9 +32,7 @@ from pathlib import Path
 import httpx
 from loguru import logger
 
-
-from paper_pipeline.core.neon_db import NeonBatch, NeonDB, TABLE
-
+from paper_pipeline.core.neon_db import TABLE, NeonBatch, NeonDB
 
 S2_BASE = "https://api.semanticscholar.org/graph/v1"
 API_KEY = os.environ.get("S2_API_KEY")
@@ -247,12 +245,7 @@ def affil_matches(authors: list, pat: re.Pattern) -> list[str]:
     We instead use trust_text_match() below to filter S2 results by checking
     title/abstract for the org regex.
     """
-    hits = []
-    for a in authors or []:
-        for aff in a.get("affiliations") or []:
-            if pat.search(aff or ""):
-                hits.append(aff)
-    return hits
+    return [aff for a in authors or [] for aff in a.get("affiliations") or [] if pat.search(aff or "")]
 
 
 def trust_text_match(title: str, abstract: str, authors: list, pat: re.Pattern) -> list[str]:
@@ -267,9 +260,7 @@ def trust_text_match(title: str, abstract: str, authors: list, pat: re.Pattern) 
             hits.append(f"{src_name}:{m.group(0)}")
     # Even if title/abstract don't mention, an author named after the org
     # (rare — happens for "DeepSeek-AI" listed as author) is a strong signal.
-    for a in authors or []:
-        if pat.search(a.get("name") or ""):
-            hits.append(f"author:{a.get('name')}")
+    hits.extend(f"author:{a.get('name')}" for a in authors or [] if pat.search(a.get("name") or ""))
     return hits
 
 
@@ -283,7 +274,7 @@ def scrape_org(
     in_neon: set[str],
     out_fh,
     max_pages: int = 10,
-    neon_batch: "NeonBatch | None" = None,
+    neon_batch: NeonBatch | None = None,
 ) -> tuple[int, int, int]:
     """Returns (kept, total_seen, saved_to_neon). Streams matching records to
     out_fh, and — when ``neon_batch`` is given — upserts each NET-NEW paper

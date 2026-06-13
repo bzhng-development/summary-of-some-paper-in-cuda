@@ -3,9 +3,14 @@
 Usage:
     uv run python prompt_iter/iter_pitch.py --version v1 --system-file prompt_iter/prompts/pitch_v1.txt
 """
+
 from __future__ import annotations
-import argparse, json, time
+
+import argparse
+import json
+import time
 from pathlib import Path
+
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
@@ -17,7 +22,9 @@ DEFAULT_S1 = DEFAULT_GEN_DIR / "s1_LOCKED.md"
 
 class PitchOutput(BaseModel):
     title: str = Field(description="The exact title of the paper as it appears in the PDF")
-    pitch: str = Field(description="A compelling 2-3 sentence pitch that captures the paper's core contribution and why it matters")
+    pitch: str = Field(
+        description="A compelling 2-3 sentence pitch that captures the paper's core contribution and why it matters"
+    )
 
 
 def main() -> None:

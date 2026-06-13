@@ -42,10 +42,7 @@ async def probe(page, url, label):
     print(f"  total <a> links: {len(hrefs)}")
 
     # Look for pagination
-    pag = []
-    for h in hrefs:
-        if any(kw in h.lower() for kw in ["page/", "?page=", "?p=", "/papers/page"]):
-            pag.append(h)
+    pag = [h for h in hrefs if any(kw in h.lower() for kw in ["page/", "?page=", "?p=", "/papers/page"])]
     print(f"  pagination-like hrefs: {len(set(pag))}")
     for p in list(set(pag))[:5]:
         print(f"    {p}")

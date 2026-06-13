@@ -67,9 +67,7 @@ def add_column() -> None:
 def ingest(
     jsonl: Annotated[Path, typer.Option("--jsonl", help="OCR output jsonl to ingest.")],
     min_chars: Annotated[int, typer.Option(help="Skip rows whose markdown is shorter than this.")] = 200,
-    statuses: Annotated[list[str], typer.Option("--status", help="Only ingest these statuses.")] = list(
-        _DEFAULT_STATUSES
-    ),
+    statuses: Annotated[list[str] | None, typer.Option("--status", help="Only ingest these statuses.")] = None,
     dry_run: Annotated[bool, typer.Option(help="Report what would change without writing.")] = False,
     ids_file: Annotated[
         Path | None, typer.Option("--ids-file", help="Only ingest these arxiv_ids (gate to a subset).")
@@ -79,6 +77,8 @@ def ingest(
     ] = "glm-ocr-pdf",
 ) -> None:
     """Upsert markdown bodies from a Stage-2 jsonl into ``nextjs-ui_paper.markdown``."""
+    if statuses is None:
+        statuses = list(_DEFAULT_STATUSES)
     records = _read_records(jsonl)
     keep = None
     if ids_file is not None:

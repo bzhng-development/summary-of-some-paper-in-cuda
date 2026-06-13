@@ -27,13 +27,11 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-
 from loguru import logger
 from psycopg.rows import dict_row
 
-
+from paper_pipeline.core.neon_db import TABLE, NeonDB
 from paper_pipeline.summarize.pdf import arxiv_url_to_pdf_url, download_and_extract_text
-from paper_pipeline.core.neon_db import NeonDB, TABLE
 
 
 def load_cached_input(path: Path) -> dict[str, dict]:

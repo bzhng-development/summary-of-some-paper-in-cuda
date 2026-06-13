@@ -35,11 +35,11 @@ from loguru import logger
 from psycopg.rows import dict_row
 
 __all__ = [
+    "SCHEMA_COLUMNS",
+    "TABLE",
     "NeonBatch",
     "NeonDB",
     "PaperRow",
-    "TABLE",
-    "SCHEMA_COLUMNS",
     "migrate_sqlite_to_neon",
 ]
 
@@ -175,7 +175,7 @@ class NeonBatch:
     Do not share across threads.
     """
 
-    __slots__ = ("_conn", "_cur", "_commit_every", "_pending")
+    __slots__ = ("_commit_every", "_conn", "_cur", "_pending")
 
     def __init__(self, conn: psycopg.Connection, *, commit_every: int = 500) -> None:
         self._conn = conn
@@ -326,7 +326,7 @@ class NeonDB:
             cur.execute(sql, payload)
 
     @contextmanager
-    def batch(self, *, commit_every: int = 500) -> Iterator["NeonBatch"]:
+    def batch(self, *, commit_every: int = 500) -> Iterator[NeonBatch]:
         """Context manager that reuses one connection for many writes.
 
         Neon's serverless proxy closes connections aggressively, so calling
@@ -445,7 +445,7 @@ def migrate_sqlite_to_neon(sqlite_path: str | Path, *, batch_size: int = 500) ->
     def _row_to_params(row: sqlite3.Row) -> dict[str, Any]:
         data = dict(row)
         data.pop("created_at", None)
-        params: dict[str, Any] = {c: None for c in cols}
+        params: dict[str, Any] = dict.fromkeys(cols)
         normalized = NeonDB._normalize_fields(data)
         params.update({k: v for k, v in normalized.items() if k in params})
         return params

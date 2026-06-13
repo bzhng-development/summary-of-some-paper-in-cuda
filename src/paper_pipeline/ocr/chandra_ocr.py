@@ -249,7 +249,7 @@ async def _ocr_page(
                 )
             raw = resp.choices[0].message.content or ""
             error = False
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raw, error = "", True
             if attempt == max_retries:
                 console.print(f"[red]page failed after {max_retries} retries: {exc}[/]")
@@ -385,7 +385,7 @@ async def _ocr_async(
                         max_tokens,
                         max_retries,
                     )
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     record = OcrRecord(
                         arxiv_id=arxiv_id,
                         paper_url=ARXIV_ABS_URL.format(id=arxiv_id),

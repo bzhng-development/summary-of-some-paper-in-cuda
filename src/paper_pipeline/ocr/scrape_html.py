@@ -120,7 +120,7 @@ async def _scrape_one(client: httpx.AsyncClient, arxiv_id: str, throttle: _Throt
                 **base, status="error", num_chars=0, markdown="", error_message=f"HTTP {resp.status_code}"
             )
         markdown = await asyncio.to_thread(html_to_markdown, resp.text)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return HtmlRecord(**base, status="error", num_chars=0, markdown="", error_message=str(exc))
 
     if len(markdown) < min_chars:

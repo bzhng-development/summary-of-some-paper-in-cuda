@@ -56,21 +56,22 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import json
 import re
 import sys
 from pathlib import Path
-from typing import Optional
 
 import httpx
 from loguru import logger
 from playwright.async_api import (
     BrowserContext,
     Page,
-    TimeoutError as PWTimeoutError,
     async_playwright,
 )
-
+from playwright.async_api import (
+    TimeoutError as PWTimeoutError,
+)
 
 # arxiv IDs: YYMM.NNNNN (4-5 digit suffix). yy 07-26, mm 01-12.
 ARXIV_ID_RE = re.compile(r"(?<![\w.])(\d{4}\.\d{4,5})(?:v\d+)?(?![\w.])")
@@ -195,7 +196,7 @@ async def follow_paper_links(
         except Exception:
             content = ""
         ids = harvest_arxiv_from_text(content)
-        title: Optional[str] = None
+        title: str | None = None
         if ids:
             try:
                 title = await page.evaluate(
@@ -404,7 +405,7 @@ async def scrape_via_sitemap(
     page: Page,
     http_client: httpx.AsyncClient,
     sitemap_url: str,
-    must_contain: Optional[str] = None,
+    must_contain: str | None = None,
     must_not_contain: tuple[str, ...] = (),
     cap: int = 400,
     label: str = "",
@@ -458,20 +459,19 @@ async def scrape_via_sitemap(
 
     if use_playwright_for_posts:
         return await follow_paper_links(page, filtered, label_for_log=label, sleep_between_ms=400)
-    else:
-        # Faster httpx-based fetch (works when site isn't behind cloudflare for /blog/<slug>/)
-        for i, u in enumerate(filtered):
-            try:
-                rr = await http_client.get(u, timeout=20.0)
-            except Exception:
-                continue
-            if rr.status_code != 200:
-                continue
-            for aid in harvest_arxiv_from_text(rr.text):
-                out.setdefault(aid, f"arxiv:{aid}")
-            if (i + 1) % 50 == 0:
-                logger.info("    {} httpx progress: {}/{} ({} ids)", label, i + 1, len(filtered), len(out))
-        return out
+    # Faster httpx-based fetch (works when site isn't behind cloudflare for /blog/<slug>/)
+    for i, u in enumerate(filtered):
+        try:
+            rr = await http_client.get(u, timeout=20.0)
+        except Exception:
+            continue
+        if rr.status_code != 200:
+            continue
+        for aid in harvest_arxiv_from_text(rr.text):
+            out.setdefault(aid, f"arxiv:{aid}")
+        if (i + 1) % 50 == 0:
+            logger.info("    {} httpx progress: {}/{} ({} ids)", label, i + 1, len(filtered), len(out))
+    return out
 
 
 async def scrape_paypal_medium_rss(http_client: httpx.AsyncClient, page: Page) -> dict[str, str]:
@@ -651,7 +651,7 @@ async def scrape_ebay(page: Page) -> dict[str, str]:
             if "innovation.ebayinc.com/" not in base:
                 continue
             # Story posts: stories/<slug>, tech/<topic>/<slug>, or post/<slug>
-            if base.endswith("/stories/") or base.endswith("/tech/"):
+            if base.endswith(("/stories/", "/tech/")):
                 continue
             if not ("/stories/" in base or "/tech/" in base or "/post/" in base):
                 continue
@@ -666,7 +666,7 @@ async def scrape_ebay(page: Page) -> dict[str, str]:
     return await follow_paper_links(page, posts_l, label_for_log="ebay", sleep_between_ms=500)
 
 
-def _gh_token() -> Optional[str]:
+def _gh_token() -> str | None:
     """Use `gh auth token` if available, else GITHUB_TOKEN env."""
     import os
     import subprocess
@@ -933,10 +933,7 @@ async def run(args: argparse.Namespace) -> int:
                     if aid in baseline_ids:
                         continue
                     title = ids_titles[aid]
-                    if isinstance(title, str) and title.startswith("arxiv:"):
-                        title_out = None
-                    else:
-                        title_out = title
+                    title_out = None if isinstance(title, str) and title.startswith("arxiv:") else title
                     rec = {
                         "arxiv_id": aid,
                         "title": title_out,
@@ -979,10 +976,8 @@ async def run(args: argparse.Namespace) -> int:
                 out_fh.flush()
                 await asyncio.sleep(args.sleep_between_orgs)
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 await browser.close()
-            except Exception:
-                pass
 
     await http_client.aclose()
     out_fh.close()

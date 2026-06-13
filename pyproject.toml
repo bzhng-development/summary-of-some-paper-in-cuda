@@ -90,6 +90,49 @@ exclude = [".venv", "**/__pycache__", "local_data", "docs_backup", "arxiv.py", "
 line-length = 120
 target-version = "py314"
 
+[tool.ruff.lint]
+# Curated "beautiful Python" set: correctness + idiom + modern syntax, minus the
+# ceremony families (docstrings / annotate-everything / print / bandit / complexity)
+# that are pure noise in a research/pipeline codebase.
+select = [
+    "F",        # pyflakes — real bugs (undefined names, unused imports/vars)
+    "E", "W",   # pycodestyle — errors + warnings (incl. W605 invalid escapes)
+    "I",        # isort — import ordering
+    "UP",       # pyupgrade — modern syntax for the target Python
+    "B",        # flake8-bugbear — likely bugs & footguns
+    "SIM",      # flake8-simplify — simpler equivalent forms
+    "C4",       # flake8-comprehensions — cleaner comprehensions
+    "PIE",      # flake8-pie — misc idiom upgrades
+    "RET",      # flake8-return — tidy return flows
+    "RSE",      # flake8-raise — drop needless parens on raise
+    "FLY",      # flynt — "".join(...) → f-string
+    "PERF",     # perflint — obvious perf anti-patterns
+    "FURB",     # refurb — modernizing refactors
+    "ICN",      # flake8-import-conventions — np/pd-style aliases
+    "LOG",      # flake8-logging — logging correctness
+    "PGH",      # pygrep-hooks — no blanket noqa / type-ignore / eval
+    "PLE",      # pylint — errors only (skip the noisy refactor/convention sets)
+    "A",        # flake8-builtins — don't shadow builtins
+    "YTT",      # flake8-2020 — correct sys.version checks
+    "NPY",      # numpy-specific guardrails
+    "RUF",      # ruff-native rules
+]
+ignore = [
+    "E501",     # line length — the formatter wraps code; the rest are long URLs/prompts/prose
+    "E402",     # module import not at top — scripts set sys.path / load env first
+    "E741",     # ambiguous names (l/I/O) — fine for throwaway loop vars
+    "RUF001",   # ambiguous unicode in strings — intentional en-dashes/arrows in prompts & prose
+    "RUF002",   #   …in docstrings
+    "RUF003",   #   …in comments
+    "PGH003",   # blanket type-ignore — fixing needs a type-checker pass to name codes
+]
+
+[tool.ruff.lint.per-file-ignores]
+# These closures are awaited within the same loop iteration, so capturing the
+# loop variable by reference is safe — B023 is a false positive here.
+"src/paper_pipeline/regen/offline_regen.py" = ["B023"]
+"src/paper_pipeline/summarize/summarizer.py" = ["B023"]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"

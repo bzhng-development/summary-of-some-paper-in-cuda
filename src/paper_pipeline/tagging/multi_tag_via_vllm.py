@@ -38,15 +38,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
-
 from loguru import logger
 from openai import AsyncOpenAI
 from psycopg.rows import dict_row
 from pydantic import BaseModel, Field, field_validator
 
-
-from paper_pipeline.core.neon_db import NeonDB, TABLE
-
+from paper_pipeline.core.neon_db import TABLE, NeonDB
 
 CATEGORIES: list[str] = [
     "agents",

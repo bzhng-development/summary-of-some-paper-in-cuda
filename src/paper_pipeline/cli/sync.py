@@ -83,7 +83,7 @@ def _parse_doc_markdown(md_file: Path) -> _ParsedDoc | None:
     """
     try:
         text = md_file.read_text(encoding="utf-8")
-    except OSError, UnicodeDecodeError:
+    except (OSError, UnicodeDecodeError):
         return None
 
     arxiv_id: str | None = None
@@ -696,7 +696,7 @@ def export_for_tagging(db: NeonDB, output: Path) -> None:
             continue
         try:
             already.add(json.loads(line)["arxiv_id"])
-        except json.JSONDecodeError, KeyError:
+        except (json.JSONDecodeError, KeyError):
             continue
 
     written = 0

@@ -50,6 +50,7 @@ paper-server = "paper_pipeline.ingest.paper_server:main"
 paper-fetch = "paper_pipeline.ingest.hf_daily_papers:main"
 paper-tag = "paper_pipeline.ingest.tag_papers:main"
 paper-import-jsonl = "paper_pipeline.core.import_jsonl:main"
+paper-e2e = "paper_pipeline.cli.e2e:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/paper_pipeline"]
@@ -88,7 +89,11 @@ exclude = [".venv", "**/__pycache__", "local_data", "docs_backup", "arxiv.py", "
 
 [tool.ruff]
 line-length = 120
-target-version = "py314"
+# py312, NOT py314: the pipeline deploys to a Python 3.12 cluster/OCR box. Under a
+# py314 target, ruff applies PEP 758 and strips the parens off `except (A, B):` →
+# `except A, B:`, a SyntaxError on 3.12. Pinning py312 stops that rewrite from firing.
+# (Local dev runs 3.14, but 3.12 is the deployment floor.)
+target-version = "py312"
 
 [tool.ruff.lint]
 # Curated "beautiful Python" set: correctness + idiom + modern syntax, minus the

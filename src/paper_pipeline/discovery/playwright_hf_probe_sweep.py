@@ -84,7 +84,7 @@ def load_seen(*paths: Path) -> set:
                 aid = rec.get("arxiv_id")
                 if aid:
                     seen.add(aid)
-            except json.JSONDecodeError, KeyError:
+            except (json.JSONDecodeError, KeyError):
                 pass
     return seen
 

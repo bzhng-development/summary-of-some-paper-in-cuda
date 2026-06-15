@@ -1,6 +1,6 @@
 """Stage 3: ingest OCR'd markdown bodies back into Neon.
 
-Reads the append-only ``ocr_out.jsonl`` produced by Stage 2 (``chandra_ocr.py``) and
+Reads the append-only ``ocr_out.jsonl`` produced by Stage 2 (``glm_ocr_driver.py``) and
 upserts each paper's markdown into the ``markdown`` column on ``nextjs-ui_paper``
 (added idempotently via ``NeonDB.init_schema``). The jsonl shard stays on disk as the
 git-trackable source of truth, per the repo's NDJSON-over-SQLite convention.

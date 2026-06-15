@@ -204,7 +204,7 @@ async def go(args: argparse.Namespace) -> int:
                 continue
             try:
                 already_seen.add(json.loads(line)["arxiv_id"])
-            except json.JSONDecodeError, KeyError:
+            except (json.JSONDecodeError, KeyError):
                 continue
         logger.info("resume: {} arxiv_ids already in output", len(already_seen))
 

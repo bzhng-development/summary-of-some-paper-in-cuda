@@ -143,7 +143,7 @@ def _load_done(out_path: Path) -> set[str]:
         if line:
             try:
                 done.add(json.loads(line)["arxiv_id"])
-            except json.JSONDecodeError, KeyError:
+            except (json.JSONDecodeError, KeyError):
                 continue
     return done
 

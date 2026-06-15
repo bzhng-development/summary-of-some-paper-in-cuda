@@ -59,7 +59,7 @@ def _valid_arxiv_id(aid: str) -> bool:
     try:
         yy = int(aid[:2])
         mm = int(aid[2:4])
-    except ValueError, IndexError:
+    except (ValueError, IndexError):
         return False
     if not (1 <= mm <= 12):
         return False
@@ -156,12 +156,19 @@ ORGS: tuple[OrgPub, ...] = (
     ),
     OrgPub(
         label="Meta-FAIR",
-        primary_url="https://ai.meta.com/research/publications/",
+        # grok 2026-06-14: old /research/publications/ now HTTP 500. New index is the
+        # global_search GraphQL app — it renders /research/publications/{slug}/ links but
+        # NOT arxiv ids directly, so follow the slug pages (each lists arxiv as publisher).
+        # JS-rendered: if this still yields 0, fall back to arxiv_org_search.py for Meta.
+        primary_url="https://ai.meta.com/global_search/?content_types%5B0%5D=publication&page=1",
         hf_orgs=("facebook", "meta-llama"),
-        mode="simple",  # ai.meta.com sitemap returns a Facebook login HTML, can't use it
+        mode="simple",
         max_scrolls=80,
         load_more_selectors=DEFAULT_LOAD_MORE,
-        # No follow_paper_links — the listing page has 0 detail links on render.
+        follow_paper_links=True,
+        paper_link_selector="a[href*='/research/publications/']",
+        paper_link_must_contain="ai.meta.com/research/publications/",
+        max_paper_links=300,
     ),
     OrgPub(
         label="Microsoft-Research",
@@ -274,8 +281,14 @@ ORGS: tuple[OrgPub, ...] = (
     ),
     OrgPub(
         label="Stability-AI",
+        primary_url="https://stability.ai/research",  # grok 2026-06-14: research blog, posts link arxiv
         hf_orgs=("stabilityai",),
-        mode="none",
+        mode="simple",
+        max_scrolls=60,
+        follow_paper_links=True,
+        paper_link_selector="a[href*='/research/']",
+        paper_link_must_contain="stability.ai/research/",
+        max_paper_links=200,
     ),
     OrgPub(
         label="EleutherAI",
@@ -312,8 +325,14 @@ ORGS: tuple[OrgPub, ...] = (
     ),
     OrgPub(
         label="AI21",
+        primary_url="https://www.ai21.com/research/",  # grok 2026-06-14: research hub, pages link arxiv
         hf_orgs=("ai21labs",),
-        mode="none",
+        mode="simple",
+        max_scrolls=60,
+        follow_paper_links=True,
+        paper_link_selector="a[href*='/research/']",
+        paper_link_must_contain="ai21.com/research/",
+        max_paper_links=150,
     ),
     # --- Chinese LLM labs ---
     OrgPub(
@@ -330,10 +349,10 @@ ORGS: tuple[OrgPub, ...] = (
     ),
     OrgPub(
         label="DeepSeek",
-        primary_url="https://www.deepseek.com/",
+        # grok 2026-06-14: NO central pubs page — deepseek.com footer = GitHub links only.
+        # Papers land on arxiv + GitHub; HF org mining is the only viable source here.
         hf_orgs=("deepseek-ai",),
-        mode="simple",
-        max_scrolls=40,
+        mode="none",
     ),
     OrgPub(
         label="ByteDance-Seed",
@@ -345,10 +364,14 @@ ORGS: tuple[OrgPub, ...] = (
     ),
     OrgPub(
         label="Moonshot-Kimi",
-        primary_url="https://www.moonshot.cn/",
+        primary_url="https://www.kimi.com/blog/",  # grok 2026-06-14: Kimi Research index (moonshot.cn redirects here)
         hf_orgs=("moonshotai",),
         mode="simple",
-        max_scrolls=40,
+        max_scrolls=60,
+        follow_paper_links=True,
+        paper_link_selector="a[href*='/blog/']",
+        paper_link_must_contain="kimi.com/blog/",
+        max_paper_links=150,
     ),
     OrgPub(
         label="Zhipu-GLM",
@@ -374,8 +397,14 @@ ORGS: tuple[OrgPub, ...] = (
     ),
     OrgPub(
         label="StepFun",
+        primary_url="https://chat.stepfun.com/research/",  # grok 2026-06-14: research hub (stepfun.ai/research redirects here)
         hf_orgs=("stepfun-ai",),
-        mode="none",
+        mode="simple",
+        max_scrolls=60,
+        follow_paper_links=True,
+        paper_link_selector="a[href*='/research/']",
+        paper_link_must_contain="stepfun.com/research/",
+        max_paper_links=150,
     ),
     OrgPub(
         label="01-AI",

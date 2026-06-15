@@ -287,7 +287,7 @@ async def async_main():
             continue
         try:
             already_done.add(json.loads(line)["arxiv_id"])
-        except json.JSONDecodeError, KeyError:
+        except (json.JSONDecodeError, KeyError):
             continue
     if already_done:
         papers = [p for p in papers if p["arxiv_id"] not in already_done]

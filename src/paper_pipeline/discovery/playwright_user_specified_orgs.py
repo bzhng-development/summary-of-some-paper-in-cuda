@@ -82,7 +82,7 @@ def _valid_arxiv_id(aid: str) -> bool:
     try:
         yy = int(aid[:2])
         mm = int(aid[2:4])
-    except ValueError, IndexError:
+    except (ValueError, IndexError):
         return False
     if not (1 <= mm <= 12):
         return False

@@ -196,7 +196,7 @@ async def go(args: argparse.Namespace) -> int:
                 continue
             try:
                 done.add(json.loads(line)["arxiv_id"])
-            except json.JSONDecodeError, KeyError:
+            except (json.JSONDecodeError, KeyError):
                 continue
         logger.info("resume: {} already in output file", len(done))
 

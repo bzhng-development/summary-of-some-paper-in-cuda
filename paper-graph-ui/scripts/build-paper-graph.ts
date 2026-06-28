@@ -781,8 +781,14 @@ function tagCategoriesFromMeta(
 }
 
 function categoryFromMetadata(meta: NeonMetadata): string {
+  // Only let a paper's raw arxiv `primary_category` (e.g. cs.CV → `cs-cv`)
+  // become its bucket if that slug is a CURATED category. Otherwise fold it
+  // into `uncategorized` so the broad org-paper backfill (which carries every
+  // arxiv primary category, incl. physics/bio/math) does not spray ~46 raw
+  // arxiv-code buckets across the category nav. Curated tags still win.
+  const fromPrimary = normalizeCategorySlug(meta?.primary_category);
   return (
-    normalizeCategorySlug(meta?.primary_category) ??
+    (fromPrimary && fromPrimary in CATEGORY_META ? fromPrimary : null) ??
     tagCategoriesFromMeta(meta)[0] ??
     'uncategorized'
   );

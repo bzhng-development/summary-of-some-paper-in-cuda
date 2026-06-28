@@ -104,6 +104,11 @@ def main():
                 normalize_row(row, has_summary_file=True, summaryless_scope=False)
 
         summary_hits = len(out)
+        # Scope for summary-less metadata nodes: any company-affiliated paper.
+        # Widened 2026-06-28 to include EVERY org-tagged paper
+        # (`organization IS NOT NULL`), not just the company-flag/interested
+        # subset, so the per-company filter in the UI spans the full org set
+        # (~24k orgs in Neon) rather than only the ~12.7k flagged ones.
         cur.execute(
             f"""
             SELECT {cols}
@@ -111,6 +116,7 @@ def main():
             WHERE (
                 is_only_important_because_of_company = true
                 OR COALESCE(interested, 0) = 1
+                OR organization IS NOT NULL
             )
               AND (summary IS NULL OR btrim(summary) = '')
             ORDER BY id

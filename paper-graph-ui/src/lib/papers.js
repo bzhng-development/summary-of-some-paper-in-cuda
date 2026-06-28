@@ -30,6 +30,18 @@ export const listCategories = cache(() =>
   Object.values(GRAPH.categories).sort((a, b) => b.count - a.count)
 );
 
+export const listCompanyOptions = cache(() => {
+  const counts = new Map();
+  for (const p of GRAPH.papers) {
+    const org = typeof p.organization === 'string' ? p.organization.trim() : '';
+    if (!org) continue;
+    counts.set(org, (counts.get(org) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([org, count]) => ({ org, count }))
+    .sort((a, b) => (b.count !== a.count ? b.count - a.count : a.org.localeCompare(b.org)));
+});
+
 export const getCategory = cache((slug) => GRAPH.categories[slug] ?? null);
 
 export const listPapersInCategory = cache((slug) => {

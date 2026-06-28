@@ -9,6 +9,7 @@ import Heading from 'components/shared/heading/heading';
 
 import { GRAPH, listCategories } from 'lib/papers';
 
+import { buildPaperSearchText } from '../../_components/paper-filter-utils';
 import PaperListMeta from '../../_components/paper-list-meta';
 import ProgressStrip from '../../_components/progress-strip';
 import ReadDot from '../../_components/read-dot';
@@ -64,8 +65,11 @@ const TopicPage = async ({ params }) => {
             return (
               <li
                 key={p.id}
+                data-paper-row="true"
                 data-company-only={p.companyOnly ? 'true' : 'false'}
                 data-has-summary={p.hasSummary === false ? 'false' : 'true'}
+                data-org={p.organization ?? ''}
+                data-search-text={buildPaperSearchText(p)}
               >
                 <Link
                   href={`/p/${encodeURIComponent(p.category)}/${encodeURIComponent(p.slug)}`}

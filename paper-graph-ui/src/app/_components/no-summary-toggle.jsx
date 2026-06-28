@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
+import { applyPaperFilters } from './paper-filter-utils';
+
 const KEY = 'pg.show-summaryless.v1';
 
 const NoSummaryToggle = () => {
@@ -9,7 +11,8 @@ const NoSummaryToggle = () => {
 
   useEffect(() => {
     try {
-      setShow(window.localStorage.getItem(KEY) === '1');
+      const stored = window.localStorage.getItem(KEY) === '1';
+      queueMicrotask(() => setShow(stored));
     } catch {
       /* localStorage blocked */
     }
@@ -23,6 +26,7 @@ const NoSummaryToggle = () => {
     } catch {
       /* ignore */
     }
+    applyPaperFilters();
   }, [show]);
 
   return (

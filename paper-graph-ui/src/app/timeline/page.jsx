@@ -5,6 +5,7 @@ import Heading from 'components/shared/heading/heading';
 
 import { yearTimeline, listCategories } from 'lib/papers';
 
+import { buildPaperSearchText } from '../_components/paper-filter-utils';
 import PaperListMeta from '../_components/paper-list-meta';
 import ReadDot from '../_components/read-dot';
 
@@ -76,6 +77,7 @@ const YearBlock = ({ row, catBySlug }) => (
   <section
     id={String(row.year)}
     className="scroll-mt-20"
+    data-paper-group="true"
     data-has-summary={row.papers.some((p) => p.hasSummary !== false) ? 'true' : 'false'}
   >
     <header className="mb-4 flex items-baseline justify-between gap-3 border-b border-gray-new-15 pb-2">
@@ -93,8 +95,11 @@ const YearBlock = ({ row, catBySlug }) => (
         return (
           <li
             key={p.id}
+            data-paper-row="true"
             data-company-only={p.companyOnly ? 'true' : 'false'}
             data-has-summary={p.hasSummary === false ? 'false' : 'true'}
+            data-org={p.organization ?? ''}
+            data-search-text={buildPaperSearchText(p)}
           >
             <Link
               href={`/p/${encodeURIComponent(p.category)}/${encodeURIComponent(p.slug)}`}

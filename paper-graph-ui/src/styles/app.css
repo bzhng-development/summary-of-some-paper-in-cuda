@@ -58,6 +58,9 @@ body {
 .pg-company-only [data-company-only="false"] {
   display: none !important;
 }
+[data-paper-filter-hidden="true"] {
+  display: none !important;
+}
 
 /* Summary-less metadata rows are opt-in. The client toggle adds
    `pg-show-summaryless` to <body>; without it, rows marked

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
+import { applyPaperFilters } from './paper-filter-utils';
+
 // Header toggle that cycles paper visibility between three mutually exclusive
 // modes:
 //   merit   — hide tracked-company-only picks (Qwen/DeepSeek/Moonshot/etc.).
@@ -23,8 +25,7 @@ const TITLE = {
   all: 'Showing all interested papers. Click to show merit-curated picks only.',
   merit:
     'Showing merit-curated picks only. Click to show tracked-company-only picks (Qwen/DeepSeek/MSR/etc.).',
-  company:
-    'Showing tracked-company-only picks. Click to show all interested papers.',
+  company: 'Showing tracked-company-only picks. Click to show all interested papers.',
 };
 
 const MeritOnlyToggle = () => {
@@ -34,12 +35,12 @@ const MeritOnlyToggle = () => {
     try {
       const stored = window.localStorage.getItem(KEY);
       if (stored && MODES.includes(stored)) {
-        setMode(stored);
+        queueMicrotask(() => setMode(stored));
         return;
       }
       // Migrate the old binary v1 key so users don't lose their preference.
       const legacy = window.localStorage.getItem(LEGACY_KEY);
-      if (legacy === '1') setMode('merit');
+      if (legacy === '1') queueMicrotask(() => setMode('merit'));
     } catch {
       /* localStorage blocked */
     }
@@ -54,6 +55,7 @@ const MeritOnlyToggle = () => {
     } catch {
       /* ignore */
     }
+    applyPaperFilters();
   }, [mode]);
 
   const cycle = () => {

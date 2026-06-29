@@ -32,10 +32,20 @@ import PaperInteractions from './_components/paper-interactions';
 import RelatedPapers from './_components/related-papers';
 import SwipeNav from './_components/swipe-nav';
 
-// Pre-render every paper at build time. The graph is static; nothing here
-// hits the network at request time.
+// Pre-render only papers that have a generated `.md` summary body. The full
+// org-paper set (~21.5k incl. ~19k summary-less metadata rows) overruns the
+// Vercel build machine's disk if every detail page is baked at build time
+// (ENOSPC at ~21.5k pages). Summary-less papers render purely from the baked
+// `*.generated.json` metadata (NoSummaryAbstract — no `readPaperBody`, so the
+// `src/content/papers/**` runtime-trace exclusion is irrelevant for them), so
+// we let `dynamicParams` render them on-demand and cache them after first hit.
+// Lossless: every paper still has a working in-site detail page.
+export const dynamicParams = true;
+
 export async function generateStaticParams() {
-  return GRAPH.papers.map((p) => ({ category: p.category, slug: p.slug }));
+  return GRAPH.papers
+    .filter((p) => p.hasSummary !== false)
+    .map((p) => ({ category: p.category, slug: p.slug }));
 }
 
 export async function generateMetadata({ params }) {

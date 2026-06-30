@@ -1,0 +1,12 @@
+# Build artifacts / caches — Vercel rebuilds these remotely. Never upload them:
+# the local Turbopack/webpack cache under .next/ holds multi-hundred-MB pack
+# files that exceed Vercel's 100 MB per-file upload limit.
+.next
+node_modules
+
+# Local logs & scratch (codex run logs, build-check logs)
+*.log
+.DS_Store
+
+# Python venv (the monorepo's tooling; never part of the web deploy)
+.venv

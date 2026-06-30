@@ -11,10 +11,8 @@ import Heading from 'components/shared/heading/heading';
 import { GRAPH, getCategory, listPapersInCategory } from 'lib/papers';
 
 import CompletionRing from '../../_components/completion-ring';
-import { buildPaperSearchText } from '../../_components/paper-filter-utils';
-import PaperListMeta from '../../_components/paper-list-meta';
+import { PaperListClient } from '../../_components/paper-list-client';
 import ProgressStrip from '../../_components/progress-strip';
-import ReadDot from '../../_components/read-dot';
 
 export async function generateStaticParams() {
   return Object.keys(GRAPH.categories).map((slug) => ({ category: slug }));
@@ -26,22 +24,6 @@ export async function generateMetadata({ params }) {
   return { title: `${cat?.title ?? category} — Paper Graph` };
 }
 
-const MONTH_NAMES = [
-  '',
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-];
-
 const CategoryPage = async ({ params }) => {
   const { category } = await params;
   const cat = getCategory(category);
@@ -49,13 +31,6 @@ const CategoryPage = async ({ params }) => {
 
   const papers = listPapersInCategory(category);
   const summaryPapers = papers.filter((p) => p.hasSummary !== false);
-  const yearBuckets = new Map();
-  for (const p of papers) {
-    const y = p.year;
-    if (!yearBuckets.has(y)) yearBuckets.set(y, []);
-    yearBuckets.get(y).push(p);
-  }
-  const years = [...yearBuckets.keys()].sort((a, b) => b - a);
 
   // Related domains via bridges
   const related = GRAPH.domainBridges
@@ -116,52 +91,7 @@ const CategoryPage = async ({ params }) => {
           </div>
         </header>
 
-        <div className="flex flex-col gap-10 sm:gap-8">
-          {years.map((y) => (
-            <section
-              key={y}
-              data-paper-group="true"
-              data-has-summary={
-                yearBuckets.get(y).some((p) => p.hasSummary !== false) ? 'true' : 'false'
-              }
-            >
-              <header className="mb-3 flex items-baseline justify-between border-b border-gray-new-15 pb-2">
-                <h2 className="font-sans text-2xl font-medium text-white sm:text-xl">{y}</h2>
-                <span className="t-sm font-mono tracking-[0.2em] text-gray-new-50 uppercase">
-                  {yearBuckets.get(y).length}
-                </span>
-              </header>
-              <ul className="flex flex-col gap-1.5">
-                {yearBuckets.get(y).map((p) => (
-                  <li
-                    key={p.id}
-                    data-paper-row="true"
-                    data-company-only={p.companyOnly ? 'true' : 'false'}
-                    data-has-summary={p.hasSummary === false ? 'false' : 'true'}
-                    data-org={p.organization ?? ''}
-                    data-search-text={buildPaperSearchText(p)}
-                  >
-                    <Link
-                      href={`/p/${encodeURIComponent(p.category)}/${encodeURIComponent(p.slug)}`}
-                      className="group flex items-baseline gap-3 rounded-lg border border-transparent px-2 py-1.5 transition-colors hover:border-gray-new-15 hover:bg-gray-new-10"
-                    >
-                      <span className="t-sm w-10 shrink-0 font-mono text-gray-new-50 tabular-nums">
-                        {p.month ? MONTH_NAMES[p.month] : '—'}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="t-sm flex items-center gap-2 leading-tight text-white group-hover:text-primary-1">
-                          <span className="truncate">{p.title}</span>
-                          <ReadDot paperId={p.id} />
-                        </span>
-                        <PaperListMeta paper={p} />
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
+        <PaperListClient scope={{ type: 'category', slug: category }} />
       </Container>
     </main>
   );

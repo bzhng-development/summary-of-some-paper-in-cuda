@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from 'react';
 
-import { PAPER_FILTER_EVENT, applyPaperFilters, updateUrlParam } from './paper-filter-utils';
+import {
+  PAPER_FILTER_EVENT,
+  dispatchPaperFilters,
+  readPaperFilterState,
+  updateUrlParam,
+} from './paper-filter-utils';
 
 const getInitialQuery = () => {
   if (typeof window === 'undefined') return '';
@@ -14,19 +19,18 @@ const PaperSearch = () => {
   const [count, setCount] = useState({ visible: 0, total: 0 });
 
   useEffect(() => {
-    const initial = getInitialQuery();
-    const nextCount = applyPaperFilters({ query: initial });
+    const initial = readPaperFilterState().query || getInitialQuery();
     queueMicrotask(() => {
       setQuery(initial);
-      setCount(nextCount);
     });
+    dispatchPaperFilters({ query: initial });
   }, []);
 
   useEffect(() => {
     const onFilterChange = (event) => {
       setCount({
-        visible: event.detail.visible,
-        total: event.detail.total,
+        visible: event.detail.visible ?? 0,
+        total: event.detail.total ?? 0,
       });
     };
     window.addEventListener(PAPER_FILTER_EVENT, onFilterChange);
@@ -35,8 +39,8 @@ const PaperSearch = () => {
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
-      setCount(applyPaperFilters({ query }));
       updateUrlParam('q', query.trim());
+      dispatchPaperFilters({ query });
     }, 150);
     return () => window.clearTimeout(handle);
   }, [query]);

@@ -3,35 +3,16 @@ import Link from 'next/link';
 import Container from 'components/shared/container/container';
 import Heading from 'components/shared/heading/heading';
 
-import { yearTimeline, listCategories } from 'lib/papers';
+import { yearTimeline } from 'lib/papers';
 
-import { buildPaperSearchText } from '../_components/paper-filter-utils';
-import PaperListMeta from '../_components/paper-list-meta';
-import ReadDot from '../_components/read-dot';
+import { PaperListClient } from '../_components/paper-list-client';
 
 export const metadata = {
   title: 'Timeline — Paper Graph',
 };
 
-const MONTH_NAMES = [
-  '',
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-];
-
 const TimelinePage = () => {
   const rows = yearTimeline();
-  const catBySlug = new Map(listCategories().map((c) => [c.slug, c]));
 
   return (
     <main>
@@ -63,69 +44,10 @@ const TimelinePage = () => {
           </ul>
         </nav>
 
-        <div className="flex flex-col gap-12 sm:gap-10">
-          {rows.map((row) => (
-            <YearBlock key={row.year} row={row} catBySlug={catBySlug} />
-          ))}
-        </div>
+        <PaperListClient scope={{ type: 'all' }} />
       </Container>
     </main>
   );
 };
-
-const YearBlock = ({ row, catBySlug }) => (
-  <section
-    id={String(row.year)}
-    className="scroll-mt-20"
-    data-paper-group="true"
-    data-has-summary={row.papers.some((p) => p.hasSummary !== false) ? 'true' : 'false'}
-  >
-    <header className="mb-4 flex items-baseline justify-between gap-3 border-b border-gray-new-15 pb-2">
-      <h2 className="font-sans text-3xl font-medium tracking-tight text-white sm:text-2xl">
-        {row.year}
-      </h2>
-      <span className="t-sm font-mono tracking-[0.2em] text-gray-new-50 uppercase">
-        {row.papers.length} papers
-      </span>
-    </header>
-    <ul className="flex flex-col gap-1.5">
-      {row.papers.map((p) => {
-        const cat = catBySlug.get(p.category);
-        const color = cat?.color ?? '#94979E';
-        return (
-          <li
-            key={p.id}
-            data-paper-row="true"
-            data-company-only={p.companyOnly ? 'true' : 'false'}
-            data-has-summary={p.hasSummary === false ? 'false' : 'true'}
-            data-org={p.organization ?? ''}
-            data-search-text={buildPaperSearchText(p)}
-          >
-            <Link
-              href={`/p/${encodeURIComponent(p.category)}/${encodeURIComponent(p.slug)}`}
-              className="group flex items-baseline gap-3 rounded-lg border border-transparent px-2 py-1.5 transition-colors hover:border-gray-new-15 hover:bg-gray-new-10"
-            >
-              <span className="t-sm w-12 shrink-0 font-mono text-gray-new-50 tabular-nums">
-                {p.month ? MONTH_NAMES[p.month] : '—'}
-              </span>
-              <span
-                className="mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full"
-                style={{ backgroundColor: color }}
-                aria-hidden
-              />
-              <span className="min-w-0 flex-1">
-                <span className="t-sm flex items-center gap-2 leading-tight text-white group-hover:text-primary-1">
-                  <span className="truncate">{p.title}</span>
-                  <ReadDot paperId={p.id} />
-                </span>
-                <PaperListMeta paper={p} categoryTitle={cat?.title ?? p.category} />
-              </span>
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
-  </section>
-);
 
 export default TimelinePage;

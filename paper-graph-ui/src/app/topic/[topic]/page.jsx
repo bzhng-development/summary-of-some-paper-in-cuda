@@ -1,18 +1,14 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import Breadcrumbs from 'components/pages/doc/breadcrumbs/breadcrumbs';
-import Tag from 'components/pages/doc/tag/tag';
 import Container from 'components/shared/container/container';
 import GradientBorder from 'components/shared/gradient-border/gradient-border';
 import Heading from 'components/shared/heading/heading';
 
-import { GRAPH, listCategories } from 'lib/papers';
+import { GRAPH } from 'lib/papers';
 
-import { buildPaperSearchText } from '../../_components/paper-filter-utils';
-import PaperListMeta from '../../_components/paper-list-meta';
+import { PaperListClient } from '../../_components/paper-list-client';
 import ProgressStrip from '../../_components/progress-strip';
-import ReadDot from '../../_components/read-dot';
 
 export async function generateStaticParams() {
   return GRAPH.topics.map((t) => ({ topic: t.id }));
@@ -32,7 +28,6 @@ const TopicPage = async ({ params }) => {
     .filter((p) => p.topics.includes(topic))
     .sort((a, b) => (a.year !== b.year ? b.year - a.year : (b.month ?? 0) - (a.month ?? 0)));
   const summaryPapers = papers.filter((p) => p.hasSummary !== false);
-  const cats = new Map(listCategories().map((c) => [c.slug, c]));
 
   return (
     <main>
@@ -59,43 +54,7 @@ const TopicPage = async ({ params }) => {
           </div>
         </header>
 
-        <ul className="flex flex-col gap-1.5">
-          {papers.map((p) => {
-            const cat = cats.get(p.category);
-            return (
-              <li
-                key={p.id}
-                data-paper-row="true"
-                data-company-only={p.companyOnly ? 'true' : 'false'}
-                data-has-summary={p.hasSummary === false ? 'false' : 'true'}
-                data-org={p.organization ?? ''}
-                data-search-text={buildPaperSearchText(p)}
-              >
-                <Link
-                  href={`/p/${encodeURIComponent(p.category)}/${encodeURIComponent(p.slug)}`}
-                  className="group flex items-baseline gap-3 rounded-lg border border-transparent px-2 py-1.5 transition-colors hover:border-gray-new-15 hover:bg-gray-new-10"
-                >
-                  <span className="t-sm w-12 shrink-0 font-mono text-gray-new-50 tabular-nums">
-                    {p.year}
-                  </span>
-                  <span
-                    className="mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: cat?.color ?? '#94979E' }}
-                    aria-hidden
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="t-sm flex items-center gap-2 text-white group-hover:text-primary-1">
-                      <span className="truncate">{p.title}</span>
-                      <ReadDot paperId={p.id} />
-                    </span>
-                    <PaperListMeta paper={p} categoryTitle={cat?.title ?? p.category} />
-                  </span>
-                  <Tag label={cat?.title ?? p.category} size="sm" />
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <PaperListClient scope={{ type: 'topic', id: topic }} />
       </Container>
     </main>
   );

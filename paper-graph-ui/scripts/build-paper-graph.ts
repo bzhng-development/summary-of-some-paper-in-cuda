@@ -10,6 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const PAPERS_DIR = path.join(ROOT, 'src/content/papers');
 const OUT = path.join(ROOT, 'src/lib/graph.generated.json');
+const INDEX_OUT = path.join(ROOT, 'src/lib/paper-index.generated.json');
 const NEON = path.join(ROOT, 'src/lib/neon-metadata.generated.json');
 
 type CategoryMeta = {
@@ -118,6 +119,21 @@ type Edge = {
   weight: number;
   via?: string;
   topic?: string;
+};
+
+type PaperIndexRecord = {
+  id: string;
+  t: string;
+  au?: string;
+  o?: string;
+  y: number;
+  m?: number;
+  s: string;
+  c: string;
+  co?: 1;
+  hs?: 0;
+  tc?: string[];
+  tp?: string[];
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -1159,7 +1175,41 @@ function main(): void {
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, JSON.stringify(out, null, 2));
 
+  const indexRecords: PaperIndexRecord[] = papers
+    .toSorted((a, b) => {
+      if (a.year !== b.year) return b.year - a.year;
+      if ((a.month ?? 0) !== (b.month ?? 0)) return (b.month ?? 0) - (a.month ?? 0);
+      return a.title.localeCompare(b.title);
+    })
+    .map((p) => {
+      const record: PaperIndexRecord = {
+        id: p.id,
+        t: p.title,
+        y: p.year,
+        s: p.slug,
+        c: p.category,
+      };
+      const authors = Array.isArray(p.authors)
+        ? p.authors
+            .map((author) => cleanString(author))
+            .filter((author): author is string => Boolean(author))
+            .slice(0, 1)
+            .join(', ')
+        : '';
+      if (authors) record.au = authors;
+      if (p.organization) record.o = p.organization;
+      if (p.month) record.m = p.month;
+      if (p.companyOnly) record.co = 1;
+      if (p.hasSummary === false) record.hs = 0;
+      const extraTagCategories = p.tagCategories.filter((category) => category !== p.category);
+      if (extraTagCategories.length > 0) record.tc = extraTagCategories;
+      if (p.topics.length > 0) record.tp = p.topics;
+      return record;
+    });
+  fs.writeFileSync(INDEX_OUT, JSON.stringify(indexRecords));
+
   console.log(`Wrote ${OUT}`);
+  console.log(`Wrote ${INDEX_OUT}`);
   console.log(`  papers: ${papers.length}`);
   console.log(`  summaries: ${summaryCount}`);
   console.log(`  summary-less: ${summarylessCount}`);

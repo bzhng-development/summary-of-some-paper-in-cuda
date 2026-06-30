@@ -2,9 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { applyPaperFilters, updateUrlParam } from './paper-filter-utils';
-
-const KEY = 'pg.company-filter.v1';
+import { COMPANY_FILTER_KEY, dispatchPaperFilters, updateUrlParam } from './paper-filter-utils';
 
 const getInitialOrg = (options) => {
   if (typeof window === 'undefined') return '';
@@ -14,7 +12,7 @@ const getInitialOrg = (options) => {
   if (urlOrg && validOrgs.has(urlOrg)) return urlOrg;
 
   try {
-    const stored = window.localStorage.getItem(KEY)?.trim();
+    const stored = window.localStorage.getItem(COMPANY_FILTER_KEY)?.trim();
     if (stored && validOrgs.has(stored)) return stored;
   } catch {
     /* localStorage blocked */
@@ -31,8 +29,8 @@ const CompanyFilter = ({ options }) => {
   useEffect(() => {
     const initial = getInitialOrg(options);
     queueMicrotask(() => setSelected(initial));
-    applyPaperFilters({ org: initial });
     updateUrlParam('org', initial);
+    dispatchPaperFilters({ org: initial });
   }, [options]);
 
   useEffect(() => {
@@ -56,14 +54,14 @@ const CompanyFilter = ({ options }) => {
     setSelected(org);
     setOpen(false);
     setFilter('');
-    applyPaperFilters({ org });
     updateUrlParam('org', org);
     try {
-      if (org) window.localStorage.setItem(KEY, org);
-      else window.localStorage.removeItem(KEY);
+      if (org) window.localStorage.setItem(COMPANY_FILTER_KEY, org);
+      else window.localStorage.removeItem(COMPANY_FILTER_KEY);
     } catch {
       /* ignore */
     }
+    dispatchPaperFilters({ org });
   };
 
   return (

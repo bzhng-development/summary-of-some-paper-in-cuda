@@ -2,31 +2,28 @@
 
 import { useEffect, useState } from 'react';
 
-import { applyPaperFilters } from './paper-filter-utils';
-
-const KEY = 'pg.show-summaryless.v1';
+import { SUMMARYLESS_FILTER_KEY, dispatchPaperFilters } from './paper-filter-utils';
 
 const NoSummaryToggle = () => {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
     try {
-      const stored = window.localStorage.getItem(KEY) === '1';
+      const stored = window.localStorage.getItem(SUMMARYLESS_FILTER_KEY) === '1';
       queueMicrotask(() => setShow(stored));
+      dispatchPaperFilters({ showSummaryless: stored });
     } catch {
       /* localStorage blocked */
     }
   }, []);
 
   useEffect(() => {
-    if (typeof document === 'undefined') return;
-    document.body.classList.toggle('pg-show-summaryless', show);
     try {
-      window.localStorage.setItem(KEY, show ? '1' : '0');
+      window.localStorage.setItem(SUMMARYLESS_FILTER_KEY, show ? '1' : '0');
     } catch {
       /* ignore */
     }
-    applyPaperFilters();
+    dispatchPaperFilters({ showSummaryless: show });
   }, [show]);
 
   return (

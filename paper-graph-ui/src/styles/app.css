@@ -47,24 +47,3 @@ body {
     row-gap: 0.25rem;
   }
 }
-
-/* Paper-source filter — driven by the 3-way header toggle (All / Merit /
-   Company). The toggle sets one of `pg-merit-only` or `pg-company-only`
-   on <body>; "All" sets neither. CSS hides whichever side is filtered
-   out by matching the `data-company-only` attribute on every paper row. */
-.pg-merit-only [data-company-only="true"] {
-  display: none !important;
-}
-.pg-company-only [data-company-only="false"] {
-  display: none !important;
-}
-[data-paper-filter-hidden="true"] {
-  display: none !important;
-}
-
-/* Summary-less metadata rows are opt-in. The client toggle adds
-   `pg-show-summaryless` to <body>; without it, rows marked
-   `data-has-summary="false"` are hidden before hydration. */
-body:not(.pg-show-summaryless) [data-has-summary="false"] {
-  display: none !important;
-}

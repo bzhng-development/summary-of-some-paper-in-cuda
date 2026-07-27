@@ -1,4 +1,4 @@
-"""Back up and remove broad pure-university OpenAlex imports from Neon."""
+"""Back up and remove every pure-university-source paper from Neon."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from rich.console import Console
 from rich.table import Table
 
 from paper_pipeline.core.neon_db import TABLE, NeonDB
-from paper_pipeline.core.organization_scope import BROAD_ACADEMIC_IMPORT_LABELS
+from paper_pipeline.core.organization_scope import PURE_ACADEMIC_ORG_LABELS
 
 console = Console()
 app = typer.Typer(add_completion=False)
@@ -31,21 +31,20 @@ class PurgeSummary(BaseModel):
 
 def _default_backup_path() -> Path:
     timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    return Path("local_data") / "backups" / f"pure_academic_openalex_{timestamp}.ndjson"
+    return Path("local_data") / "backups" / f"pure_academic_all_sources_{timestamp}.ndjson"
 
 
 def _fetch_candidates(db: NeonDB) -> list[dict[str, Any]]:
-    labels = sorted(BROAD_ACADEMIC_IMPORT_LABELS)
+    labels = sorted(PURE_ACADEMIC_ORG_LABELS)
     with db.get_conn() as conn, conn.cursor(row_factory=dict_row) as cur:
         cur.execute(
             f"""
             SELECT *
             FROM {TABLE}
-            WHERE score_source = %s
-              AND organization = ANY(%s)
+            WHERE organization = ANY(%s)
             ORDER BY id
             """,
-            ("openalex_audit", labels),
+            (labels,),
         )
         return list(cur.fetchall())
 
@@ -58,16 +57,15 @@ def _write_backup(rows: list[dict[str, Any]], path: Path) -> None:
 
 
 def _delete_candidates(db: NeonDB) -> int:
-    labels = sorted(BROAD_ACADEMIC_IMPORT_LABELS)
+    labels = sorted(PURE_ACADEMIC_ORG_LABELS)
     with db.get_conn() as conn, conn.cursor() as cur:
         cur.execute(
             f"""
             DELETE FROM {TABLE}
-            WHERE score_source = %s
-              AND organization = ANY(%s)
+            WHERE organization = ANY(%s)
             RETURNING id
             """,
-            ("openalex_audit", labels),
+            (labels,),
         )
         return len(cur.fetchall())
 
@@ -81,7 +79,7 @@ def _organization_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
 
 
 def _render(summary: PurgeSummary, *, apply: bool) -> None:
-    table = Table(title="Pure-academic OpenAlex cleanup")
+    table = Table(title="Pure-academic source cleanup")
     table.add_column("organization")
     table.add_column("rows", justify="right")
     for label, count in summary.organizations.items():
@@ -107,7 +105,7 @@ def main(
         typer.Option(help="Recovery backup path; defaults under local_data/backups/."),
     ] = None,
 ) -> None:
-    """Remove only broad university rows whose provenance is OpenAlex."""
+    """Remove every row whose source organization is purely academic."""
     db = NeonDB()
     rows = _fetch_candidates(db)
     organizations = _organization_counts(rows)

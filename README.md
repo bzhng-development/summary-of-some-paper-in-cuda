@@ -70,8 +70,9 @@ The corpus is company/industrial-research scoped. Pure university discovery
 feeds (including broad Berkeley, Stanford, CMU, UW, MIT, Princeton, NYU, and
 Tsinghua searches) are excluded at discovery and rejected again at absorption.
 University coauthors remain valid when a paper is found through a tracked
-company or industrial lab. To audit and remove legacy broad-university
-OpenAlex imports, run `uv run paper-purge-academic` first, then
+company or industrial lab. To audit and remove every legacy row whose source
+organization is a university or university lab, run
+`uv run paper-purge-academic` first, then
 `uv run paper-purge-academic --apply`; apply mode writes a full recovery NDJSON
 under `local_data/backups/` before deleting anything.
 

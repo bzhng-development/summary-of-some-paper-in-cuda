@@ -54,9 +54,9 @@ PURE_ACADEMIC_HF_NAMESPACES: Final[frozenset[str]] = frozenset(
     }
 )
 
-# These labels identify the broad institution-wide OpenAlex cohort already in
-# Neon. Cleanup is intentionally narrower than the discovery denylist so it
-# does not delete older hand-curated AI-lab papers.
+# These labels identify the original broad institution-wide OpenAlex cohort.
+# They remain useful for reporting the source of the initial cleanup, while
+# destructive cleanup uses the full PURE_ACADEMIC_ORG_LABELS boundary.
 BROAD_ACADEMIC_IMPORT_LABELS: Final[frozenset[str]] = frozenset(
     {
         "Berkeley",

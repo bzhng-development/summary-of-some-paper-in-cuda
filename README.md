@@ -39,6 +39,46 @@ uv run paper-sync                 # same, plus enrich from the arxiv API
 
 Mirrors every field — arxiv metadata **and** scoring columns — via `NeonDB.batch()` (one connection, commit every 500). Idempotent, safe to re-run.
 
+## Refresh company papers
+
+`paper-e2e` is the canonical company-paper discovery pipeline that feeds the
+same Neon table used to build `paper-graph-ui`. It can run a historical year
+window or only the publication delta since the prior scrape:
+
+```bash
+# On Monday 2026-07-27, this selects Thursday through Monday, inclusively.
+uv run paper-e2e --days 4
+
+# Reproducible equivalent:
+uv run paper-e2e --since 2026-07-23 --through 2026-07-27
+
+# Existing whole-year mode remains available:
+uv run paper-e2e --window 2025-2026
+```
+
+OpenAlex and Semantic Scholar receive the exact date filters. The arxiv
+affiliation source applies both boundaries, and browser-discovered IDs are
+verified against arxiv publication metadata before they are absorbed. In delta
+mode, arxiv enrichment is scoped to IDs discovered in that run rather than the
+historical backlog. Use `--dry-run` to inspect the resolved dates without
+writing or scraping. Interrupted browser stages resume organizations already
+completed in that window's landing file; pass `--force-web` only when a full
+same-window source refresh is intentional. Hugging Face model-card requests use
+the locally authenticated Hub token when available.
+
+The corpus is company/industrial-research scoped. Pure university discovery
+feeds (including broad Berkeley, Stanford, CMU, UW, MIT, Princeton, NYU, and
+Tsinghua searches) are excluded at discovery and rejected again at absorption.
+University coauthors remain valid when a paper is found through a tracked
+company or industrial lab. To audit and remove legacy broad-university
+OpenAlex imports, run `uv run paper-purge-academic` first, then
+`uv run paper-purge-academic --apply`; apply mode writes a full recovery NDJSON
+under `local_data/backups/` before deleting anything.
+
+After a catch-up, `paper-report-delta` exports the exact newly created
+company-paper rows as CSV, NDJSON, and readable Markdown when given the
+pre-run `created_at` boundary and publication dates.
+
 ## Summarize a paper
 
 ```bash

@@ -337,8 +337,8 @@ def absorb_scored_json(db: NeonDB, scored_path: Path = SCORED_PATH) -> int:
 # ---------------------------------------------------------------------------
 
 
-def enrich_from_arxiv(db: NeonDB) -> int:
-    """Fetch arxiv metadata for every paper that's still missing it.
+def enrich_from_arxiv(db: NeonDB, *, ids: set[str] | None = None) -> int:
+    """Fetch arxiv metadata for missing rows, optionally within an ID scope.
 
     Splits by id shape: modern ``YYMM.NNNNN`` ids go through the bulk
     ``id_list`` endpoint; old-style ids (``physics/0401001`` etc., missing
@@ -357,9 +357,13 @@ def enrich_from_arxiv(db: NeonDB) -> int:
         _parse_arxiv_entry,
     )
 
+    if ids is not None and not ids:
+        logger.info("No papers were discovered in this run, nothing to enrich")
+        return 0
+
     sql = f"""
         SELECT id, categories FROM {TABLE}
-        WHERE id NOT LIKE 'ext:%'
+        WHERE id NOT LIKE %s
           AND (
             categories IS NULL
             OR abstract IS NULL OR abstract = ''
@@ -367,8 +371,13 @@ def enrich_from_arxiv(db: NeonDB) -> int:
             OR published IS NULL OR published = ''
           )
     """
+    if ids is not None:
+        sql += "\n AND id = ANY(%s)"
     with db.get_conn() as conn, conn.cursor() as cur:
-        cur.execute(sql)
+        if ids is None:
+            cur.execute(sql, ("ext:%",))
+        else:
+            cur.execute(sql, ("ext:%", sorted(ids)))
         rows = cur.fetchall()
 
     if not rows:

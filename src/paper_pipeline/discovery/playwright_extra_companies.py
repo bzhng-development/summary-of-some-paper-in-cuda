@@ -44,6 +44,11 @@ import httpx
 from loguru import logger
 from playwright.async_api import async_playwright
 
+from paper_pipeline.core.organization_scope import (
+    is_pure_academic_hf_namespace,
+    is_pure_academic_org,
+)
+
 # Reuse the workhorse utilities from the original scraper. NEVER mutate
 # anything imported from it — read-only.
 from paper_pipeline.discovery.playwright_pub_scrape import (  # type: ignore
@@ -594,6 +599,7 @@ async def run(args: argparse.Namespace) -> int:
         selected = list(EXTRA_ORGS)
         if not args.force:
             selected = [o for o in selected if o.label not in done_orgs]
+    selected = [org for org in selected if not is_pure_academic_org(org.label)]
 
     if not selected:
         logger.warning("nothing to do — pass --force or --only")
@@ -657,6 +663,9 @@ async def run(args: argparse.Namespace) -> int:
                         logger.exception("snap js-bundle harvest failed")
 
                 for slug in org.hf_orgs:
+                    if is_pure_academic_hf_namespace(slug):
+                        logger.info("  hf:{} skipped (pure-academic namespace)", slug)
+                        continue
                     try:
                         ids = await scrape_hf_org(
                             http_client,

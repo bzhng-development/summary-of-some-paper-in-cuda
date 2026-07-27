@@ -41,6 +41,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import httpx
+from huggingface_hub import get_token
 from loguru import logger
 from playwright.async_api import (
     Page,
@@ -48,6 +49,11 @@ from playwright.async_api import (
 )
 from playwright.async_api import (
     TimeoutError as PWTimeoutError,
+)
+
+from paper_pipeline.core.organization_scope import (
+    is_pure_academic_hf_namespace,
+    is_pure_academic_org,
 )
 
 # arxiv IDs: YYMM.NNNNN (4-5 digit suffix).
@@ -376,7 +382,9 @@ ORGS: tuple[OrgPub, ...] = (
     OrgPub(
         label="Zhipu-GLM",
         primary_url="https://www.zhipuai.cn/en",
-        hf_orgs=("zai-org", "THUDM"),
+        # `THUDM` is Tsinghua's pure-academic namespace and is deliberately
+        # outside the company-paper scope.
+        hf_orgs=("zai-org",),
         mode="simple",
         max_scrolls=40,
     ),
@@ -1011,6 +1019,7 @@ async def run(args: argparse.Namespace) -> int:
         selected = list(ORGS)
         if not args.force:
             selected = [o for o in selected if o.label not in done_orgs]
+    selected = [org for org in selected if not is_pure_academic_org(org.label)]
 
     if not selected:
         logger.warning("nothing to do — all orgs already completed; pass --force or --only")
@@ -1021,8 +1030,14 @@ async def run(args: argparse.Namespace) -> int:
     out_fh = args.output.open("a", encoding="utf-8")
     per_org_stats: list[dict] = []
 
+    http_headers = {"User-Agent": "playwright-pub-scrape/1.0 (research)"}
+    if hf_token := get_token():
+        http_headers["Authorization"] = f"Bearer {hf_token}"
+        logger.info("Hugging Face requests: authenticated")
+    else:
+        logger.warning("Hugging Face requests: anonymous; rate limits may reduce coverage")
     http_client = httpx.AsyncClient(
-        headers={"User-Agent": "playwright-pub-scrape/1.0 (research)"},
+        headers=http_headers,
         follow_redirects=True,
     )
 
@@ -1066,6 +1081,9 @@ async def run(args: argparse.Namespace) -> int:
 
                 if not org.skip_hf_models:
                     for slug in org.hf_orgs:
+                        if is_pure_academic_hf_namespace(slug):
+                            logger.info("  hf:{} skipped (pure-academic namespace)", slug)
+                            continue
                         try:
                             ids = await scrape_hf_org(
                                 http_client, slug, max_models=org.hf_max_models, concurrency=org.hf_concurrency

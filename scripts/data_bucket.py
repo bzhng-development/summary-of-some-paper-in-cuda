@@ -176,9 +176,7 @@ def _is_junk(rel: str) -> bool:
 
 def _data_files(root: Path) -> list[str]:
     """Gitignored files that are data, not software junk — sorted, repo-relative POSIX."""
-    out = _run(
-        ["git", "ls-files", "--others", "--ignored", "--exclude-standard"], cwd=root
-    ).stdout.splitlines()
+    out = _run(["git", "ls-files", "--others", "--ignored", "--exclude-standard"], cwd=root).stdout.splitlines()
     return sorted(f for f in out if f and not _is_junk(f) and (root / f).is_file())
 
 
@@ -230,26 +228,18 @@ app = typer.Typer(add_completion=False, help=__doc__)
 @app.command()
 def push(
     bucket: Annotated[str, typer.Option(help="HF bucket id, e.g. vincentzed-hf/data")],
-    prefix: Annotated[
-        str, typer.Option(help="Path prefix inside the bucket (repo namespace)")
-    ] = "",
+    prefix: Annotated[str, typer.Option(help="Path prefix inside the bucket (repo namespace)")] = "",
     delete: Annotated[
         bool,
-        typer.Option(
-            help="Mirror: prune bucket files no longer present locally (e.g. de-bucketed dirs)"
-        ),
+        typer.Option(help="Mirror: prune bucket files no longer present locally (e.g. de-bucketed dirs)"),
     ] = False,
-    dry_run: Annotated[
-        bool, typer.Option(help="Plan only; don't upload or write manifest")
-    ] = False,
+    dry_run: Annotated[bool, typer.Option(help="Plan only; don't upload or write manifest")] = False,
 ) -> None:
     """Upload gitignored data to the bucket (upstream sync) and (re)write the manifest."""
     root = _repo_root()
     files = _data_files(root)
     total = sum((root / f).stat().st_size for f in files)
-    console.print(
-        f"[bold]{len(files)}[/] data files, {total / 1e9:.2f} GB -> {_bucket_root(bucket, prefix)}"
-    )
+    console.print(f"[bold]{len(files)}[/] data files, {total / 1e9:.2f} GB -> {_bucket_root(bucket, prefix)}")
     if dry_run:
         for f in files[:20]:
             console.print(f"  {f}")
@@ -257,8 +247,11 @@ def push(
             console.print(f"  … +{len(files) - 20} more")
         return
 
-    # Stage into a temp tree preserving paths, then one batched upstream sync.
-    with tempfile.TemporaryDirectory(prefix="data-bucket-") as tmp:
+    # Stage visibly inside the repository rather than in an out-of-tree system
+    # temp directory. The scratch tree is still removed automatically.
+    scratch_root = root / "scratch"
+    scratch_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="data-bucket-", dir=scratch_root) as tmp:
         stage = Path(tmp)
         for f in track(files, description="staging"):
             dst = stage / f
@@ -286,9 +279,7 @@ def push(
 @app.command()
 def manifest(
     bucket: Annotated[str, typer.Option(help="HF bucket id, e.g. vincentzed-hf/data")],
-    prefix: Annotated[
-        str, typer.Option(help="Path prefix inside the bucket (repo namespace)")
-    ] = "",
+    prefix: Annotated[str, typer.Option(help="Path prefix inside the bucket (repo namespace)")] = "",
 ) -> None:
     """(Re)write the manifest from local data files WITHOUT uploading (data already in bucket)."""
     root = _repo_root()
@@ -314,9 +305,7 @@ def _load_manifest(root: Path) -> list[ManifestEntry]:
     if not mf.exists():
         err.print(f"[red]no {MANIFEST_NAME} found in {root}[/]")
         raise typer.Exit(1)
-    return _ENTRIES.validate_python(
-        [json.loads(ln) for ln in mf.read_text().splitlines() if ln.strip()]
-    )
+    return _ENTRIES.validate_python([json.loads(ln) for ln in mf.read_text().splitlines() if ln.strip()])
 
 
 @app.command()

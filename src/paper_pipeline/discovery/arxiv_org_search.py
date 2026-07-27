@@ -33,9 +33,10 @@ from loguru import logger
 ORG_SEARCHES = [
     (
         "Meta / FAIR",
-        '(abs:"Meta AI" OR abs:"FAIR" OR abs:"Facebook AI Research" OR abs:"Meta Research" OR abs:"Meta Platforms")',
+        '(abs:"Meta AI" OR abs:"Facebook AI Research" OR abs:"Meta Research" OR abs:"Meta Platforms")',
         re.compile(
-            r"\b(meta\s+ai|fair|facebook\s+ai|meta\s+platforms|meta\s+research|meta\s+gen\s+ai)\b", re.IGNORECASE
+            r"\b(meta\s+ai|facebook\s+ai(?:\s+research)?|meta\s+platforms|meta\s+research|meta\s+gen\s+ai)\b",
+            re.IGNORECASE,
         ),
     ),
     (
@@ -60,9 +61,9 @@ def matches_affiliation(authors, pattern: re.Pattern) -> tuple[bool, list[str]]:
     """
     hits: list[str] = []
     for author in authors:
-        aff = getattr(author, "affiliation", None)
-        if aff and pattern.search(aff):
-            hits.append(aff)
+        affiliation = getattr(author, "affiliation", None)
+        affiliations = [affiliation] if isinstance(affiliation, str) else affiliation or []
+        hits.extend(aff for aff in affiliations if pattern.search(aff))
     return bool(hits), hits
 
 
@@ -81,7 +82,15 @@ def main() -> int:
         default=DEFAULT_SINCE,
         help="Only include papers published on/after this date (YYYY-MM-DD). Default 2024-01-01.",
     )
+    ap.add_argument(
+        "--through",
+        type=lambda s: datetime.strptime(s, "%Y-%m-%d").date(),
+        default=None,
+        help="Only include papers published on/before this date (YYYY-MM-DD).",
+    )
     args = ap.parse_args()
+    if args.through is not None and args.through < args.since:
+        ap.error("--through must be on or after --since")
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
 
@@ -110,7 +119,14 @@ def main() -> int:
                 sort_by=arxiv.SortCriterion.SubmittedDate,
                 sort_order=arxiv.SortOrder.Descending,
             )
-            org_stats = {"raw": 0, "kept": 0, "skip_too_old": 0, "skip_aff": 0, "skip_dup": 0}
+            org_stats = {
+                "raw": 0,
+                "kept": 0,
+                "skip_too_new": 0,
+                "skip_too_old": 0,
+                "skip_aff": 0,
+                "skip_dup": 0,
+            }
 
             for result in client.results(search):
                 org_stats["raw"] += 1
@@ -122,6 +138,9 @@ def main() -> int:
 
                 # Sort is descending; once we see one before the cutoff we can stop.
                 pub = result.published.date() if hasattr(result.published, "date") else None
+                if pub and args.through is not None and pub > args.through:
+                    org_stats["skip_too_new"] += 1
+                    continue
                 if pub and pub < args.since:
                     org_stats["skip_too_old"] += 1
                     # Continue iterating in case the sort isn't strict, but bail
@@ -147,7 +166,7 @@ def main() -> int:
                     "abstract": (result.summary or "")[:1200],
                     "pdf_url": result.pdf_url,
                 }
-                fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+                fh.write(json.dumps(rec, ensure_ascii=False, sort_keys=True) + "\n")
                 fh.flush()
                 already_seen.add(aid)
                 org_stats["kept"] += 1

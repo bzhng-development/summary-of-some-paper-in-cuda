@@ -228,7 +228,7 @@ def fetch_arxiv_metadata(arxiv_ids: list[str]) -> dict[str, ArxivMeta]:
     """Batch-fetch full metadata from the arxiv API.
 
     Returns {arxiv_id: ArxivMeta}.
-    Chunks into batches of 100 with a 1s delay between batches.
+    Chunks into batches of 100 with arXiv's required 3s request spacing.
     """
     result: dict[str, ArxivMeta] = {}
     batch_size = 100
@@ -237,7 +237,7 @@ def fetch_arxiv_metadata(arxiv_ids: list[str]) -> dict[str, ArxivMeta]:
         for i in range(0, len(arxiv_ids), batch_size):
             batch = arxiv_ids[i : i + batch_size]
             if i > 0:
-                time.sleep(1)
+                time.sleep(3)
 
             id_list = ",".join(batch)
             resp = None

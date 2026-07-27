@@ -9,8 +9,8 @@ For each org we track:
   4. Extract arxiv_id from externalIds.ArXiv.
   5. Cross-ref Neon, write only the NET-NEW ones.
 
-Designed to run multiple times: scope is --year-range so we can do 2025-2026
-first (highest value, fastest), then 2020-2024 in a second pass.
+Designed to run multiple times: use ``--year-range`` for a historical sweep or
+``--since``/``--through`` for an exact inclusive publication-date delta.
 
 Rate-limit: API key, but S2 caps at 1 req/sec cumulative across all endpoints
 — enforced by a global throttle.
@@ -32,7 +32,9 @@ from pathlib import Path
 import httpx
 from loguru import logger
 
+from paper_pipeline.core.date_window import DateWindow
 from paper_pipeline.core.neon_db import TABLE, NeonBatch, NeonDB
+from paper_pipeline.core.organization_scope import is_pure_academic_org
 
 S2_BASE = "https://api.semanticscholar.org/graph/v1"
 API_KEY = os.environ.get("S2_API_KEY")
@@ -189,17 +191,27 @@ def _normalize_query(q: str) -> str:
     return " | ".join(p.strip() for p in q.split(" OR "))
 
 
-def search_bulk(query: str, year: str, token: str | None) -> dict | None:
+def search_bulk(
+    query: str,
+    year: str,
+    token: str | None,
+    publication_window: DateWindow | None = None,
+) -> dict | None:
     """One /paper/search/bulk call."""
     _throttle()
     params = {
         "query": _normalize_query(query),
-        "year": year,
         # S2's affiliation coverage is sparse (<5% of authors populated even
         # for well-known papers like GPT-5 System Card) and often shows historic
         # university not current company. We trust the text query match instead.
         "fields": "externalIds,title,year,authors,publicationDate,abstract",
     }
+    if publication_window is None:
+        params["year"] = year
+    else:
+        params["publicationDateOrYear"] = (
+            f"{publication_window.since.isoformat()}:{publication_window.through.isoformat()}"
+        )
     if token:
         params["token"] = token
     for attempt in range(5):
@@ -275,6 +287,7 @@ def scrape_org(
     out_fh,
     max_pages: int = 10,
     neon_batch: NeonBatch | None = None,
+    publication_window: DateWindow | None = None,
 ) -> tuple[int, int, int]:
     """Returns (kept, total_seen, saved_to_neon). Streams matching records to
     out_fh, and — when ``neon_batch`` is given — upserts each NET-NEW paper
@@ -287,7 +300,7 @@ def scrape_org(
     saved = 0
     page = 0
     while True:
-        data = search_bulk(query, year, token)
+        data = search_bulk(query, year, token, publication_window)
         page += 1
         if not data or "data" not in data:
             break
@@ -304,6 +317,8 @@ def scrape_org(
             except ValueError:
                 continue
             if not (year_min <= yyi <= year_max):
+                continue
+            if publication_window is not None and not publication_window.contains(p.get("publicationDate")):
                 continue
             # Verify match via title/abstract text (S2 affiliations are too
             # sparse to be useful; the text query already filtered to papers
@@ -326,7 +341,7 @@ def scrape_org(
                 "publicationDate": p.get("publicationDate"),
                 "in_neon": aid in in_neon,
             }
-            out_fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            out_fh.write(json.dumps(rec, ensure_ascii=False, sort_keys=True) + "\n")
             kept += 1
             if neon_batch is not None and aid not in in_neon:
                 neon_batch.save_paper(
@@ -347,10 +362,15 @@ def scrape_org(
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--output", type=Path, default=Path("local_data/s2_company_scrape.jsonl"))
+    ap.add_argument("--output", type=Path, default=None)
     ap.add_argument(
-        "--year-range", type=str, default="2025-2026", help="S2 year filter (e.g. '2025-2026' or '2020-2024')."
+        "--year-range",
+        type=str,
+        default=None,
+        help="S2 year filter (e.g. '2025-2026' or '2020-2024'; default: 2025-2026).",
     )
+    ap.add_argument("--since", type=str, default=None, help="Inclusive publication date (YYYY-MM-DD).")
+    ap.add_argument("--through", type=str, default=None, help="Inclusive publication date (YYYY-MM-DD).")
     ap.add_argument("--max-pages", type=int, default=10, help="Pages of 1000 per org per call.")
     ap.add_argument("--orgs", type=str, default=None, help="Comma-separated subset of org labels to scrape.")
     ap.add_argument(
@@ -361,7 +381,22 @@ def main() -> int:
     )
     args = ap.parse_args()
 
-    year_min, year_max = map(int, args.year_range.split("-"))
+    exact_window = args.since is not None or args.through is not None
+    try:
+        publication_window = DateWindow.from_inputs(
+            years=args.year_range,
+            since=args.since,
+            through=args.through,
+        )
+    except ValueError as error:
+        ap.error(str(error))
+    year_min = publication_window.since.year
+    year_max = publication_window.through.year
+    year_range = publication_window.years
+    output = (
+        args.output
+        or Path("local_data") / f"s2_company_{publication_window.label if exact_window else year_range}.jsonl"
+    )
 
     db = NeonDB()
     with db.get_conn() as c, c.cursor() as cur:
@@ -369,34 +404,41 @@ def main() -> int:
         yy_clauses = " OR ".join([f"id LIKE '{y - 2000:02d}%'" for y in range(year_min, year_max + 1)])
         cur.execute(f"SELECT id FROM {TABLE} WHERE ({yy_clauses}) AND id NOT LIKE 'ext%'")
         in_neon = {r[0] for r in cur.fetchall()}
-    logger.info(f"Neon already has {len(in_neon)} arxiv ids in {args.year_range}")
+    logger.info(
+        "Neon already has {} arxiv ids in {}..{}",
+        len(in_neon),
+        publication_window.since,
+        publication_window.through,
+    )
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    out_fh = args.output.open("a", encoding="utf-8")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    out_fh = output.open("a", encoding="utf-8")
     logger.info("Neon auto-save: {}", "ON" if args.save_neon else "OFF (dry run)")
 
     org_filter = set(args.orgs.split(",")) if args.orgs else None
+    active_orgs = [org for org in ORGS if not is_pure_academic_org(org[0])]
     summary: list[tuple[str, int, int]] = []
     grand_new = 0
     grand_saved = 0
     batch_cm = db.batch() if args.save_neon else nullcontext(None)
     try:
         with batch_cm as nb:
-            for i, (label, query, pat) in enumerate(ORGS):
+            for i, (label, query, pat) in enumerate(active_orgs):
                 if org_filter and label not in org_filter:
                     continue
-                logger.info(f"[{i + 1}/{len(ORGS)}] {label} (query={query!r})")
+                logger.info(f"[{i + 1}/{len(active_orgs)}] {label} (query={query!r})")
                 kept, total, saved = scrape_org(
                     label,
                     query,
                     pat,
-                    args.year_range,
+                    year_range,
                     year_min,
                     year_max,
                     in_neon,
                     out_fh,
                     max_pages=args.max_pages,
                     neon_batch=nb,
+                    publication_window=publication_window if exact_window else None,
                 )
                 summary.append((label, kept, total))
                 grand_new += kept
@@ -414,7 +456,7 @@ def main() -> int:
     print(
         f"  saved to Neon (net-new stubs): {grand_saved if args.save_neon else 0}{'' if args.save_neon else ' (dry run)'}"
     )
-    print(f"  output: {args.output}")
+    print(f"  output: {output}")
     return 0
 
 

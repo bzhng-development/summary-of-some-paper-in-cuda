@@ -1,8 +1,7 @@
 """OpenAlex-based affiliation audit — replaces the broken regex probe.
 
-Year window is configurable via --years (default 2026; pass 2025-2026 for the
-two-year sweep). Filters on a publication-date RANGE; the arxiv-id YY prefix is
-the precise submission-window gate downstream.
+The publication window is configurable as whole years or exact inclusive dates.
+Use ``--since 2026-07-23 --through 2026-07-27`` for an incremental scrape.
 
 For each tracked org:
   1. Resolve OpenAlex institution ID via name search (with manual overrides
@@ -30,16 +29,29 @@ import json
 import re
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 import pyalex
 from pyalex import Institutions, Works
 
+from paper_pipeline.core.date_window import DateWindow, validate_openalex_save_mode
 from paper_pipeline.core.neon_db import TABLE, NeonDB
+from paper_pipeline.core.organization_scope import is_pure_academic_org
 
 ARXIV_RE = re.compile(r"(?:arxiv\.org/abs/|arxiv\.org/pdf/)(\d{4}\.\d{4,5})")
 ARXIV_DOI_RE = re.compile(r"10\.48550/arXiv\.(\d{4}\.\d{4,5})", re.IGNORECASE)
 ARXIV_SOURCE_ID = "S4306400194"  # arxiv.org in OpenAlex
+
+
+@dataclass(frozen=True, slots=True)
+class FetchResult:
+    """One institution query result, including completeness state."""
+
+    works: list[dict]
+    truncated: bool = False
+    error: str | None = None
+
 
 # Override map for orgs where auto-search would pick the wrong institution.
 # Key = label to use in output; value = explicit OpenAlex institution ID.
@@ -236,26 +248,31 @@ def extract_arxiv_id(work: dict) -> str | None:
     return None
 
 
-def fetch_org_works(inst_id: str, year_min: int, year_max: int, max_pages: int = 25) -> tuple[list[dict], bool]:
-    """Get all works for an institution in [year_min, year_max] via pyalex.
+def fetch_org_works(
+    inst_id: str,
+    publication_window: DateWindow,
+    max_pages: int = 25,
+) -> FetchResult:
+    """Get all works for an institution in an inclusive date window.
 
     NOTE: we DO NOT filter by locations.source=arxiv here — OpenAlex marks
     arxiv as a location for only a tiny fraction of papers. Instead we
     fetch all papers in the window and apply our own arxiv-ID extractor
     downstream. A 2025-submitted arxiv paper can land in OpenAlex as either
-    publication_year, so we filter on a date RANGE and let the arxiv-id
-    prefix do the precise submission-window gate downstream.
+    publication_year, so we filter on the exact publication-date range and
+    retain a client-side date gate downstream.
 
-    Returns (works, truncated) — truncated=True if we hit the page cap, so
-    the caller can surface that silent-loss rather than report false-complete.
+    A non-null ``error`` or ``truncated=True`` means the query is incomplete.
+    The caller must return a non-zero status so automation cannot treat a
+    partial inventory as a successful refresh.
     """
     out: list[dict] = []
     truncated = False
     try:
         query = Works().filter(
             authorships={"institutions": {"id": inst_id}},
-            from_publication_date=f"{year_min}-01-01",
-            to_publication_date=f"{year_max}-12-31",
+            from_publication_date=publication_window.since.isoformat(),
+            to_publication_date=publication_window.through.isoformat(),
         )
         for page in query.paginate(per_page=200, n_max=max_pages * 200):
             out.extend(page)
@@ -263,14 +280,21 @@ def fetch_org_works(inst_id: str, year_min: int, year_max: int, max_pages: int =
                 truncated = True
                 break
     except Exception as e:
-        print(f"  ! query error: {e}")
-    return out, truncated
+        return FetchResult(works=out, truncated=truncated, error=str(e))
+    return FetchResult(works=out, truncated=truncated)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--output", type=Path, default=None, help="Default: local_data/openalex_<years>_audit.jsonl")
-    ap.add_argument("--years", type=str, default="2026", help="Year range, e.g. '2026' or '2025-2026'.")
+    ap.add_argument("--output", type=Path, default=None, help="Default: local_data/openalex_<window>_audit.jsonl")
+    ap.add_argument(
+        "--years",
+        type=str,
+        default=None,
+        help="Year range, e.g. '2026' or '2025-2026' (default: 2026).",
+    )
+    ap.add_argument("--since", type=str, default=None, help="Inclusive publication date (YYYY-MM-DD).")
+    ap.add_argument("--through", type=str, default=None, help="Inclusive publication date (YYYY-MM-DD).")
     ap.add_argument(
         "--email", type=str, default=None, help="Optional contact email for OpenAlex polite pool (10/s vs default)."
     )
@@ -294,15 +318,30 @@ def main() -> int:
     )
     args = ap.parse_args()
     exclude = {s.strip() for s in args.exclude.split(",") if s.strip()}
-    orgs_to_run = [o for o in ORGS if o[0] not in exclude]
+    orgs_to_run = [o for o in ORGS if not is_pure_academic_org(o[0]) and o[0] not in exclude]
 
-    if "-" in args.years:
-        year_min, year_max = map(int, args.years.split("-"))
-    else:
-        year_min = year_max = int(args.years)
+    try:
+        publication_window = DateWindow.from_inputs(
+            years=args.years,
+            since=args.since,
+            through=args.through,
+            default_years="2026",
+        )
+    except ValueError as error:
+        ap.error(str(error))
+    try:
+        validate_openalex_save_mode(
+            save_neon=args.save_neon,
+            exact_window=args.since is not None or args.through is not None,
+        )
+    except ValueError as error:
+        ap.error(str(error))
+    year_min = publication_window.since.year
+    year_max = publication_window.through.year
     # arxiv-id YY prefixes that count as in-window (ids encode submission year).
     prefixes = tuple(f"{y - 2000:02d}" for y in range(year_min, year_max + 1))
-    output = args.output or Path(f"local_data/openalex_{args.years}_audit.jsonl")
+    output_label = publication_window.label if args.since or args.through else args.years or publication_window.years
+    output = args.output or Path(f"local_data/openalex_{output_label}_audit.jsonl")
 
     if args.email:
         pyalex.config.email = args.email
@@ -312,12 +351,13 @@ def main() -> int:
         like_clauses = " OR ".join(f"id LIKE '{p}%%'" for p in prefixes)
         cur.execute(f"SELECT id FROM {TABLE} WHERE ({like_clauses})")
         in_neon = {row[0] for row in cur.fetchall()}
-    print(f"Neon already has {len(in_neon)} arxiv_ids in {args.years}\n")
+    print(f"Neon already has {len(in_neon)} arxiv_ids in {publication_window.since}..{publication_window.through}\n")
 
     output.parent.mkdir(parents=True, exist_ok=True)
     print(f"Neon auto-save: {'ON' if args.save_neon else 'OFF (dry run)'}\n")
 
     per_org: list[tuple[str, int, int, int]] = []  # (org, total, in_neon, missing)
+    incomplete_orgs: list[str] = []
     grand_new = 0
     if exclude:
         print(f"Excluding {len(exclude)} orgs: {', '.join(sorted(exclude))}\n")
@@ -334,15 +374,29 @@ def main() -> int:
                 per_org.append((label, 0, 0, 0))
                 continue
             inst_id, display = resolved
-            works, truncated = fetch_org_works(inst_id, year_min, year_max, max_pages=args.max_pages)
-            if truncated:
+            fetch_result = fetch_org_works(
+                inst_id,
+                publication_window,
+                max_pages=args.max_pages,
+            )
+            if fetch_result.error is not None:
+                print(f"  ! [{label}] query failed: {fetch_result.error}")
+                incomplete_orgs.append(label)
+                per_org.append((label, 0, 0, 0))
+                continue
+            if fetch_result.truncated:
                 print(f"  ! [{label}] hit page cap — results TRUNCATED, count is a floor")
+                incomplete_orgs.append(label)
             org_in_neon = 0
             org_missing = 0
             org_saves: list[dict] = []  # net-new save kwargs, flushed in a short batch after the loop
-            for w in works:
+            for w in fetch_result.works:
                 aid = extract_arxiv_id(w)
-                if not aid or not aid.startswith(prefixes):
+                if (
+                    not aid
+                    or not aid.startswith(prefixes)
+                    or not publication_window.contains(w.get("publication_date"))
+                ):
                     continue
                 already = aid in in_neon
                 if already:
@@ -424,6 +478,11 @@ def main() -> int:
     print(f"\n  GRAND TOTAL new arxiv IDs missing from Neon: {grand_new}")
     print(f"  {'saved to Neon as stubs: ' + str(grand_new) if args.save_neon else 'dry run — nothing written to Neon'}")
     print(f"  output: {output}")
+    if incomplete_orgs:
+        print(
+            f"  INCOMPLETE: {len(incomplete_orgs)} org queries failed or hit the page cap: {', '.join(incomplete_orgs)}"
+        )
+        return 1
     return 0
 
 

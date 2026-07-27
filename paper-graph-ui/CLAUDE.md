@@ -1,4 +1,3 @@
-@AGENTS.md
 @README.md
 
 # What changed since AGENTS.md / README.md were written
@@ -40,6 +39,24 @@ vercel --prod --yes                              # deploy
 ```
 
 `pnpm build` alone won't pick up Neon changes — you must re-run the two scripts first so the `*.generated.json` files are fresh on disk before Next reads them.
+
+## Search ownership
+
+The compact `paper-index.generated.json` plus `paper-filter.js` own only
+in-browser list filtering. Cross-corpus ranked search is implemented once in
+the sibling binutils pipeline's `pipeline.company_blogs.search` module, which
+adapts this app's `graph.generated.json` alongside the company-blog exports.
+
+From the binutils `classification/pipeline/` directory:
+
+```bash
+uv run company-content-search search "expert parallelism" --limit 20
+```
+
+Do not reintroduce a server-only `searchPapers` helper in `src/lib/papers.js`;
+it was unused and duplicated the browser filter with fewer fields. If the
+generated graph changes, preserve the fields listed in the parent
+`CLAUDE.md`'s unified-search contract or update the adapter and tests together.
 
 ## What's stored client-side (current localStorage keys)
 

@@ -208,15 +208,3 @@ export const yearCategoryMatrix = cache(() => {
   }
   return out;
 });
-
-export const searchPapers = cache((query) => {
-  const q = query.trim().toLowerCase();
-  if (!q) return [];
-  return GRAPH.papers.filter(
-    (p) =>
-      p.title.toLowerCase().includes(q) ||
-      p.id.toLowerCase().includes(q) ||
-      p.category.toLowerCase().includes(q) ||
-      (p.arxivId && p.arxivId.includes(q))
-  );
-});

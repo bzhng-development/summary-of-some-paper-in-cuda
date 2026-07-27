@@ -36,7 +36,8 @@ scripts/build-paper-graph.ts
    reads every .md, parses arxiv ID + H1 title,
    classifies topics by title keyword,
    joins src/lib/neon-metadata.generated.json,
-   emits src/lib/graph.generated.json (~1 MB)
+   emits src/lib/graph.generated.json and
+   src/lib/paper-index.generated.json
                           │
                           ▼
 src/lib/papers.js
@@ -47,6 +48,20 @@ src/lib/papers.js
                           ▼
             (all routes consume from here)
 ```
+
+`paper-index.generated.json` is the compact client-list input used by
+`paper-filter.js`. Ranked topic retrieval across this paper graph and the
+company-blog corpus is owned by the sibling binutils pipeline:
+
+```bash
+cd /Users/vincentzed/Documents/Github/open_source/mine/binutils/classification/pipeline
+uv run company-content-search search "expert parallelism" --limit 20
+```
+
+That wrapper consumes `graph.generated.json` so it can search abstracts,
+organizations, tags, and paper metadata through the same schema as blog
+content. The client substring filter is a UI interaction, not a second
+full-text search implementation.
 
 ## Refreshing metadata from Neon
 

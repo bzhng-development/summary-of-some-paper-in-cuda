@@ -18,6 +18,31 @@ A personal arxiv-paper curation + summarization pipeline. The Python side handle
 - **Non-pipeline dirs** (gitignored, kept on purpose): `mintlify-ref/` (abandoned mintlify docs reference) + `scratch/` (throwaway). The pre-package stale leftovers (`multi_prompt_pkg/`, `daily_papers/`, `docs_backup/`, `docs_new/`, `throwaway_script/`, `PDF/`) were **deleted 2026-06-14**.
 - **vllm-on-remote workflow** lives in `~/.claude/skills/jsonl-remote-job/` — the resume-safe JSONL+SCP+docker-exec pattern these scripts all use.
 
+# Unified paper + company-blog search
+
+The canonical local full-text retrieval wrapper lives in the sibling binutils
+pipeline at
+`classification/pipeline/src/pipeline/company_blogs/search.py`. It consumes
+`paper-graph-ui/src/lib/graph.generated.json` as the paper adapter input and
+the two canonical company-blog CSV exports as the blog input:
+
+```bash
+cd /Users/vincentzed/Documents/Github/open_source/mine/binutils/classification/pipeline
+uv run company-content-search search "expert parallelism" --limit 20
+```
+
+That command owns source normalization, stable IDs, the Tantivy schema, query
+preparation, ranking, source filters, freshness checks, and the shared
+Pydantic/JSON result shape. Do not add another Python or server-side paper
+search helper here. `paper-filter.js` remains intentionally UI-only: it
+performs immediate substring/filter interactions over the compact records
+already downloaded by a browser and is not a corpus search engine.
+
+`graph.generated.json` must continue to expose `id`, `arxivId`, `title`,
+`abstract`, `authors`, `organization`, `published`, `category`,
+`primaryCategory`, `tagCategories`, `topics`, and `companyOnly`. Update the
+binutils adapter and its tests deliberately if that generated contract changes.
+
 # `src/paper_pipeline/` package map
 
 Installable package — `uv sync` editable-installs it. Run entrypoints via the console scripts declared in `pyproject.toml` `[project.scripts]`: `paper-summarize`, `paper-summarize-single`, `paper-sync`, `paper-server`, `paper-fetch`, `paper-tag`, `paper-import-jsonl`, `paper-e2e`, `paper-purge-academic`, `paper-report-delta`. **No `sys.path` bootstraps anywhere** — imports are package-qualified (`from paper_pipeline.core.neon_db import NeonDB`). Data is co-located with its consuming code; `local_data/` (gitignored) and `docs/` stay at the repo root and are read CWD-relative, so **run console scripts from the repo root**.
